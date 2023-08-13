@@ -191,11 +191,11 @@ def main():
 
     def preprocess_function(examples):
         queries = examples["question"]
-        result = tokenizer(queries, padding="max_length", max_length=128, truncation=True)
+        result = tokenizer(queries, padding="max_length", max_length=512, truncation=True)
         result = {f"query_{k}": v for k, v in result.items()}
 
         passage = examples["Abstract"]
-        result_passage = tokenizer(passage, padding="max_length", max_length=256, truncation=True)
+        result_passage = tokenizer(passage, padding="max_length", max_length=512, truncation=True)
         for k, v in result_passage.items():
             result[f"passage_{k}"] = v
 
