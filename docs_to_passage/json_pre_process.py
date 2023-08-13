@@ -4,6 +4,7 @@ import json
 from tqdm import tqdm
 import csv
 
+# output csv file
 csv_filename = "abstract_output.csv"
 
 def get_date(patent):
