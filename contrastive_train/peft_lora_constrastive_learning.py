@@ -163,6 +163,7 @@ def main():
         level=logging.INFO,
     )
     logger.info(accelerator.state, main_process_only=False)
+
     if accelerator.is_local_main_process:
         datasets.utils.logging.set_verbosity_warning()
         transformers.utils.logging.set_verbosity_info()
@@ -189,12 +190,12 @@ def main():
                                                        "validation": f"{args.dataset_path}/valid.csv"})
 
     def preprocess_function(examples):
-        queries = examples["query"]
-        result = tokenizer(queries, padding="max_length", max_length=512, truncation=True)
+        queries = examples["question"]
+        result = tokenizer(queries, padding="max_length", max_length=128, truncation=True)
         result = {f"query_{k}": v for k, v in result.items()}
 
-        passage = examples["passage"]
-        result_passage = tokenizer(passage, padding="max_length", max_length=512, truncation=True)
+        passage = examples["Abstract"]
+        result_passage = tokenizer(passage, padding="max_length", max_length=256, truncation=True)
         for k, v in result_passage.items():
             result[f"passage_{k}"] = v
 
@@ -225,7 +226,8 @@ def main():
         )
         model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()
-
+    
+ 
     accelerator.print(model)
 
     # get dataloaders
@@ -284,11 +286,12 @@ def main():
         experiment_config = vars(args)
         # TensorBoard cannot log Enums, need the raw value
         experiment_config["lr_scheduler_type"] = experiment_config["lr_scheduler_type"].value
-        accelerator.init_trackers("peft_semantic_search", experiment_config)
+        accelerator.init_trackers("peft_contrastive_learning", experiment_config)
 
-    metric = evaluate.load("roc_auc")
+    metric = evaluate.load("accuracy")
 
     total_batch_size = args.per_device_train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
+
 
     if args.use_peft:
         # saving and loading checkpoints for resuming training
@@ -349,8 +352,10 @@ def main():
                 query_embs = model(**{k.replace("query_", ""): v for k, v in batch.items() if "query" in k})
                 passage_embs = model(**{k.replace("passage_", ""): v for k, v in batch.items() if "passage" in k})
                 logits = get_cosine_sim(query_embs, passage_embs, args.logit_scale)
+
                 loss_query = get_nt_xent_loss(logits)
                 loss_passage =  get_nt_xent_loss(logits.t())
+
                 loss = (loss_query +loss_passage) / 2.0
                 total_loss += accelerator.reduce(loss.detach().float(), reduction="sum")
                 accelerator.backward(loss)
@@ -389,7 +394,7 @@ def main():
                 labels = torch.arange(len(logits), device=logits.device) 
             logits, labels = accelerator.gather_for_metrics((logits, labels))
             metric.add_batch(
-                prediction_scores=logits,
+                predictions= torch.argmax(logits, dim=1),
                 references=labels,
             )
 
@@ -416,3 +421,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# python contrastive_train/peft_lora_constrastive_learning.py  --dataset_path "./dataset" --model_name_or_path "BAAI/bge-small-en" --output_dir "./contrastive_checkpoints" --use_peft  --with_tracking --report_to tensorboard
+
+                                                                                                                                                                                                             
+                                                         

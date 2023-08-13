@@ -3,11 +3,11 @@ import torch
 from transformers import AutoModel
 
 
-class AutoModelForSentenceEmbedding(nn.Module):
+class AutoModelForSentenceEmbedding(torch.nn.Module):
     def __init__(self, model_name, tokenizer, normalize=True):
         super(AutoModelForSentenceEmbedding, self).__init__()
 
-        self.model = AutoModel.from_pretrained(model_name)  # , load_in_8bit=True, device_map={"":0})
+        self.model = AutoModel.from_pretrained(model_name , load_in_8bit=True, device_map={"":0})
         self.normalize = normalize
         self.tokenizer = tokenizer
 

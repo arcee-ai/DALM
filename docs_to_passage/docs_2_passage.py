@@ -1,10 +1,7 @@
 import argparse
 import logging
 import os
-
-import faiss
-import torch
-from datasets
+import datasets
 
 from split_utils import split_documents
 
@@ -28,8 +25,9 @@ def parse_args():
     return args
 
 def main():
-    
+
     args = parse_args()
+
     ######################################
     logger.info("Step 1 - Create the dataset")
     ######################################
@@ -38,16 +36,19 @@ def main():
     # - title (string): title of the document
     # - text (string): text of a passage of the document
     # Let's say you have documents in tab-separated csv files with columns "title" and "text"
-    assert os.path.isfile(args.dataset_path), "Please provide a valid path to a csv file"
+    assert os.path.isfile(f"{args.dataset_path}/abstracts.csv"), "Please provide a valid path to a csv file"
 
     # You can load a Dataset object this way
-    dataset = datasets.load_dataset("csv", data_files={"test": f"{args.dataset_path}/test.csv"})
+    dataset = datasets.load_dataset("csv", data_files={"abstracts": f"{args.dataset_path}/abstracts.csv"}, delimiter="\t")
+
     # Then split the documents into passages of 100 words
-    dataset = dataset.map(split_documents, batched=True, num_proc=args.num_proc)
+    dataset = dataset.map(split_documents, batched=True)
 
     # And finally save your dataset
     passages_path = os.path.join(args.output_dir, "knowledge_dataset")
     dataset.save_to_disk(passages_path)
+
+    dataset['abstracts'].to_csv(f"{args.output_dir}/knowledge_dataset.csv")
 
 
 if __name__ == "__main__":

@@ -10,9 +10,9 @@ def split_text(text: str, n=100, character=" ") -> List[str]:
 def split_documents(documents: dict) -> dict:
     """Split documents into passages"""
     titles, texts = [], []
-    for title, text in zip(documents["title"], documents["text"]):
+    for title, text in zip(documents["Title"], documents["Abstract"]):
         if text is not None:
             for passage in split_text(text):
                 titles.append(title if title is not None else "")
                 texts.append(passage)
-    return {"title": titles, "text": texts}
+    return {"Title": titles, "Abstract": texts}

@@ -3,9 +3,7 @@ import argparse
 import logging
 import os
 
-import faiss
-import torch
-from datasets
+import datasets
 
 from transformers import pipeline
 
@@ -45,24 +43,25 @@ def main():
 
     # You can load a Dataset object this way
     dataset = datasets.load_from_disk(args.dataset_path)
-    
+  
     question_generator = pipeline(task="text2text-generation", model=args.qa_gen_model_name, device="cuda:0")
-    
+
     # Add a question for each passage
     dataset_question = dataset.map(
-        lambda x: {"question": generate_question(x['passage'],question_generator)},
+        lambda x: {"question": generate_question(x['Abstract'],question_generator)},
         batched = True,
         batch_size=args.batch_size,
-        num_proc=args.num_proc
-        
     )
 
     # And finally save your dataset
-    question_dataset_path = os.path.join(args.output_dir, "dataset_with_question")
-    dataset_question.to_csv(question_dataset_path)
+    question_dataset_path = os.path.join(args.output_dir, "dataset_with_question.csv")
+    dataset_question["abstracts"].to_csv(question_dataset_path)
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING)
     logger.setLevel(logging.INFO)
     main()
+
+
+#  python synth_data_gen/qa_gen.py  --dataset_path "./dataset/knowledge_dataset" --output_dir "./dataset"
