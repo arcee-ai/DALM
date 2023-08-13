@@ -55,7 +55,7 @@ def main():
 
     # And finally save your dataset
     question_dataset_path = os.path.join(args.output_dir, "dataset_with_question.csv")
-    dataset_question["abstracts"].to_csv(question_dataset_path)
+    dataset_question.to_csv(question_dataset_path)
 
 
 if __name__ == "__main__":

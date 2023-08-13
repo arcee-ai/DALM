@@ -16,3 +16,9 @@ def split_documents(documents: dict) -> dict:
                 titles.append(title if title is not None else "")
                 texts.append(passage)
     return {"Title": titles, "Abstract": texts}
+
+
+def filter_short_abstracts(example: dict) -> bool:
+    abstract = example['Abstract']
+    words = abstract.split()
+    return len(words) >= 100

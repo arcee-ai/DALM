@@ -3,7 +3,7 @@ import logging
 import os
 import datasets
 
-from split_utils import split_documents
+from split_utils import split_documents, filter_short_abstracts
 
 
 logger = logging.getLogger(__name__)
@@ -44,14 +44,20 @@ def main():
     # Then split the documents into passages of 100 words
     dataset = dataset.map(split_documents, batched=True)
 
+    # Filter the dataset using the defined function
+    filtered_dataset = dataset.filter(filter_short_abstracts)
+
     # And finally save your dataset
     passages_path = os.path.join(args.output_dir, "knowledge_dataset")
-    dataset.save_to_disk(passages_path)
+    filtered_dataset.save_to_disk(passages_path)
 
-    dataset['abstracts'].to_csv(f"{args.output_dir}/knowledge_dataset.csv")
+    filtered_dataset['abstracts'].to_csv(f"{args.output_dir}/knowledge_dataset.csv")
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING)
     logger.setLevel(logging.INFO)
     main()
+
+
+#  python docs_to_passage/docs_2_passage.py --dataset_path "./dataset" --output_dir "./dataset"
