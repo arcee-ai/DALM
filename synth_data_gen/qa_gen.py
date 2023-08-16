@@ -5,9 +5,13 @@ import os
 
 import datasets
 
+from datasets import Dataset
+
 from transformers import pipeline
 
 from qa_gen_utils import generate_question
+import torch
+
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +25,18 @@ def parse_args():
         type=int,
         default=4,
         help="Number of processes to used during the data processing ",
+    )
+    parser.add_argument(
+        "--gpu_id",
+        type=int,
+        default=0,
+        help="GPU ID to use for inference",
+    )
+    parser.add_argument(
+        "--num_gpus",
+        type=int,
+        default=1,
+        help="Number of GPUs to use for inference",
     )
     parser.add_argument(
         "--batch_size",
@@ -43,8 +59,19 @@ def main():
 
     # You can load a Dataset object this way
     dataset = datasets.load_from_disk(args.dataset_path)
-  
-    question_generator = pipeline(task="text2text-generation", model=args.qa_gen_model_name, device="cuda:0")
+
+    if args.gpu_id is not None and args.num_gpus > 1:
+        # multi-gpu slice
+        start = int((float(args.gpu_id) / float(args.num_gpus)) * len(dataset["abstracts"]))
+        end = int(((float(args.gpu_id) + float(1)) / float(args.num_gpus)) * len(dataset["abstracts"]))
+        sliced_dataset = dataset['abstracts'][start:end]
+
+        sliced_dataset_dataset = Dataset.from_dict(sliced_dataset)
+
+        dataset['abstracts'] = sliced_dataset_dataset
+
+
+    question_generator = pipeline(task="text2text-generation", model=args.qa_gen_model_name, device=args.gpu_id)
 
     # Add a question for each passage
     dataset_question = dataset.map(
@@ -56,7 +83,6 @@ def main():
     # And finally save your dataset
     question_dataset_path = os.path.join(args.output_dir, "dataset_with_question.csv")
     dataset_question.to_csv(question_dataset_path)
-
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING)
