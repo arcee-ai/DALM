@@ -347,14 +347,11 @@ class ArceeRagTrainer(BaseTrainer):
                 self.model, prompt_tensors, prompt_attention
             )
         
-
-        
         logprobs_logits = logprobs_from_logits(logits[:, :-1, :], prompt_tensors[:, 1:], gather=False) \
         .view(
            logits.shape[0], n_docs, -1, logits.size(-1)
         ) 
         
-            
         doc_logprobs = torch.log_softmax(scores, dim=1).unsqueeze(-1).unsqueeze(-1)
         
         # we let the model to predict the next word for the query as is
@@ -374,47 +371,42 @@ class ArceeRagTrainer(BaseTrainer):
     @PPODecorators.empty_cuda_cache()
     def compute_marginalized_loss(
         self,
-        prompt_tensors: torch.LongTensor,
-        prompt_attention: torch.LongTensor,
+        input_tensors: torch.LongTensor,
+        input_attention: torch.LongTensor,
         scores: torch.FloatTensor,
         query_token_length: int,
-        n_docs =3,
     ) -> Dict[str, Any]:
         """
-        Marginalizes the causal language modeling given query and prompt tokens with their attention masks.
+        Marginalizes the causal language modeling given query and input tokens with their attention masks.
 
         Args:
-            prompt_tensors (torch.LongTensor):
-                Tensor containing the encoded prompt tokens of shape (`batch_size`, `prompt_length`)
-            prompt_attention (torch.LongTensor):
-                Tensor containing the attention mask for prompt tokens of shape (`batch_size`, `prompt_length`)
+            input_tensors (torch.LongTensor):
+                Tensor containing the encoded input tokens of shape (`batch_size`, `input_length`)
+            input_attention (torch.LongTensor):
+                Tensor containing the attention mask for input tokens of shape (`batch_size`, `input_length`)
             scores (torch.FloatTensor):
                 Tensor containing the scores for the marginalization process of shape (`batch_size`, `num_samples`)
 
         Returns:
             Dict[str, Any]: A summary of the marginalization process and its training statistics
         """
-        
-        
+          
         logits = self.get_logits(
-                self.model, prompt_tensors, prompt_attention
+                self.model, input_tensors, input_attention
             )
-        
-        
+         
         # do not compute for the final token
         logprobs_logits = F.log_softmax(logits[:, :-1, :], dim=2) \
         .view(
            logits.shape[0],  -1, logits.size(-1)
-        )  
-        
+        ) 
         
         # we take the take the first log prob here
         doc_logprobs = torch.log_softmax(scores, dim=1)[:,0].unsqueeze(-1).unsqueeze(-1)
         
-       
         marginalized_log_probs = marginalize_log_probs(logprobs_logits, doc_logprobs, query_token_length )
         
-        loss = get_nll(marginalized_log_probs, prompt_tensors[:, 1:] )
+        loss = get_nll(marginalized_log_probs, input_tensors[:, 1:] )
         
         return loss
         
@@ -455,115 +447,3 @@ class ArceeRagTrainer(BaseTrainer):
         logits = model(input_ids=prompt_tensor, attention_mask=prompt_mask)
         
         return logits
-    
-    @PPODecorators.empty_cuda_cache()
-    def batched_forward_pass(
-        self,
-        model: PreTrainedModelWrapper,
-        prompt_tensor: torch.Tensor,
-        prompt_mask: torch.Tensor,
-    ):
-        """
-        Calculate model outputs in multiple batches.
-
-        Args:
-            queries (`torch.LongTensor`):
-                List of tensors containing the encoded queries, shape (`batch_size`, `query_length`)
-            responses (`torch.LongTensor`):
-                List of tensors containing the encoded responses, shape (`batch_size`, `response_length`)
-            return_logits (`bool`, *optional*, defaults to `False`):
-                Whether to return all_logits. Set to `False` if logits are not needed to reduce memory consumption.
-        Returns:
-            (tuple):
-                - all_logprobs (`torch.FloatTensor`): Log probabilities of the responses,
-                    shape (`batch_size`, `response_length`)
-                - all_values (`torch.FloatTensor`): Values of the responses, shape (`batch_size`, `response_length`)
-        """
-        bs = len(queries)
-        fbs = self.config.mini_batch_size
-        all_logprobs = []
-        all_logits = []
-        all_masks = []
-        all_values = []
-
-        for i in range(math.ceil(bs / fbs)):
-            input_kwargs = {key: value[i * fbs : (i + 1) * fbs] for key, value in model_inputs.items()}
-            query_batch = queries[i * fbs : (i + 1) * fbs]
-            response_batch = responses[i * fbs : (i + 1) * fbs]
-            logits, _, values = model(**input_kwargs)
-
-            input_ids = input_kwargs["input_ids"]
-            attention_mask = input_kwargs["attention_mask"]
-
-            logprobs = logprobs_from_logits(logits[:, :-1, :], input_ids[:, 1:])
-            masks = torch.zeros_like(attention_mask)
-            masks[:, :-1] = attention_mask[:, 1:]
-
-            for j in range(len(query_batch)):
-                start = len(query_batch[j]) - 1
-                if attention_mask[j, 0] == 0:  # offset left padding
-                    start += attention_mask[j, :].nonzero()[0]
-                end = start + len(response_batch[j])
-
-                masks[j, :start] = 0
-                masks[j, end:] = 0
-
-            if return_logits:
-                all_logits.append(logits)
-            else:
-                del logits
-            all_values.append(values)
-            all_logprobs.append(logprobs)
-            all_masks.append(masks)
-
-        return (
-            torch.cat(all_logprobs),
-            torch.cat(all_logits)[:, :-1] if return_logits else None,
-            torch.cat(all_values)[:, :-1],
-            torch.cat(all_masks)[:, :-1],
-        )
-
-    @PPODecorators.empty_cuda_cache()
-    def train_minibatch(
-        self,
-        old_logprobs: torch.FloatTensor,
-        values: torch.FloatTensor,
-        logprobs: torch.FloatTensor,
-        logits: torch.FloatTensor,
-        vpreds: torch.FloatTensor,
-        mask: torch.LongTensor,
-        advantages: torch.FloatTensor,
-        returns: torch.FloatTensor,
-    ):
-        """
-        Train one PPO minibatch
-
-        Args:
-            logprobs (`torch.FloatTensor`):
-                Log probabilities of the model, shape [batch_size, response_length]
-            values (`torch.FloatTensor`):
-                Values of the value head, shape [batch_size, response_length]
-            query (`torch.LongTensor`):
-                Encoded queries, shape [batch_size, query_length]
-            response (`torch.LongTensor`):
-                Encoded responses, shape [batch_size, response_length]
-            model_input (`torch.LongTensor`):
-                Concatenated queries and responses, shape [batch_size, query_length+response_length]
-
-        Returns:
-            train_stats (dict[str, `torch.Tensor`]):
-                Dictionary of training statistics
-        """
-        loss_p, loss_v, train_stats = self.loss(
-            old_logprobs, values, logits, vpreds, logprobs, mask, advantages, returns
-        )
-        loss = loss_p + loss_v
-        self.accelerator.backward(loss)
-        if self.config.max_grad_norm is not None:
-            if self.accelerator.sync_gradients:
-                self.accelerator.clip_grad_norm_(self.model_params, self.config.max_grad_norm)
-        self.optimizer.step()
-        # we call optimizer.zero_grad() every time and let `accelerator` handle accumulation
-        # see https://huggingface.co/docs/accelerate/usage_guides/gradient_accumulation#the-finished-code
-        self.optimizer.zero_grad()
-        return train_stats

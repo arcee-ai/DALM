@@ -7,6 +7,8 @@ from trl import AutoModelForCausalLMWithRAG, RagE2EConfig, ArceeRagTrainer
 
 dataset = datasets.load_dataset("csv", data_files="triplets.csv")
 
+
+
 # 1. load a pretrained model
 model = AutoModelForCausalLMWithRAG.from_pretrained("gpt2")
 
@@ -20,7 +22,7 @@ arcee_rag_trainer = ArceeRagTrainer(config, model, tokenizer)
 
 
 # 3. encode a query
-query_txt = ["I really like to drink "]
+query_txt = ["##query## Who is the largest mammal on Earth ?"]
 
 tokenized_query = tokenizer.batch_encode_plus(query_txt, padding=True, truncation=True)
 query_tokens = tokenized_query['input_ids'][0]
@@ -30,34 +32,41 @@ query_am = tokenized_query['attention_mask'][0]
 # marginalizing the next word prediction on the prompt or not
 query_am_for_loss =  [ 0 for _ in range (len(query_tokens))]  # am for attention mask
 
-
-
 # 4. encode passage
-top_k_text = ["my morning tea."]
+top_k_text = ["##passaga## The blue whale is the largest mammal to have ever existed."]
 
-tokenized_top_k = tokenizer.batch_encode_plus(top_k_text, padding=True, truncation=True)
-top_k_tokens = tokenized_top_k['input_ids'][0]
-top_k_am = tokenized_top_k['attention_mask'][0]
+# 5. answer
+answer = ["##answer## The answer is Blue whale"]
+
+# 6. prompt tokenization
+tokenized_prompt = tokenizer.batch_encode_plus([top_k_text+answer], padding=True, truncation=True)
+prompt_tokens = tokenized_prompt['input_ids'][0]
+prompt_am = tokenized_prompt['attention_mask'][0]
 
 
-# 5. combine the query with passages for  the casual llm
-prompt_tensor = torch.tensor([query_tokens + top_k_tokens ]).to(model.pretrained_model.device)
-prompt_am_tensor = torch.tensor([ query_am + top_k_am ]).to(model.pretrained_model.device)
+# 7. answer tokenization
+tokenized_answer = tokenizer.batch_encode_plus(answer, padding=True, truncation=True)
+answer_k_tokens = tokenized_answer['input_ids'][0]
+answer_k_am = tokenized_answer['attention_mask'][0]
 
-# 5. cosine score tensor
+
+# 8. combine the prompt with the answer for  casual llm training
+input_tensor = torch.tensor([prompt_tokens + answer_k_tokens ]).to(model.pretrained_model.device)
+iput_am_tensor = torch.tensor([ prompt_am + answer_k_am ]).to(model.pretrained_model.device)
+
+# 9. cosine score tensor
 # (this could be any reward such as human feedback or output from another model)
 similarity_scores = torch.rand(5, device=model.pretrained_model.device)
 
 
 # 6. train model with ppo
 marginalize_casual_loss = arcee_rag_trainer.compute_marginalized_loss(
-                            prompt_tensor,
-                            prompt_am_tensor,
+                            input_tensor,
+                            iput_am_tensor,
                             similarity_scores.unsqueeze(0),
-                            len(query_tokens)
+                            len(prompt_tokens)
 )
 
-print(marginalize_casual_loss)
 
 exit()
 
