@@ -39,7 +39,7 @@ top_k_text = ["##passaga## The blue whale is the largest mammal to have ever exi
 answer = ["##answer## The answer is Blue whale"]
 
 # 6. prompt tokenization
-tokenized_prompt = tokenizer.batch_encode_plus([top_k_text+answer], padding=True, truncation=True)
+tokenized_prompt = tokenizer.batch_encode_plus([query_txt+top_k_text], padding=True, truncation=True)
 prompt_tokens = tokenized_prompt['input_ids'][0]
 prompt_am = tokenized_prompt['attention_mask'][0]
 
