@@ -30,7 +30,7 @@ query_am = tokenized_query['attention_mask'][0]
 
 # this will control whether we are 
 # marginalizing the next word prediction on the prompt or not
-query_am_for_loss =  [ 0 for _ in range (len(query_tokens))]  # am for attention mask
+query_am_for_loss = [0 for _ in range (len(query_tokens))]  # am for attention mask
 
 # 4. encode passage
 top_k_text = ["##passaga## The blue whale is the largest mammal to have ever existed."]
