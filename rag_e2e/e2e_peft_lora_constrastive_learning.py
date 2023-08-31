@@ -279,6 +279,7 @@ def main():
     )
 
     def preprocess_function(examples):
+        c_padding = 1024
         queries = examples["query"]
         passages = examples["passage"]
         answers = examples["answer"]
@@ -293,16 +294,20 @@ def main():
         # Tokenize for causal model
         # Here, we need to combine the query and passage as the input, and the answer as the output
         inputs = [
-            f"###passage### {passage}\n\n###query### {query}"
-            for passage, query in zip(passages, queries)
+            f"###passage### {passage}\n\n###query### {query}\n\n{answer}"
+            for passage, query, answer in zip(passages, queries, answers)
         ]
         c_input = c_tokenizer(
-            inputs, padding="max_length", max_length=1024, truncation=True
+            inputs, padding="max_length", max_length=c_padding, truncation=True
         )
-        c_output = c_tokenizer(
-            answers, padding="max_length", max_length=1024, truncation=True
+        # TODO: @shamane is there a way to only invoke the tokenizer once? Is this slow to have to do it again?
+        only_qp = [
+            f"###passage### {passage}\n\n###query### {query}"
+            for passage, query, answer in zip(passages, queries, answers)
+        ]
+        c_input_lens = c_tokenizer(
+            only_qp, max_length=1024, truncation=True
         )
-
         pre_batch = {}
         for k, v in r_input.items():
             pre_batch[f"r_input_{k}"] = v
@@ -310,8 +315,8 @@ def main():
             pre_batch[f"r_output_{k}"] = v
         for k, v in c_input.items():
             pre_batch[f"c_input_{k}"] = v
-        for k, v in c_output.items():
-            pre_batch[f"c_output_{k}"] = v
+        for input_ids in c_input_lens["input_ids"]:
+            pre_batch[f"c_input_len"] = len(input_ids)
         return pre_batch
 
     processed_datasets = dataset.map(
@@ -514,37 +519,16 @@ def main():
 
                 # Get the loss for the causal model
                 # 8. combine the prompt with the answer for  casual llm training
-                query_answer_inputs = torch.stack([
-                    query_input + answer_input for query_input, answer_input in
-                    zip(batch["c_input_ids"], batch["c_output_input_ids"])
-                ], dim=0)
-                query_answer_am = torch.stack([
-                    query_input + answer_input for query_input, answer_input in
-                    zip(batch["c_input_attention_mask"], batch["c_output_attention_mask"])
-                ], dim=0)
-                prompt_tokens = torch.tensor(batch["c_input_ids"])
-                c_logits = c_model(input_ids=query_answer_inputs, attention_mask=query_answer_am)
+                query_prompt_answer_inputs = torch.tensor(batch["c_input_ids"])
+                query_prompt_answer_am = torch.tensor(batch["c_input_attention_mask"])
+                prompt_tokens_lens = torch.tensor(batch["c_input_len"])
+                c_logits = c_model(input_ids=query_prompt_answer_inputs, attention_mask=query_prompt_answer_am)
 
-                # query_passage_logits = r_model(
-                #     **{
-                #         k.replace("c_input_", ""): v
-                #         for k, v in batch.items()
-                #         if "c_input" in k
-                #     }
-                # )
-                # answer_logits = r_model(
-                #     **{
-                #         k.replace("c_output_", ""): v
-                #         for k, v in batch.items()
-                #         if "c_output" in k
-                #     }
-                # )
-                # 6. train model with ppo
                 marginalize_casual_loss = arcee_rag_trainer.compute_marginalized_loss_from_logits(
                     c_logits,
-                    query_answer_inputs,
-                    r_loss.unsqueeze(0),
-                    prompt_tokens
+                    query_prompt_answer_inputs,
+                    logits,
+                    prompt_tokens_lens
                 )
 
                 total_loss += accelerator.reduce(marginalize_casual_loss.detach().float(), reduction="sum")
