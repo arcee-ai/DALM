@@ -531,7 +531,9 @@ def main():
                     prompt_tokens_lens
                 )
 
-                total_loss += accelerator.reduce(marginalize_casual_loss.detach().float(), reduction="sum")
+                total_loss += accelerator.reduce(
+                    marginalize_casual_loss.detach().float() + r_loss.detach().float(), reduction="sum"
+                )
                 accelerator.backward(marginalize_casual_loss)
                 r_optimizer.step()
                 r_lr_scheduler.step()
