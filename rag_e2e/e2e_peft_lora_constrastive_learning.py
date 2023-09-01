@@ -28,19 +28,35 @@ from accelerate.logging import get_logger
 from accelerate.utils import set_seed
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AutoTokenizer, SchedulerType, default_data_collator, get_scheduler
+from transformers import (
+    AutoTokenizer,
+    SchedulerType,
+    default_data_collator,
+    get_scheduler,
+)
+import transformers.utils.logging
 
+from transformers import GPT2Tokenizer
 from peft import LoraConfig, TaskType, get_peft_model
 from base_model import AutoModelForSentenceEmbedding
-from train_utils import save_model_hook, load_model_hook, get_cosine_sim, get_nt_xent_loss
-
+from train_utils import (
+    save_model_hook,
+    load_model_hook,
+    get_cosine_sim,
+    get_nt_xent_loss,
+)
+from trl import AutoModelForCausalLMWithRAG, RagE2EConfig, ArceeRagTrainer
 
 logger = get_logger(__name__)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Training a PEFT model for Sematic Search task")
-    parser.add_argument("--dataset_path", type=str, default=None, help="dataset path in the local dir")
+    parser = argparse.ArgumentParser(
+        description="Training a PEFT model for Sematic Search task"
+    )
+    parser.add_argument(
+        "--dataset_path", type=str, default=None, help="dataset path in the local dir"
+    )
     parser.add_argument(
         "--max_length",
         type=int,
@@ -80,8 +96,15 @@ def parse_args():
         default=100,
         help="Batch size (per device) for the evaluation dataloader.",
     )
-    parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
-    parser.add_argument("--num_train_epochs", type=int, default=3, help="Total number of training epochs to perform.")
+    parser.add_argument(
+        "--weight_decay", type=float, default=0.0, help="Weight decay to use."
+    )
+    parser.add_argument(
+        "--num_train_epochs",
+        type=int,
+        default=3,
+        help="Total number of training epochs to perform.",
+    )
     parser.add_argument(
         "--max_train_steps",
         type=int,
@@ -99,17 +122,35 @@ def parse_args():
         type=SchedulerType,
         default="linear",
         help="The scheduler type to use.",
-        choices=["linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"],
+        choices=[
+            "linear",
+            "cosine",
+            "cosine_with_restarts",
+            "polynomial",
+            "constant",
+            "constant_with_warmup",
+        ],
     )
     parser.add_argument(
-        "--num_warmup_steps", type=int, default=0, help="Number of steps for the warmup in the lr scheduler."
+        "--num_warmup_steps",
+        type=int,
+        default=0,
+        help="Number of steps for the warmup in the lr scheduler.",
     )
-    parser.add_argument("--output_dir", type=str, default=None, help="Where to store the final model.")
-    parser.add_argument("--seed", type=int, default=None, help="A seed for reproducible training.")
     parser.add_argument(
-        "--hub_model_id", type=str, help="The name of the repository to keep in sync with the local `output_dir`."
+        "--output_dir", type=str, default=None, help="Where to store the final model."
     )
-    parser.add_argument("--hub_token", type=str, help="The token to use to push to the Model Hub.")
+    parser.add_argument(
+        "--seed", type=int, default=None, help="A seed for reproducible training."
+    )
+    parser.add_argument(
+        "--hub_model_id",
+        type=str,
+        help="The name of the repository to keep in sync with the local `output_dir`.",
+    )
+    parser.add_argument(
+        "--hub_token", type=str, help="The token to use to push to the Model Hub."
+    )
     parser.add_argument(
         "--checkpointing_steps",
         type=str,
@@ -151,11 +192,54 @@ def parse_args():
 
     return args
 
+
 def main():
     args = parse_args()
-    accelerator = (
-        Accelerator(log_with=args.report_to, project_dir=args.output_dir) if args.with_tracking else Accelerator()
-    )
+    # get the retriever tokenizer
+    r_tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
+    # Get the causal tokenizer
+    c_tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+    c_tokenizer.pad_token = c_tokenizer.eos_token
+
+    # base retriever model
+    r_model = AutoModelForSentenceEmbedding(args.model_name_or_path, r_tokenizer)
+    # base causal model
+    c_model = AutoModelForCausalLMWithRAG.from_pretrained("gpt2")
+
+    if args.use_peft:
+        # peft config and wrapping
+        peft_dict = dict(
+            r=8,
+            lora_alpha=16,
+            bias="none",
+            target_modules=["key", "query", "value"],
+        )
+        retriever_config = peft_dict.copy()
+        retriever_config["task_type"] = TaskType.FEATURE_EXTRACTION
+        r_peft_config = LoraConfig(**retriever_config)
+        r_model = get_peft_model(r_model, r_peft_config)
+        r_model.print_trainable_parameters()
+
+        c_config = peft_dict.copy()
+        c_config["task_type"] = TaskType.CAUSAL_LM
+        c_peft_config = LoraConfig(**c_config)
+        c_model = get_peft_model(c_model, c_peft_config)
+        c_model.print_trainable_parameters()
+
+    rag_config = {"batch_size": 1}
+    config = RagE2EConfig(**rag_config)
+    arcee_rag_trainer = ArceeRagTrainer(config, c_model, c_tokenizer)
+    accelerator = arcee_rag_trainer.accelerator
+    accelerator.print(r_model)
+
+    # TODO: Can I replace the accelerator with the one here?
+    accelerator = arcee_rag_trainer.accelerator
+
+    # accelerator = (
+    #     Accelerator(log_with=args.report_to, project_dir=args.output_dir)
+    #     if args.with_tracking
+    #     else Accelerator()
+    # )
     # Make one log on every process with the configuration for debugging.
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -181,54 +265,73 @@ def main():
             os.makedirs(args.output_dir, exist_ok=True)
     accelerator.wait_for_everyone()
 
-    # get the tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
 
     # dataset download and preprocessing
- 
-    dataset = datasets.load_dataset("csv", data_files={"train": f"{args.dataset_path}/train.csv",
-                                                       "validation": f"{args.dataset_path}/valid.csv"})
+
+    # dataset = datasets.load_dataset("csv", data_files={"train": f"{args.dataset_path}/train.csv",
+    #                                                    "validation": f"{args.dataset_path}/valid.csv"})
+    dataset = datasets.load_dataset(
+        "csv",
+        data_files={
+            "train": "triplets.csv",
+            "validation": "triplets.csv",
+        },
+    )
 
     def preprocess_function(examples):
-        queries = examples["question"]
-        result = tokenizer(queries, padding="max_length", max_length=512, truncation=True)
-        result = {f"query_{k}": v for k, v in result.items()}
+        c_padding = 1024
+        queries = examples["query"]
+        passages = examples["passage"]
+        answers = examples["answer"]
+        # Tokenize for Retriever
+        r_input = r_tokenizer(
+            queries, padding="max_length", max_length=512, truncation=True
+        )
+        r_output = r_tokenizer(
+            passages, padding="max_length", max_length=512, truncation=True
+        )
 
-        passage = examples["Abstract"]
-        result_passage = tokenizer(passage, padding="max_length", max_length=512, truncation=True)
-        for k, v in result_passage.items():
-            result[f"passage_{k}"] = v
-
-        return result
+        # Tokenize for causal model
+        # Here, we need to combine the query and passage as the input, and the answer as the output
+        inputs = [
+            f"###passage### {passage}\n\n###query### {query}\n\n{answer}"
+            for passage, query, answer in zip(passages, queries, answers)
+        ]
+        c_input = c_tokenizer(
+            inputs, padding="max_length", max_length=c_padding, truncation=True
+        )
+        # TODO: @shamane is there a way to only invoke the tokenizer once? Is this slow to have to do it again?
+        only_qp = [
+            f"###passage### {passage}\n\n###query### {query}"
+            for passage, query, answer in zip(passages, queries, answers)
+        ]
+        c_input_lens = c_tokenizer(
+            only_qp, max_length=1024, truncation=True
+        )
+        pre_batch = {}
+        for k, v in r_input.items():
+            pre_batch[f"r_input_{k}"] = v
+        for k, v in r_output.items():
+            pre_batch[f"r_output_{k}"] = v
+        for k, v in c_input.items():
+            pre_batch[f"c_input_{k}"] = v
+        for input_ids in c_input_lens["input_ids"]:
+            pre_batch[f"c_input_len"] = len(input_ids)
+        return pre_batch
 
     processed_datasets = dataset.map(
         preprocess_function,
         batched=True,
         remove_columns=dataset["train"].column_names,
         desc="Running tokenizer on dataset",
+        num_proc=4,
     )
 
     # Log a few random samples from the training set:
     for index in random.sample(range(len(processed_datasets["train"])), 3):
-        logger.info(f"Sample {index} of the training set: {processed_datasets['train'][index]}.")
-
-    # base model
-    model = AutoModelForSentenceEmbedding(args.model_name_or_path, tokenizer)
-
-    if args.use_peft:
-        # peft config and wrapping
-        peft_config = LoraConfig(
-            r=8,
-            lora_alpha=16,
-            bias="none",
-            task_type=TaskType.FEATURE_EXTRACTION,
-            target_modules=["key", "query", "value"],
+        logger.info(
+            f"Sample {index} of the training set: {processed_datasets['train'][index]}."
         )
-        model = get_peft_model(model, peft_config)
-        model.print_trainable_parameters()
-    
- 
-    accelerator.print(model)
 
     # get dataloaders
     train_dataloader = DataLoader(
@@ -247,29 +350,52 @@ def main():
         pin_memory=True,
     )
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+    r_optimizer = torch.optim.Adam(r_model.parameters(), lr=args.learning_rate)
+    c_optimizer = torch.optim.Adam(c_model.parameters(), lr=args.learning_rate)
 
     # Scheduler and math around the number of training steps.
     overrode_max_train_steps = False
-    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
+    num_update_steps_per_epoch = math.ceil(
+        len(train_dataloader) / args.gradient_accumulation_steps
+    )
     if args.max_train_steps is None:
         args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
         overrode_max_train_steps = True
 
-    lr_scheduler = get_scheduler(
+    r_lr_scheduler = get_scheduler(
         name=args.lr_scheduler_type,
-        optimizer=optimizer,
+        optimizer=r_optimizer,
+        num_warmup_steps=args.num_warmup_steps,
+        num_training_steps=args.max_train_steps,
+    )
+    c_lr_scheduler = get_scheduler(
+        name=args.lr_scheduler_type,
+        optimizer=c_optimizer,
         num_warmup_steps=args.num_warmup_steps,
         num_training_steps=args.max_train_steps,
     )
 
     # Prepare everything with our `accelerator`.
-    model, optimizer, train_dataloader, eval_dataloader, lr_scheduler = accelerator.prepare(
-        model, optimizer, train_dataloader, eval_dataloader, lr_scheduler
+    # see https://github.com/huggingface/accelerate/issues/253#issuecomment-1253231210
+    r_model, c_model = accelerator.prepare(r_model, c_model)
+    r_optimizer, c_optimizer, r_lr_scheduler, c_lr_scheduler = accelerator.prepare(
+        r_optimizer, c_optimizer, r_lr_scheduler, c_lr_scheduler
     )
 
+    # (
+    #     model,
+    #     optimizer,
+    #     train_dataloader,
+    #     eval_dataloader,
+    #     lr_scheduler,
+    # ) = accelerator.prepare(
+    #     r_model, optimizer, train_dataloader, eval_dataloader, lr_scheduler
+    # )
+
     # We need to recalculate our total training steps as the size of the training dataloader may have changed
-    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
+    num_update_steps_per_epoch = math.ceil(
+        len(train_dataloader) / args.gradient_accumulation_steps
+    )
     if overrode_max_train_steps:
         args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
     # Afterwards we recalculate our number of training epochs
@@ -285,13 +411,18 @@ def main():
     if args.with_tracking:
         experiment_config = vars(args)
         # TensorBoard cannot log Enums, need the raw value
-        experiment_config["lr_scheduler_type"] = experiment_config["lr_scheduler_type"].value
+        experiment_config["lr_scheduler_type"] = experiment_config[
+            "lr_scheduler_type"
+        ].value
         accelerator.init_trackers("peft_contrastive_learning", experiment_config)
 
     metric = evaluate.load("accuracy")
 
-    total_batch_size = args.per_device_train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
-
+    total_batch_size = (
+        args.per_device_train_batch_size
+        * accelerator.num_processes
+        * args.gradient_accumulation_steps
+    )
 
     if args.use_peft:
         # saving and loading checkpoints for resuming training
@@ -301,13 +432,19 @@ def main():
     logger.info("***** Running training *****")
     logger.info(f"  Num examples = {len(processed_datasets['train'])}")
     logger.info(f"  Num Epochs = {args.num_train_epochs}")
-    logger.info(f"  Instantaneous batch size per device = {args.per_device_train_batch_size}")
-    logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
+    logger.info(
+        f"  Instantaneous batch size per device = {args.per_device_train_batch_size}"
+    )
+    logger.info(
+        f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}"
+    )
     logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
     logger.info(f"  Total optimization steps = {args.max_train_steps}")
 
     # Only show the progress bar once on each machine.
-    progress_bar = tqdm(range(args.max_train_steps), disable=not accelerator.is_local_main_process)
+    progress_bar = tqdm(
+        range(args.max_train_steps), disable=not accelerator.is_local_main_process
+    )
     completed_steps = 0
     starting_epoch = 0
     # Potentially load in the weights and states from a previous save
@@ -320,7 +457,9 @@ def main():
             # Get the most recent checkpoint
             dirs = [f.name for f in os.scandir(os.getcwd()) if f.is_dir()]
             dirs.sort(key=os.path.getctime)
-            path = dirs[-1]  # Sorts folders by date modified, most recent checkpoint is the last
+            path = dirs[
+                -1
+            ]  # Sorts folders by date modified, most recent checkpoint is the last
         # Extract `epoch_{i}` or `step_{i}`
         training_difference = os.path.splitext(path)[0]
 
@@ -330,7 +469,10 @@ def main():
             completed_steps = starting_epoch * num_update_steps_per_epoch
         else:
             # need to multiply `gradient_accumulation_steps` to reflect real steps
-            resume_step = int(training_difference.replace("step_", "")) * args.gradient_accumulation_steps
+            resume_step = (
+                int(training_difference.replace("step_", ""))
+                * args.gradient_accumulation_steps
+            )
             starting_epoch = resume_step // len(train_dataloader)
             resume_step -= starting_epoch * len(train_dataloader)
             completed_steps = resume_step // args.gradient_accumulation_step
@@ -339,29 +481,63 @@ def main():
     progress_bar.update(completed_steps)
 
     for epoch in range(starting_epoch, args.num_train_epochs):
-        model.train()
+        r_model.train()
         if args.with_tracking:
             total_loss = 0
-        if args.resume_from_checkpoint and epoch == starting_epoch and resume_step is not None:
+        if (
+            args.resume_from_checkpoint
+            and epoch == starting_epoch
+            and resume_step is not None
+        ):
             # We skip the first `n` batches in the dataloader when resuming from a checkpoint
-            active_dataloader = accelerator.skip_first_batches(train_dataloader, resume_step)
+            active_dataloader = accelerator.skip_first_batches(
+                train_dataloader, resume_step
+            )
         else:
             active_dataloader = train_dataloader
         for step, batch in enumerate(active_dataloader):
-            with accelerator.accumulate(model):
-                query_embs = model(**{k.replace("query_", ""): v for k, v in batch.items() if "query" in k})
-                passage_embs = model(**{k.replace("passage_", ""): v for k, v in batch.items() if "passage" in k})
+            with accelerator.accumulate(r_model, c_model):
+                query_embs = r_model(
+                    **{
+                        k.replace("r_input_", ""): v
+                        for k, v in batch.items()
+                        if "r_input" in k
+                    }
+                )
+                passage_embs = r_model(
+                    **{
+                        k.replace("r_output_", ""): v
+                        for k, v in batch.items()
+                        if "r_output" in k
+                    }
+                )
                 logits = get_cosine_sim(query_embs, passage_embs, args.logit_scale)
-
                 loss_query = get_nt_xent_loss(logits)
                 loss_passage = get_nt_xent_loss(logits.t())
+                # Retriever loss
+                r_loss = (loss_query + loss_passage) / 2.0
 
-                loss = (loss_query +loss_passage) / 2.0
-                total_loss += accelerator.reduce(loss.detach().float(), reduction="sum")
-                accelerator.backward(loss)
-                optimizer.step()
-                lr_scheduler.step()
-                model.zero_grad()
+                # Get the loss for the causal model
+                # 8. combine the prompt with the answer for  casual llm training
+                query_prompt_answer_inputs = torch.tensor(batch["c_input_ids"])
+                query_prompt_answer_am = torch.tensor(batch["c_input_attention_mask"])
+                prompt_tokens_lens = torch.tensor(batch["c_input_len"])
+                c_logits = c_model(input_ids=query_prompt_answer_inputs, attention_mask=query_prompt_answer_am)
+
+                marginalize_casual_loss = arcee_rag_trainer.compute_marginalized_loss_from_logits(
+                    c_logits,
+                    query_prompt_answer_inputs,
+                    logits,
+                    prompt_tokens_lens
+                )
+
+                total_loss += accelerator.reduce(
+                    marginalize_casual_loss.detach().float() + r_loss.detach().float(), reduction="sum"
+                )
+                accelerator.backward(marginalize_casual_loss)
+                r_optimizer.step()
+                r_lr_scheduler.step()
+                r_model.zero_grad()
 
             # Checks if the accelerator has performed an optimization step behind the scenes
             if accelerator.sync_gradients:
@@ -371,7 +547,9 @@ def main():
             if (step + 1) % 100 == 0:
                 logger.info(f"Step: {step+1}, Loss: {total_loss/(step+1)}")
                 if args.with_tracking:
-                    accelerator.log({"train/loss": total_loss / (step + 1)}, step=completed_steps)
+                    accelerator.log(
+                        {"train/loss": total_loss / (step + 1)}, step=completed_steps
+                    )
 
             if isinstance(checkpointing_steps, int):
                 if completed_steps % checkpointing_steps == 0:
@@ -384,17 +562,29 @@ def main():
                 break
 
         # for the efficiency we do a per-batch evaluation
-        model.eval()
+        r_model.eval()
         for step, batch in enumerate(eval_dataloader):
             with torch.no_grad():
-                query_embs = model(**{k.replace("query_", ""): v for k, v in batch.items() if "query" in k})
-                passage_embs = model(**{k.replace("passage_", ""): v for k, v in batch.items() if "passage" in k})
+                query_embs = r_model(
+                    **{
+                        k.replace("query_", ""): v
+                        for k, v in batch.items()
+                        if "query" in k
+                    }
+                )
+                passage_embs = r_model(
+                    **{
+                        k.replace("passage_", ""): v
+                        for k, v in batch.items()
+                        if "passage" in k
+                    }
+                )
                 logits = get_cosine_sim(query_embs, passage_embs, args.logit_scale)
-                # we just need an identity matrix 
-                labels = torch.arange(len(logits), device=logits.device) 
+                # we just need an identity matrix
+                labels = torch.arange(len(logits), device=logits.device)
             logits, labels = accelerator.gather_for_metrics((logits, labels))
             metric.add_batch(
-                predictions= torch.argmax(logits, dim=1),
+                predictions=torch.argmax(logits, dim=1),
                 references=labels,
             )
 
@@ -410,11 +600,16 @@ def main():
             accelerator.wait_for_everyone()
             if accelerator.is_main_process:
                 if isinstance(checkpointing_steps, str):
-                    accelerator.save_state(os.path.join(args.output_dir, f"epoch_{epoch}"))
-                accelerator.unwrap_model(model).save_pretrained(
-                    args.output_dir, state_dict=accelerator.get_state_dict(accelerator.unwrap_model(model))
+                    accelerator.save_state(
+                        os.path.join(args.output_dir, f"epoch_{epoch}")
+                    )
+                accelerator.unwrap_model(r_model).save_pretrained(
+                    args.output_dir,
+                    state_dict=accelerator.get_state_dict(
+                        accelerator.unwrap_model(r_model)
+                    ),
                 )
-                tokenizer.save_pretrained(args.output_dir)
+                r_tokenizer.save_pretrained(args.output_dir)
             accelerator.wait_for_everyone()
     accelerator.end_training()
 
@@ -423,7 +618,4 @@ if __name__ == "__main__":
     main()
 
 
-# python contrastive_train/peft_lora_constrastive_learning.py  --dataset_path "./dataset" --model_name_or_path "BAAI/bge-small-en" --output_dir "./contrastive_checkpoints" --use_peft  --with_tracking --report_to tensorboard
-
-                                                                                                                                                                                                             
-                                                         
+# python rag_e2e/e2e_peft_lora_constrastive_learning.py  --dataset_path "./dataset" --model_name_or_path "BAAI/bge-small-en" --output_dir "./contrastive_checkpoints" --use_peft  --with_tracking --report_to tensorboard

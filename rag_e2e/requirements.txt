@@ -1,0 +1,9 @@
+accelerate
+transformers
+torch
+peft
+datasets
+evaluate
+diffusers
+bitsandbytes
+torchvision
