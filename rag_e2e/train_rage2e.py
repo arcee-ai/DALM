@@ -36,19 +36,18 @@ from transformers import (
 )
 import transformers.utils.logging
 
-from transformers import GPT2Tokenizer
 from peft import LoraConfig, TaskType, get_peft_model
-from base_model import AutoModelForSentenceEmbedding
+from base_model import AutoModelForRagE2E
 from train_utils import (
     save_model_hook,
     load_model_hook,
     get_cosine_sim,
     get_nt_xent_loss,
+    compute_marginalized_loss_from_logits
 )
-from trl import AutoModelForCausalLMWithRAG, RagE2EConfig, ArceeRagTrainer
+
 
 logger = get_logger(__name__)
-
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -67,7 +66,13 @@ def parse_args():
         ),
     )
     parser.add_argument(
-        "--model_name_or_path",
+        "--retriever_name_or_path",
+        type=str,
+        help="Path to pretrained model or model identifier from huggingface.co/models.",
+        required=True,
+    )
+    parser.add_argument(
+        "--generator_name_or_path",
         type=str,
         help="Path to pretrained model or model identifier from huggingface.co/models.",
         required=True,
@@ -102,7 +107,7 @@ def parse_args():
     parser.add_argument(
         "--num_train_epochs",
         type=int,
-        default=3,
+        default=5,
         help="Total number of training epochs to perform.",
     )
     parser.add_argument(
@@ -195,51 +200,16 @@ def parse_args():
 
 def main():
     args = parse_args()
-    # get the retriever tokenizer
-    r_tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
-    # Get the causal tokenizer
-    c_tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-    c_tokenizer.pad_token = c_tokenizer.eos_token
-
-    # base retriever model
-    r_model = AutoModelForSentenceEmbedding(args.model_name_or_path, r_tokenizer)
-    # base causal model
-    c_model = AutoModelForCausalLMWithRAG.from_pretrained("gpt2")
-
-    if args.use_peft:
-        # peft config and wrapping
-        peft_dict = dict(
-            r=8,
-            lora_alpha=16,
-            bias="none",
-            target_modules=["key", "query", "value"],
-        )
-        retriever_config = peft_dict.copy()
-        retriever_config["task_type"] = TaskType.FEATURE_EXTRACTION
-        r_peft_config = LoraConfig(**retriever_config)
-        r_model = get_peft_model(r_model, r_peft_config)
-        r_model.print_trainable_parameters()
-
-        c_config = peft_dict.copy()
-        c_config["task_type"] = TaskType.CAUSAL_LM
-        c_peft_config = LoraConfig(**c_config)
-        c_model = get_peft_model(c_model, c_peft_config)
-        c_model.print_trainable_parameters()
-
-    rag_config = {"batch_size": 1}
-    config = RagE2EConfig(**rag_config)
-    arcee_rag_trainer = ArceeRagTrainer(config, c_model, c_tokenizer)
-    accelerator = arcee_rag_trainer.accelerator
-    accelerator.print(r_model)
-
-    # TODO: Can I replace the accelerator with the one here?
-    accelerator = arcee_rag_trainer.accelerator
-
-    # accelerator = (
-    #     Accelerator(log_with=args.report_to, project_dir=args.output_dir)
-    #     if args.with_tracking
-    #     else Accelerator()
-    # )
+       
+    # rag retriver and the generator 
+    rag_model = AutoModelForRagE2E(args.retriever_name_or_path, args.generator_name_or_path)
+ 
+    
+    accelerator = (
+        Accelerator(log_with=args.report_to, project_dir=args.output_dir)
+        if args.with_tracking
+        else Accelerator()
+    )
     # Make one log on every process with the configuration for debugging.
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -267,9 +237,6 @@ def main():
 
 
     # dataset download and preprocessing
-
-    # dataset = datasets.load_dataset("csv", data_files={"train": f"{args.dataset_path}/train.csv",
-    #                                                    "validation": f"{args.dataset_path}/valid.csv"})
     dataset = datasets.load_dataset(
         "csv",
         data_files={
@@ -277,46 +244,73 @@ def main():
             "validation": "triplets.csv",
         },
     )
+    
 
+    retriever_tokenizer = rag_model.retriever_tokenizer
+    
+    generator_tokenizer = rag_model.generator_tokenizer
+    generator_tokenizer.pad_token = generator_tokenizer.eos_token
+
+    
     def preprocess_function(examples):
-        c_padding = 1024
+        
+        
         queries = examples["query"]
         passages = examples["passage"]
         answers = examples["answer"]
-        # Tokenize for Retriever
-        r_input = r_tokenizer(
-            queries, padding="max_length", max_length=512, truncation=True
+             
+        # Tokenization for the retriever
+        retriever_query_tokens = retriever_tokenizer(
+            queries,  padding="max_length", max_length=128, truncation=True
         )
-        r_output = r_tokenizer(
-            passages, padding="max_length", max_length=512, truncation=True
+        
+        retriever_passage_tokens = retriever_tokenizer(
+            passages,  padding="max_length", max_length=128, truncation=True
         )
-
+        
+    
         # Tokenize for causal model
-        # Here, we need to combine the query and passage as the input, and the answer as the output
-        inputs = [
-            f"###passage### {passage}\n\n###query### {query}\n\n{answer}"
+        # Here, we need to combine the query, passage, and the answer as the input, and the answer as the output
+        casual_input_text = [
+            f"#query# {query} #passage# {passage} #answer# {answer}"
             for passage, query, answer in zip(passages, queries, answers)
         ]
-        c_input = c_tokenizer(
-            inputs, padding="max_length", max_length=c_padding, truncation=True
+        causal_input_tokens = generator_tokenizer(
+            casual_input_text,  padding="max_length", max_length=128, truncation=True
         )
-        # TODO: @shamane is there a way to only invoke the tokenizer once? Is this slow to have to do it again?
-        only_qp = [
-            f"###passage### {passage}\n\n###query### {query}"
+        
+             
+        query_passage_text = [
+            f"#query# {query} #passage# {passage} #answer# "
             for passage, query, answer in zip(passages, queries, answers)
         ]
-        c_input_lens = c_tokenizer(
-            only_qp, max_length=1024, truncation=True
+        
+        query_passage_lengths = []
+        
+        query_passage_tokens = generator_tokenizer(
+            query_passage_text
         )
+        
+        for single_query_passage in query_passage_tokens["input_ids"]:
+            query_passage_lengths.append(len(single_query_passage))
+            
+        
+        
         pre_batch = {}
-        for k, v in r_input.items():
-            pre_batch[f"r_input_{k}"] = v
-        for k, v in r_output.items():
-            pre_batch[f"r_output_{k}"] = v
-        for k, v in c_input.items():
-            pre_batch[f"c_input_{k}"] = v
-        for input_ids in c_input_lens["input_ids"]:
-            pre_batch[f"c_input_len"] = len(input_ids)
+        
+        # for the retriever in-batch negats
+        for k, v in retriever_query_tokens.items():
+            pre_batch[f"retriever_query_{k}"] = v
+        for k, v in retriever_passage_tokens.items():
+            pre_batch[f"retriever_passage_{k}"] = v
+            
+       
+        # for the generator     
+        for k, v in causal_input_tokens.items():
+            pre_batch[f"generator_input_{k}"] = v
+            
+        pre_batch[f"query_passage_input_len"] = query_passage_lengths
+        
         return pre_batch
 
     processed_datasets = dataset.map(
@@ -324,11 +318,12 @@ def main():
         batched=True,
         remove_columns=dataset["train"].column_names,
         desc="Running tokenizer on dataset",
-        num_proc=4,
+        num_proc=1,
     )
+    
 
     # Log a few random samples from the training set:
-    for index in random.sample(range(len(processed_datasets["train"])), 3):
+    for index in random.sample(range(len(processed_datasets["train"])), 2):
         logger.info(
             f"Sample {index} of the training set: {processed_datasets['train'][index]}."
         )
@@ -341,6 +336,7 @@ def main():
         batch_size=args.per_device_train_batch_size,
         pin_memory=True,
     )
+    
 
     eval_dataloader = DataLoader(
         processed_datasets["validation"],
@@ -349,9 +345,9 @@ def main():
         batch_size=args.per_device_eval_batch_size,
         pin_memory=True,
     )
+    
 
-    r_optimizer = torch.optim.Adam(r_model.parameters(), lr=args.learning_rate)
-    c_optimizer = torch.optim.Adam(c_model.parameters(), lr=args.learning_rate)
+    optimizer = torch.optim.Adam(rag_model.parameters(), lr=args.learning_rate)
 
     # Scheduler and math around the number of training steps.
     overrode_max_train_steps = False
@@ -362,35 +358,27 @@ def main():
         args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
         overrode_max_train_steps = True
 
-    r_lr_scheduler = get_scheduler(
+    lr_scheduler = get_scheduler(
         name=args.lr_scheduler_type,
-        optimizer=r_optimizer,
+        optimizer=optimizer,
         num_warmup_steps=args.num_warmup_steps,
         num_training_steps=args.max_train_steps,
     )
-    c_lr_scheduler = get_scheduler(
-        name=args.lr_scheduler_type,
-        optimizer=c_optimizer,
-        num_warmup_steps=args.num_warmup_steps,
-        num_training_steps=args.max_train_steps,
-    )
+        
 
-    # Prepare everything with our `accelerator`.
-    # see https://github.com/huggingface/accelerate/issues/253#issuecomment-1253231210
-    r_model, c_model = accelerator.prepare(r_model, c_model)
-    r_optimizer, c_optimizer, r_lr_scheduler, c_lr_scheduler = accelerator.prepare(
-        r_optimizer, c_optimizer, r_lr_scheduler, c_lr_scheduler
+    (
+        retriever,
+        generator,
+        optimizer,
+        train_dataloader,
+        eval_dataloader,
+        lr_scheduler,
+    ) = accelerator.prepare(
+        rag_model.retriever_model,  rag_model.generator_model, optimizer, train_dataloader, eval_dataloader, lr_scheduler
     )
+    
 
-    # (
-    #     model,
-    #     optimizer,
-    #     train_dataloader,
-    #     eval_dataloader,
-    #     lr_scheduler,
-    # ) = accelerator.prepare(
-    #     r_model, optimizer, train_dataloader, eval_dataloader, lr_scheduler
-    # )
+    
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed
     num_update_steps_per_epoch = math.ceil(
@@ -428,6 +416,7 @@ def main():
         # saving and loading checkpoints for resuming training
         accelerator.register_save_state_pre_hook(save_model_hook)
         accelerator.register_load_state_pre_hook(load_model_hook)
+        
 
     logger.info("***** Running training *****")
     logger.info(f"  Num examples = {len(processed_datasets['train'])}")
@@ -481,7 +470,7 @@ def main():
     progress_bar.update(completed_steps)
 
     for epoch in range(starting_epoch, args.num_train_epochs):
-        r_model.train()
+        rag_model.train()
         if args.with_tracking:
             total_loss = 0
         if (
@@ -495,49 +484,65 @@ def main():
             )
         else:
             active_dataloader = train_dataloader
+            
+        
         for step, batch in enumerate(active_dataloader):
-            with accelerator.accumulate(r_model, c_model):
-                query_embs = r_model(
-                    **{
-                        k.replace("r_input_", ""): v
-                        for k, v in batch.items()
-                        if "r_input" in k
-                    }
+            
+            
+            with accelerator.accumulate(rag_model):
+                query_embs = rag_model("retrieval", 
+                                       retriever, 
+                                       batch["retriever_query_input_ids"], 
+                                       batch["retriever_query_attention_mask"]
                 )
-                passage_embs = r_model(
-                    **{
-                        k.replace("r_output_", ""): v
-                        for k, v in batch.items()
-                        if "r_output" in k
-                    }
+                
+                passage_embs =  rag_model("retrieval", 
+                                       retriever, 
+                                       batch["retriever_passage_input_ids"], 
+                                       batch["retriever_passage_attention_mask"]
                 )
+                
+      
+              
                 logits = get_cosine_sim(query_embs, passage_embs, args.logit_scale)
+                
                 loss_query = get_nt_xent_loss(logits)
                 loss_passage = get_nt_xent_loss(logits.t())
                 # Retriever loss
-                r_loss = (loss_query + loss_passage) / 2.0
-
+                retriver_contrastive_loss = (loss_query + loss_passage) / 2.0
+                
+                
                 # Get the loss for the causal model
                 # 8. combine the prompt with the answer for  casual llm training
-                query_prompt_answer_inputs = torch.tensor(batch["c_input_ids"])
-                query_prompt_answer_am = torch.tensor(batch["c_input_attention_mask"])
-                prompt_tokens_lens = torch.tensor(batch["c_input_len"])
-                c_logits = c_model(input_ids=query_prompt_answer_inputs, attention_mask=query_prompt_answer_am)
-
-                marginalize_casual_loss = arcee_rag_trainer.compute_marginalized_loss_from_logits(
-                    c_logits,
-                    query_prompt_answer_inputs,
-                    logits,
-                    prompt_tokens_lens
+    
+                ### add the loss casual here
+                
+                generator_logits = rag_model("generation",
+                                generator,             
+                                batch["generator_input_input_ids"],
+                                batch["generator_input_attention_mask"])
+                
+                
+                            
+                marginalize_casual_loss = compute_marginalized_loss_from_logits(
+                    generator_logits,
+                    batch["generator_input_input_ids"],
+                    batch["generator_input_attention_mask"],
+                    logits, # assume since we know what is matching # test this also by taking the torch.argmax(logits, dim=1)
+                    batch["query_passage_input_len"]
                 )
-
-                total_loss += accelerator.reduce(
-                    marginalize_casual_loss.detach().float() + r_loss.detach().float(), reduction="sum"
-                )
-                accelerator.backward(marginalize_casual_loss)
-                r_optimizer.step()
-                r_lr_scheduler.step()
-                r_model.zero_grad()
+                
+                
+                combined_loss = retriver_contrastive_loss + marginalize_casual_loss
+                                
+                total_loss += accelerator.reduce(combined_loss.detach().float(), reduction="sum")
+                
+ 
+                accelerator.backward(combined_loss)
+                optimizer.step()
+                lr_scheduler.step()
+                retriever.zero_grad()
+                generator.zero_grad()
 
             # Checks if the accelerator has performed an optimization step behind the scenes
             if accelerator.sync_gradients:
@@ -560,24 +565,22 @@ def main():
 
             if completed_steps >= args.max_train_steps:
                 break
+            
 
         # for the efficiency we do a per-batch evaluation
-        r_model.eval()
+        retriever.eval()
         for step, batch in enumerate(eval_dataloader):
             with torch.no_grad():
-                query_embs = r_model(
-                    **{
-                        k.replace("query_", ""): v
-                        for k, v in batch.items()
-                        if "query" in k
-                    }
+                query_embs = rag_model("retrieval", 
+                                       retriever, 
+                                       batch["retriever_query_input_ids"], 
+                                       batch["retriever_query_attention_mask"]
                 )
-                passage_embs = r_model(
-                    **{
-                        k.replace("passage_", ""): v
-                        for k, v in batch.items()
-                        if "passage" in k
-                    }
+                
+                passage_embs =  rag_model("retrieval", 
+                                       retriever, 
+                                       batch["retriever_passage_input_ids"], 
+                                       batch["retriever_passage_attention_mask"]
                 )
                 logits = get_cosine_sim(query_embs, passage_embs, args.logit_scale)
                 # we just need an identity matrix
@@ -603,13 +606,13 @@ def main():
                     accelerator.save_state(
                         os.path.join(args.output_dir, f"epoch_{epoch}")
                     )
-                accelerator.unwrap_model(r_model).save_pretrained(
+                accelerator.unwrap_model(retriever).save_pretrained(
                     args.output_dir,
                     state_dict=accelerator.get_state_dict(
-                        accelerator.unwrap_model(r_model)
+                        accelerator.unwrap_model(retriever)
                     ),
                 )
-                r_tokenizer.save_pretrained(args.output_dir)
+                retriever_tokenizer.save_pretrained(args.output_dir)
             accelerator.wait_for_everyone()
     accelerator.end_training()
 
@@ -618,4 +621,4 @@ if __name__ == "__main__":
     main()
 
 
-# python rag_e2e/e2e_peft_lora_constrastive_learning.py  --dataset_path "./dataset" --model_name_or_path "BAAI/bge-small-en" --output_dir "./contrastive_checkpoints" --use_peft  --with_tracking --report_to tensorboard
+# python train_rage2e.py  --dataset_path "./dataset" --retriever_name_or_path "BAAI/bge-small-en" --generator_name_or_path "tiiuae/falcon-7b"   --output_dir "./contrastive_checkpoints" --use_peft  --with_tracking --report_to tensorboard
