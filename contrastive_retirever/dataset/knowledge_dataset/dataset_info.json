@@ -1,0 +1,42 @@
+{
+  "builder_name": "csv",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "csv",
+  "dataset_size": 6364,
+  "description": "",
+  "download_checksums": {
+    "/home/ubuntu/arcee-retriever/./dataset/abstracts.csv": {
+      "num_bytes": 6330,
+      "checksum": null
+    }
+  },
+  "download_size": 6330,
+  "features": {
+    "Title": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "Abstract": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 12694,
+  "splits": {
+    "abstracts": {
+      "name": "abstracts",
+      "num_bytes": 6364,
+      "num_examples": 10,
+      "dataset_name": "csv"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}
