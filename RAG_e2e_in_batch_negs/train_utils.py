@@ -42,16 +42,15 @@ def marginalize_log_probs(logprobs_logits, doc_logprobs, query_token_length):
     
     
     # we let the model to predict the next word for the query as is
-    query_log_prob = logprobs_logits[: query_token_length - 1, :]
+    query_passage_log_prob = logprobs_logits[: query_token_length - 1, :]
     
     # we marginalize the next word prediction of the passa based on the scores
-    passage_log_prob = logprobs_logits[query_token_length - 1 :, :]
+    answer_log_prob = logprobs_logits[query_token_length - 1 :, :]
     
-
-    marginalized_prob_sum = passage_log_prob + doc_logprobs
+    marginalized_prob_sum = answer_log_prob + doc_logprobs
     
     # get all the log probs
-    all_log_probs = torch.cat([query_log_prob, marginalized_prob_sum], dim=0)
+    all_log_probs = torch.cat([query_passage_log_prob, marginalized_prob_sum], dim=0)
     
     return all_log_probs
 
