@@ -73,12 +73,7 @@ def compute_marginalized_loss_from_logits(
     # here I am assuming that we always take the positive sample as the correct one   
     doc_logprobs = torch.log_softmax(scores, dim=1).diag().unsqueeze(-1).unsqueeze(-1)
     
- 
-    # we take the first log prob here
-    doc_logprobs = (
-        torch.log_softmax(scores, dim=1)[:, 0].unsqueeze(-1).unsqueeze(-1)
-    )
-    
+     
     marginalized_next_word_prob_list = []
     
     for sample_logprobs_logits, sample_doc_logprobs, sample_doc_logprobs in zip (logprobs_logits, doc_logprobs, query_token_length):
