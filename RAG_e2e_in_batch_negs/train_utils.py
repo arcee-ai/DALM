@@ -75,12 +75,12 @@ def compute_marginalized_loss_from_logits(
      
     marginalized_next_word_prob_list = []
     
-    for sample_logprobs_logits, sample_doc_logprobs, sample_doc_logprobs in zip (logprobs_logits, doc_logprobs, query_token_length):
+    for sample_logprobs_logits, sample_doc_logprobs, sample_token_length in zip (logprobs_logits, doc_logprobs, query_token_length):
         
         marginalized_log_probs = marginalize_log_probs(
             sample_logprobs_logits, 
             sample_doc_logprobs, 
-            sample_doc_logprobs
+            sample_token_length
         )
                 
         marginalized_next_word_prob_list.append(marginalized_log_probs)
