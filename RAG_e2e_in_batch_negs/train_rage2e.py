@@ -236,13 +236,7 @@ def main():
 
 
     # dataset download and preprocessing
-    dataset = datasets.load_dataset(
-        "csv",
-        data_files={
-            "train": "triplets.csv",
-        },
-    )
-    
+    dataset = datasets.load_from_disk(args.dataset_path)
 
     retriever_tokenizer = rag_model.retriever_tokenizer
     
