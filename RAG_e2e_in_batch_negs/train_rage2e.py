@@ -453,7 +453,8 @@ def main():
     progress_bar.update(completed_steps)
 
     for epoch in range(starting_epoch, args.num_train_epochs):
-        rag_model.train()
+        retriever.train()
+        generator.train()
         if args.with_tracking:
             total_loss = 0
         if (
