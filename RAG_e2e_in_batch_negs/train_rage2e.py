@@ -57,6 +57,15 @@ def parse_args():
         "--dataset_path", type=str, default=None, help="dataset path in the local dir"
     )
     parser.add_argument(
+        "--dataset_passage_col_name", type=str, default="Abstract", help="Name of the column containing the passage"
+    )
+    parser.add_argument(
+        "--dataset_query_col_name", type=str, default="Question", help="Name of the column containing the query"
+    )
+    parser.add_argument(
+        "--dataset_answer_col_name", type=str, default="Answer", help="Name of the column containing the answer"
+    )
+    parser.add_argument(
         "--max_length",
         type=int,
         default=128,
@@ -247,9 +256,9 @@ def main():
     def preprocess_function(examples):
         
         
-        queries = examples["query"]
-        passages = examples["passage"]
-        answers = examples["answer"]
+        queries = examples[args.dataset_query_col_name]
+        passages = examples[args.dataset_passage_col_name]
+        answers = examples[args.dataset_answer_col_name]
              
         # Tokenization for the retriever
         retriever_query_tokens = retriever_tokenizer(
@@ -308,21 +317,21 @@ def main():
     processed_datasets = dataset.map(
         preprocess_function,
         batched=True,
-        remove_columns=dataset["train"].column_names,
+        remove_columns=dataset.column_names,
         desc="Running tokenizer on dataset",
         num_proc=1,
     )
     
 
     # Log a few random samples from the training set:
-    for index in random.sample(range(len(processed_datasets["train"])), 2):
+    for index in random.sample(range(len(processed_datasets)), 2):
         logger.info(
-            f"Sample {index} of the training set: {processed_datasets['train'][index]}."
+            f"Sample {index} of the training set: {processed_datasets[index]}."
         )
 
     # get dataloaders
     train_dataloader = DataLoader(
-        processed_datasets["train"],
+        processed_datasets,
         shuffle=True,
         collate_fn=default_data_collator,
         batch_size=args.per_device_train_batch_size,
@@ -396,7 +405,7 @@ def main():
         
 
     logger.info("***** Running training *****")
-    logger.info(f"  Num examples = {len(processed_datasets['train'])}")
+    logger.info(f"  Num examples = {len(processed_datasets)}")
     logger.info(f"  Num Epochs = {args.num_train_epochs}")
     logger.info(
         f"  Instantaneous batch size per device = {args.per_device_train_batch_size}"
