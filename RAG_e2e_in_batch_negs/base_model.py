@@ -38,7 +38,7 @@ class AutoModelForRagE2E(torch.nn.Module):
             
             self.retriever_model = self.use_peft(self.retriever_model, 
                                                 preft_config_retriever,
-                                                # TaskType.FEATURE_EXTRACTION 
+                                                 TaskType.FEATURE_EXTRACTION 
                                                 )
             
             # trainable_params = sum(p.numel() for p in self.retriever_model .parameters() if p.requires_grad)
@@ -53,7 +53,7 @@ class AutoModelForRagE2E(torch.nn.Module):
             )
             self.generator_model = self.use_peft(self.generator_model, 
                                                 preft_config_generator,
-                                                # TaskType.CAUSAL_LM 
+                                                TaskType.CAUSAL_LM 
                                                 )
             
             # ptrainable_params = sum(p.numel() for p in self.generator_model .parameters() if p.requires_grad)
