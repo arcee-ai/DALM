@@ -9,7 +9,8 @@ class AutoModelForRagE2E(torch.nn.Module):
         
         # Retriver initialization
         self.retriever_model = AutoModel.from_pretrained(
-            retriever_name, load_in_4bit=True, 
+            retriever_name,
+            quantization_config=AutoModelForRagE2E.__get_bnb_config(),
         )
         self.retriever_tokenizer = AutoTokenizer.from_pretrained(
             retriever_name
@@ -25,7 +26,6 @@ class AutoModelForRagE2E(torch.nn.Module):
         
         self.generator_tokenizer = AutoTokenizer.from_pretrained(
             generator_name,
-            quantization_config=AutoModelForRagE2E.__get_bnb_config(),
         ) 
         
         if get_peft:
