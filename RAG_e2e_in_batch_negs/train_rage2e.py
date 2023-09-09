@@ -54,7 +54,7 @@ def parse_args():
         description="Training a PEFT model for Sematic Search task"
     )
     parser.add_argument(
-        "--dataset_path", type=str, default=None, help="dataset path in the local dir"
+        "--dataset_path", type=str, default=None, help="Dataset path. Can be a huggingface dataset directory or a csv file."
     )
     parser.add_argument(
         "--dataset_passage_col_name", type=str, default="Abstract", help="Name of the column containing the passage"
@@ -245,7 +245,8 @@ def main():
 
 
     # dataset download and preprocessing
-    dataset = datasets.load_from_disk(args.dataset_path)
+    dataset = (datasets.load_from_disk(args.dataset_path) if os.path.isdir(args.dataset_path) 
+               else datasets.load_dataset('csv', data_files=args.dataset_path)["train"])
 
     retriever_tokenizer = rag_model.retriever_tokenizer
     
