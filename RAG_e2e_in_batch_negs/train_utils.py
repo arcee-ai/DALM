@@ -51,7 +51,7 @@ def marginalize_log_probs(logprobs_logits, doc_logprobs, query_token_length):
     
     # get all the log probs
     all_log_probs = torch.cat([query_passage_log_prob, marginalized_prob_sum], dim=0)
-    
+
     return all_log_probs
 
 
@@ -68,7 +68,7 @@ def compute_marginalized_loss_from_logits(
     logprobs_logits = F.log_softmax(logits[:, :-1, :], dim=2).view(
         logits.shape[0], -1, logits.size(-1)
     )
-    
+
     # here I am assuming that we always take the positive sample as the correct one   
     doc_logprobs = torch.log_softmax(scores, dim=1).diag().unsqueeze(-1).unsqueeze(-1)
     
@@ -89,20 +89,8 @@ def compute_marginalized_loss_from_logits(
     
     loss = get_nll(marginalized_log_probs, input_tensors[:, 1:])
     
-    
     loss_tensor =  loss * attention_mask[:, 1:]
-    
-    # Sum the losses for each example (row)
-    sum_loss_per_example = torch.sum(loss_tensor, dim=1)
 
-    # Count the number of non-zero elements in each example
-    non_zero_counts = torch.count_nonzero(loss_tensor, dim=1)
-    
-    # Calculate the average loss for each example, considering only non-zero elements
-    average_loss_per_example = sum_loss_per_example / non_zero_counts
- 
-    # Calculate the overall average over the batch
-    overall_average_loss = torch.mean(average_loss_per_example)
-
+    overall_average_loss = loss_tensor.sum() /  attention_mask[:, 1:].sum()
 
     return overall_average_loss
