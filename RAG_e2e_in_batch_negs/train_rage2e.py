@@ -203,6 +203,8 @@ def main():
        
     # rag retriver and the generator 
     rag_model = AutoModelForRagE2E(args.retriever_name_or_path, args.generator_name_or_path)
+
+    exit()
  
     
     accelerator = (
@@ -379,7 +381,6 @@ def main():
     
 
     
-
     # We need to recalculate our total training steps as the size of the training dataloader may have changed
     num_update_steps_per_epoch = math.ceil(
         len(train_dataloader) / args.gradient_accumulation_steps
@@ -566,33 +567,7 @@ def main():
             if completed_steps >= args.max_train_steps:
                 break
             
-
-        # for the efficiency we do a per-batch evaluation
-        retriever.eval()
-        for step, batch in enumerate(eval_dataloader):
-            with torch.no_grad():
-                query_embs = rag_model("retrieval", 
-                                       retriever, 
-                                       batch["retriever_query_input_ids"], 
-                                       batch["retriever_query_attention_mask"]
-                )
-                
-                passage_embs =  rag_model("retrieval", 
-                                       retriever, 
-                                       batch["retriever_passage_input_ids"], 
-                                       batch["retriever_passage_attention_mask"]
-                )
-                logits = get_cosine_sim(query_embs, passage_embs, args.logit_scale)
-                # we just need an identity matrix
-                labels = torch.arange(len(logits), device=logits.device)
-            logits, labels = accelerator.gather_for_metrics((logits, labels))
-            metric.add_batch(
-                predictions=torch.argmax(logits, dim=1),
-                references=labels,
-            )
-
-        result = metric.compute()
-        result = {f"eval/{k}": v for k, v in result.items()}
+        result = {}
         # Use accelerator.print to print only on the main process.
         accelerator.print(f"epoch {epoch}:", result)
         if args.with_tracking:
@@ -606,13 +581,27 @@ def main():
                     accelerator.save_state(
                         os.path.join(args.output_dir, f"epoch_{epoch}")
                     )
+
+                retriever_ckpt_path = args.output_dir + "/retriever"
+                generator_ckpt_path = args.output_dir + "/generator"
+
+                # retriever saving 
                 accelerator.unwrap_model(retriever).save_pretrained(
-                    args.output_dir,
+                    retriever_ckpt_path,
                     state_dict=accelerator.get_state_dict(
                         accelerator.unwrap_model(retriever)
                     ),
                 )
-                retriever_tokenizer.save_pretrained(args.output_dir)
+                retriever_tokenizer.save_pretrained(retriever_ckpt_path)
+
+                # generator saving 
+                accelerator.unwrap_model(generator).save_pretrained(
+                    generator_ckpt_path,
+                    state_dict=accelerator.get_state_dict(
+                        accelerator.unwrap_model(generator)
+                    ),
+                )
+                generator_tokenizer.save_pretrained(generator_ckpt_path)
             accelerator.wait_for_everyone()
     accelerator.end_training()
 
