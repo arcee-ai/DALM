@@ -1,5 +1,5 @@
 import torch
-from transformers import AutoModel, AutoModelForCausalLM,  AutoTokenizer
+from transformers import AutoModel, AutoModelForCausalLM,  AutoTokenizer, BitsAndBytesConfig
 from peft import LoraConfig, TaskType, get_peft_model
 
 
@@ -18,43 +18,34 @@ class AutoModelForRagE2E(torch.nn.Module):
         
         # Generator initialization
         self.generator_model = AutoModelForCausalLM.from_pretrained(
-            generator_name, load_in_4bit=True, trust_remote_code=True
+            generator_name,
+            quantization_config=AutoModelForRagE2E.__get_bnb_config(),
+            trust_remote_code=True,
         )
         
         self.generator_tokenizer = AutoTokenizer.from_pretrained(
-            generator_name
+            generator_name,
+            quantization_config=AutoModelForRagE2E.__get_bnb_config(),
         ) 
         
         if get_peft:
-            
-            preft_config_retriever = dict(
-                r=8,
-                lora_alpha=16,
-                lora_dropout=0.05,
-                bias="none",
-                target_modules=["key", "query", "value"],
-                task_type="FEATURE_EXTRACTION",
+            self.retriever_model = get_peft_model(
+                self.retriever_model,
+                peft_config=AutoModelForRagE2E.__get_lora_config(
+                    TaskType.FEATURE_EXTRACTION,
+                    target_modules=["key", "query", "value"]
+                ),
             )
-            
-            self.retriever_model = self.use_peft(self.retriever_model, 
-                                                preft_config_retriever,
-                                                 TaskType.FEATURE_EXTRACTION 
-                                                )
             
             # trainable_params = sum(p.numel() for p in self.retriever_model .parameters() if p.requires_grad)
-            
-            preft_config_generator = dict(
-                r=8,
-                lora_alpha=16,
-                lora_dropout=0.05,
-                target_modules=["q_proj", "v_proj"],
-                bias="none",
-                task_type="CAUSAL_LM",
+
+            self.generator_model = get_peft_model(
+                self.generator_model,
+                peft_config=AutoModelForRagE2E.__get_lora_config(
+                    TaskType.CAUSAL_LM,
+                    target_modules=["q_proj", "v_proj"],
+                ),
             )
-            self.generator_model = self.use_peft(self.generator_model, 
-                                                preft_config_generator,
-                                                TaskType.CAUSAL_LM 
-                                                )
             
             # ptrainable_params = sum(p.numel() for p in self.generator_model .parameters() if p.requires_grad)
  
@@ -84,11 +75,6 @@ class AutoModelForRagE2E(torch.nn.Module):
         return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(
             input_mask_expanded.sum(1), min=1e-9
         )
-        
-    def use_peft(self, model, peft_dict, task_type):
-        peft_dict['task_type'] = task_type
-        return  get_peft_model(model,  LoraConfig(**peft_dict))
-
 
     def __getattr__(self, name: str):
         """Forward missing attributes to the wrapped module."""
@@ -96,3 +82,22 @@ class AutoModelForRagE2E(torch.nn.Module):
             return super().__getattr__(name)  # defer to nn.Module's logic
         except AttributeError:
             return getattr(self.model, name)
+    
+    @staticmethod
+    def __get_bnb_config() -> BitsAndBytesConfig:
+        return BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16,
+        )
+    
+    @staticmethod
+    def __get_lora_config(task_type: TaskType, r=8, lora_alpha=16, lora_dropout=0.05, bias="none", target_modules=None) -> LoraConfig:
+        return LoraConfig(
+            task_type=task_type,
+            r=r,
+            lora_alpha=lora_alpha,
+            lora_dropout=lora_dropout,
+            bias=bias,
+            target_modules=target_modules,
+        )
