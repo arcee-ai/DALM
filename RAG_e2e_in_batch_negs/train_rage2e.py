@@ -204,9 +204,6 @@ def main():
     # rag retriver and the generator 
     rag_model = AutoModelForRagE2E(args.retriever_name_or_path, args.generator_name_or_path)
 
-    exit()
- 
-    
     accelerator = (
         Accelerator(log_with=args.report_to, project_dir=args.output_dir)
         if args.with_tracking
@@ -243,7 +240,6 @@ def main():
         "csv",
         data_files={
             "train": "triplets.csv",
-            "validation": "triplets.csv",
         },
     )
     
@@ -339,16 +335,6 @@ def main():
         pin_memory=True,
     )
     
-
-    eval_dataloader = DataLoader(
-        processed_datasets["validation"],
-        shuffle=False,
-        collate_fn=default_data_collator,
-        batch_size=args.per_device_eval_batch_size,
-        pin_memory=True,
-    )
-    
-
     optimizer = torch.optim.Adam(rag_model.parameters(), lr=args.learning_rate)
 
     # Scheduler and math around the number of training steps.
@@ -373,13 +359,10 @@ def main():
         generator,
         optimizer,
         train_dataloader,
-        eval_dataloader,
         lr_scheduler,
     ) = accelerator.prepare(
-        rag_model.retriever_model,  rag_model.generator_model, optimizer, train_dataloader, eval_dataloader, lr_scheduler
+        rag_model.retriever_model,  rag_model.generator_model, optimizer, train_dataloader, lr_scheduler
     )
-    
-
     
     # We need to recalculate our total training steps as the size of the training dataloader may have changed
     num_update_steps_per_epoch = math.ceil(
@@ -394,7 +377,8 @@ def main():
     checkpointing_steps = args.checkpointing_steps
     if checkpointing_steps is not None and checkpointing_steps.isdigit():
         checkpointing_steps = int(checkpointing_steps)
-
+    
+   
     # We need to initialize the trackers we use, and also store our configuration.
     # The trackers initializes automatically on the main process.
     if args.with_tracking:
@@ -403,9 +387,7 @@ def main():
         experiment_config["lr_scheduler_type"] = experiment_config[
             "lr_scheduler_type"
         ].value
-        accelerator.init_trackers("peft_contrastive_learning", experiment_config)
-
-    metric = evaluate.load("accuracy")
+        accelerator.init_trackers("peft_rag_e2e_learning", experiment_config)
 
     total_batch_size = (
         args.per_device_train_batch_size
