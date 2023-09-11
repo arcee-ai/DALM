@@ -91,23 +91,24 @@ def main():
     # load the test dataset
     test_dataset = datasets.load_dataset("csv", data_files={"test": f"{args.dataset_path}/test.csv"})['test']
 
-    # modification, find a way to pass arguments to a preprocess_function  (hint: lambda function arguments)
-    # args rag_model.retriever_tokenizer, rag_model.generator_tokenizer
     processed_datasets = test_dataset.map(
-        preprocess_function,
+        lambda example: preprocess_function(example, rag_model.retriever_tokenizer, rag_model.generator_tokenizer),
         batched=True,
         remove_columns=test_dataset["train"].column_names,
         desc="Running tokenizer on dataset",
         num_proc=4,
     )
-        
-    # from the above processed dataset now extract the following things
-    # unique passage dataset with three columns [passage, input_ids,  attention_masks]
-    # hint (explore huggingface datasets library )
-    unique_passage_dataset = # processed_datasets .....
+    
+    unique_passages = set(processed_datasets["passage"])
+    def is_passage_unique(example):
+        is_in_unique_list = example["passage"] in unique_passages
+        unique_passages.discard(example["passage"])
+        return is_in_unique_list
+    
+    unique_passage_dataset = processed_datasets.filter(is_passage_unique)
     
     passage_to_id_dict = {i: p for i, p in enumerate(unique_passage_dataset)}
-     
+    
     unique_passage_dataloader = DataLoader(
         unique_passage_dataset,
         shuffle=False,
