@@ -1,42 +1,45 @@
 import torch
-from transformers import AutoModel, AutoModelForCausalLM,  AutoTokenizer, BitsAndBytesConfig
+from transformers import (
+    AutoModel,
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+)
 from peft import LoraConfig, TaskType, get_peft_model
 
 
 class AutoModelForRagE2E(torch.nn.Module):
     def __init__(self, retriever_name, generator_name, normalize=True, get_peft=True):
         super(AutoModelForRagE2E, self).__init__()
-        
+
         # Retriver initialization
         self.retriever_model = AutoModel.from_pretrained(
             retriever_name,
             quantization_config=AutoModelForRagE2E.__get_bnb_config(),
         )
-        self.retriever_tokenizer = AutoTokenizer.from_pretrained(
-            retriever_name
-        )        
+        self.retriever_tokenizer = AutoTokenizer.from_pretrained(retriever_name)
         self.normalize = normalize
-        
+
         # Generator initialization
         self.generator_model = AutoModelForCausalLM.from_pretrained(
             generator_name,
             quantization_config=AutoModelForRagE2E.__get_bnb_config(),
             trust_remote_code=True,
         )
-        
+
         self.generator_tokenizer = AutoTokenizer.from_pretrained(
             generator_name,
-        ) 
-        
+        )
+
         if get_peft:
             self.retriever_model = get_peft_model(
                 self.retriever_model,
                 peft_config=AutoModelForRagE2E.__get_lora_config(
                     TaskType.FEATURE_EXTRACTION,
-                    target_modules=["key", "query", "value"]
+                    target_modules=["key", "query", "value"],
                 ),
             )
-            
+
             # trainable_params = sum(p.numel() for p in self.retriever_model .parameters() if p.requires_grad)
 
             self.generator_model = get_peft_model(
@@ -46,13 +49,10 @@ class AutoModelForRagE2E(torch.nn.Module):
                     target_modules=["q_proj", "v_proj"],
                 ),
             )
-            
+
             # ptrainable_params = sum(p.numel() for p in self.generator_model .parameters() if p.requires_grad)
- 
-        
 
     def forward(self, task, model, input_ids, attention_mask):
-        
         if task == "retrieval":
             model_output = model(input_ids=input_ids, attention_mask=attention_mask)
             embeddings = self.mean_pooling(model_output, attention_mask)
@@ -62,7 +62,7 @@ class AutoModelForRagE2E(torch.nn.Module):
             return embeddings
         else:
             gen_outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            
+
             return gen_outputs.logits
 
     def mean_pooling(self, model_output, attention_mask):
@@ -82,7 +82,7 @@ class AutoModelForRagE2E(torch.nn.Module):
             return super().__getattr__(name)  # defer to nn.Module's logic
         except AttributeError:
             return getattr(self.model, name)
-    
+
     @staticmethod
     def __get_bnb_config() -> BitsAndBytesConfig:
         return BitsAndBytesConfig(
@@ -90,9 +90,16 @@ class AutoModelForRagE2E(torch.nn.Module):
             bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.bfloat16,
         )
-    
+
     @staticmethod
-    def __get_lora_config(task_type: TaskType, r=8, lora_alpha=16, lora_dropout=0.05, bias="none", target_modules=None) -> LoraConfig:
+    def __get_lora_config(
+        task_type: TaskType,
+        r=8,
+        lora_alpha=16,
+        lora_dropout=0.05,
+        bias="none",
+        target_modules=None,
+    ) -> LoraConfig:
         return LoraConfig(
             task_type=task_type,
             r=r,
