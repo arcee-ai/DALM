@@ -61,16 +61,23 @@ def calculate_precision_recall(retrieved_items, correct_items):
     return precision, recall
 
 
-def preprocess_function(examples, retriever_tokenizer, generator_tokenizer):
-    queries = examples["query"]
-    passages = examples["passage"]
-    answers = examples["answer"]
-
+def preprocess_function(
+    examples,
+    retriever_tokenizer,
+    generator_tokenizer,
+    query_col_name="query",
+    passage_col_name="passage",
+    answer_col_name="answer",
+):
+    queries = examples[query_col_name]
+    passages = examples[passage_col_name]
+    answers = examples[answer_col_name]
+    
     # Tokenization for the retriever
     retriever_query_tokens = retriever_tokenizer(
         queries, padding="max_length", max_length=128, truncation=True
     )
-
+    
     retriever_passage_tokens = retriever_tokenizer(
         passages, padding="max_length", max_length=128, truncation=True
     )

@@ -40,7 +40,7 @@ class AutoModelForRagE2E(torch.nn.Module):
                 ),
             )
 
-            # trainable_params = sum(p.numel() for p in self.retriever_model .parameters() if p.requires_grad)
+            # flake8: noqa trainable_params = sum(p.numel() for p in self.retriever_model .parameters() if p.requires_grad)
 
             self.generator_model = get_peft_model(
                 self.generator_model,
@@ -50,7 +50,7 @@ class AutoModelForRagE2E(torch.nn.Module):
                 ),
             )
 
-            # ptrainable_params = sum(p.numel() for p in self.generator_model .parameters() if p.requires_grad)
+            # flake8: noqa ptrainable_params = sum(p.numel() for p in self.generator_model .parameters() if p.requires_grad)
 
     def forward(self, task, model, input_ids, attention_mask):
         if task == "retrieval":
