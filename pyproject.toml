@@ -9,7 +9,6 @@ authors = [{name = "Shamane Siri", email = "shamane@arcee.ai"}, {name = "Ben Eps
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "Apache 2.0"}
-classifiers = ["Private :: Do not Upload"]
 dynamic = ["version", "description"]
 dependencies = [
     "transformers",

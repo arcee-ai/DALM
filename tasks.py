@@ -7,7 +7,7 @@ from invoke.context import Context
 PACKAGE_NAME = "dalm"
 VERSION_FILE = f"{PACKAGE_NAME}/__init__.py"
 # TODO: do only dalm
-SOURCES = " ".join(["dalm/training", "tasks.py"])
+SOURCES = " ".join(["dalm/training", "tasks.py", "tests"])
 # TODO: Get this to 95
 PYTEST_FAIL_UNDER = 0
 
@@ -142,16 +142,9 @@ def build(ctx: Context) -> None:
 
 
 @task
-def run(ctx: Context) -> None:
-    """run
-
-    Runs the uvicorn server
-    """
-    ctx.run(
-        "uvicorn app.main:app --reload",
-        pty=True,
-        echo=True,
-    )
+def deploy(ctx: Context) -> None:
+    """Deploy to pypi"""
+    ctx.run("twine upload dist/*", pty=True, echo=True)
 
 
 @task
