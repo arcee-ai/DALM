@@ -1,4 +1,4 @@
 .venv
-.idea
+.idea/*
 __pycache__
 .vscode/*
