@@ -1,4 +1,5 @@
 import argparse
+from typing import Final
 from tqdm import tqdm
 import numpy as np
 
@@ -20,6 +21,8 @@ from test_utils import (
     calculate_precision_recall,
 )
 
+import os
+
 logger = get_logger(__name__)
 
 
@@ -28,7 +31,11 @@ def parse_args():
         description="Testing a PEFT model for Sematic Search task"
     )
     parser.add_argument(
-        "--dataset_path", type=str, default=None, help="dataset path in the local dir"
+        "--dataset_path",
+        type=str,
+        default=None,
+        help="dataset path in the local dir. Can be huggingface dataset directory or a csv file.",
+        required=True,
     )
     parser.add_argument(
         "--query_column_name", type=str, default="query", help="name of the query col"
@@ -88,7 +95,13 @@ def parse_args():
         "--device",
         type=str,
         default="cuda",
-        help="Device",
+        help="Device. cpu or cuda.",
+    )
+    parser.add_argument(
+        "--torch_dtype",
+        type=str,
+        default="float16",
+        help="torch.dtype to use for tensors. float16 or bfloat16.",
     )
     parser.add_argument(
         "--top_k",
@@ -103,6 +116,9 @@ def parse_args():
 
 def main():
     args = parse_args()
+    SELECTED_TORCH_DTYPE: Final[torch.dtype] = (
+        torch.float16 if args.torch_dtype == "float16" else torch.bfloat16
+    )
 
     # rag retriver and the generator (don't load new peft layers no need)
     rag_model = AutoModelForRagE2E(
@@ -112,9 +128,13 @@ def main():
     )
 
     # load the test dataset
-    test_dataset = datasets.load_dataset(
-        "csv", data_files={"test": f"{args.dataset_path}/triplets.csv"}
-    )["test"]
+    test_dataset = (
+        datasets.load_from_disk(args.dataset_path)
+        if os.path.isdir(args.dataset_path)
+        else datasets.load_dataset("csv", data_files={"test": f"{args.dataset_path}"})[
+            "test"
+        ]
+    )
 
     # test_dataset = datasets.load_from_disk("/home/datasets/question_answer_pairs")
 
@@ -215,7 +235,9 @@ def main():
     passage_embeddings_array = np.zeros((num_passages, args.embed_dim))
     for step, batch in enumerate(tqdm(unique_passage_dataloader)):
         with torch.no_grad():
-            with torch.amp.autocast(dtype=torch.float16, device_type=args.device):
+            with torch.amp.autocast(
+                dtype=SELECTED_TORCH_DTYPE, device_type=args.device
+            ):
                 passage_embs = get_passage_embeddings(
                     batch["retriever_passage_input_ids"],
                     batch["retriever_passage_attention_mask"],
@@ -247,7 +269,9 @@ def main():
     # to:do : torch_dtype make a varaibles float16 or bfloat16
     for step, test_example in enumerate(processed_datasets):
         with torch.no_grad():
-            with torch.amp.autocast(dtype=torch.float16, device_type=args.device):
+            with torch.amp.autocast(
+                dtype=SELECTED_TORCH_DTYPE, device_type=args.device
+            ):
                 # use the batch size for the first dim
                 # do not hard-code it
                 retriever_query_input_ids = torch.tensor(
@@ -303,7 +327,9 @@ def main():
     for test_example in processed_datasets:
         # select query:
         with torch.no_grad():
-            with torch.amp.autocast(dtype=torch.float16, device_type=args.device):
+            with torch.amp.autocast(
+                dtype=SELECTED_TORCH_DTYPE, device_type=args.device
+            ):
                 # use the batch size for the first dim
                 # do not hard-code it
                 retriever_query_input_ids = torch.tensor(
@@ -335,7 +361,7 @@ def main():
             "text-generation",
             model=generator_with_peft_layers,
             tokenizer=rag_model.generator_tokenizer,
-            torch_dtype=torch.float16,
+            torch_dtype=SELECTED_TORCH_DTYPE,
             trust_remote_code=True,
             device_map="auto",
         )
