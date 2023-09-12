@@ -109,6 +109,11 @@ def parse_args():
         default=10,
         help="Top K retrieval",
     )
+    parser.add_argument(
+        "--evaluate_generator",
+        action="store_true",
+        help="Enable generator evaluation.",
+    )
     args = parser.parse_args()
 
     return args
@@ -260,8 +265,9 @@ def main():
     batch_precision = []
     batch_recall = []
     total_hit = 0
+    total_em_hit = 0  # for the geneator. hint: use chatGPT to see what is Exact match when evalauting question answer models
 
-    print("Retriever evaluation start")
+    print("Evaluation start")
 
     # here we are interacting through the dataset, not a dataloader
     # so we need to convert them to a tensor
@@ -308,49 +314,11 @@ def main():
         hit = any(passage in retrieved_passages for passage in correct_passages)
         total_hit += hit
 
-    total_examples = len(processed_datasets)
-    recall = sum(batch_recall) / total_examples
-    precision = sum(batch_precision) / total_examples
-    hit_rate = total_hit / float(total_examples)
+        if not args.evaluate_generator:
+            continue
 
-    print("Retriever results:")
-
-    print("Recall:", recall)
-    print("Precision:", precision)
-    print("Hit Rate:", hit_rate)
-
-    print("*************")
-    print(("Generator evaluation:"))
-
-    # for the geneator
-    total_em_hit = 0  # hinit use chatGPT to see what is Exact match when evalauting question answer models
-    for test_example in processed_datasets:
-        # select query:
-        with torch.no_grad():
-            with torch.amp.autocast(
-                dtype=SELECTED_TORCH_DTYPE, device_type=args.device
-            ):
-                # use the batch size for the first dim
-                # do not hard-code it
-                retriever_query_input_ids = torch.tensor(
-                    test_example["retriever_query_input_ids"]
-                ).view(1, -1)
-                retriever_query__attention_mask = torch.tensor(
-                    test_example["retriever_query_attention_mask"]
-                ).view(1, -1)
-
-                query_embeddings = get_query_embeddings(
-                    retriever_query_input_ids,
-                    retriever_query__attention_mask,
-                )
-
-        search_result_passage = get_nearest_neighbours(
-            args.top_k,
-            passage_search_index,
-            query_embeddings,
-            passage_to_id_dict,
-            threshold=0.0,
-        )[0][0]
+        # Evaluate the generator
+        search_result_passage = search_results[0][0]
 
         # this query comes without the answer
         query = f"#query# {test_example[args.query_column_name]} #passage# {search_result_passage} #answer# "
@@ -375,12 +343,29 @@ def main():
             eos_token_id=rag_model.generator_tokenizer.eos_token_id,
         )
 
-        generated_answer_string = sequences[0]["generated_text"].split("#answer#")[1]
+        generated_answer_string = (
+            sequences[0]["generated_text"].split("#answer#")[1]
+        ).strip()
 
         if generated_answer_string == answer:
             total_em_hit = total_em_hit + 1
 
-    print("Exact mactch:", total_em_hit / len(processed_datasets))
+    total_examples = len(processed_datasets)
+    recall = sum(batch_recall) / total_examples
+    precision = sum(batch_precision) / total_examples
+    hit_rate = total_hit / float(total_examples)
+
+    print("Retriever results:")
+
+    print("Recall:", recall)
+    print("Precision:", precision)
+    print("Hit Rate:", hit_rate)
+
+    print("*************")
+
+    if args.evaluate_generator:
+        print("Generator evaluation:")
+        print("Exact mactch:", total_em_hit / len(processed_datasets))
 
 
 if __name__ == "__main__":
