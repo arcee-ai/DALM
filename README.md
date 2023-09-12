@@ -1,6 +1,12 @@
 # Domain Adapted Language Modeling Toolkit
 
-This repository houses the code for building a dense retriever using Transformers, PEFT (Parameter-Efficient Fine-Tuning), Accelerate, and HNSW. The retriever is designed to preprocess data, generate synthetic data, train a dense retriever model, and test it using indexing.
+This repository primarily contains code for fine-tuning a **fully differential** Retrieval Augmented Generation (RAG-end2end) architecture. For the first time in the literature, we modified the initial RAG-end2end model ((paper)[https://aclanthology.org/2023.tacl-1.1/], (HuggingFace implementation)[https://github.com/huggingface/transformers/tree/main/examples/research_projects/rag-end2end-retriever]) to work with decoder-only language models like Llma, Falcon, or GPT. We also incorporated the **in-batch negative concept** alongside the RAG's marginalization to make the entire process **efficient**.
+
+- Inside the Training folder, you'll find two codes to train the RAG-end2end and Retriever with contrastive learning.
+
+- All evaluations related to the Retriever and the Generator are located in the Evaluation folder.
+
+- Additionally, we have data processing codes and synthetic data generation code inside the Dataset folder.
 
 # Dependencies - Installation
 Ensure you have the following dependencies installed before running the code:
@@ -10,18 +16,7 @@ Ensure you have the following dependencies installed before running the code:
 - Accelerate
 - HNSW
 
-# Contents
-
-The repository is structured as follows:
-
-- docs_to_passage/: Contains code for preprocessing the patent papers.
-- synth_data_gen/: Includes code for generating synthetic data for training augmentation.
-- contrastive_train/: Contains code to train the dense retriever model using Transformers and PEFT.
-- synth_data_gen/: Includes code for testing the trained model with indexing using HNSW.
-
 ## Train Retriever Only
-
-## Train Generator Only
 
 ## Train Retriever and Generator Jointly
 
