@@ -22,6 +22,7 @@ def construct_search_index(dim, num_elements, data):
 
     # Initializing index - the maximum number of elements should be known beforehand
     search_index.init_index(max_elements=num_elements, ef_construction=200, M=100)
+    
 
     # Element insertion (can be called several times):
     ids = np.arange(num_elements)
@@ -38,7 +39,7 @@ def get_nearest_neighbours(
 
     # Query dataset, k - number of the closest elements (returns 2 numpy arrays)
     labels, distances = search_index.knn_query(query_embeddings, k=k)
-
+       
     return [
         (ids_to_cat_dict[label], (1 - distance))
         for label, distance in zip(labels[0], distances[0])
@@ -82,29 +83,6 @@ def preprocess_function(
         passages, padding="max_length", max_length=128, truncation=True
     )
 
-    # Tokenize for causal model
-    # Here, we need to combine the query, passage, and the answer as the input,
-    # and the answer as the output
-    casual_input_text = [
-        f"#query# {query} #passage# {passage} #answer# "
-        for passage, query, answer in zip(passages, queries, answers)
-    ]
-    causal_input_tokens = generator_tokenizer(
-        casual_input_text, padding="max_length", max_length=128, truncation=True
-    )
-
-    query_passage_text = [
-        f"#query# {query} #passage# {passage} #answer# "
-        for passage, query, answer in zip(passages, queries, answers)
-    ]
-
-    query_passage_lengths = []
-
-    query_passage_tokens = generator_tokenizer(query_passage_text)
-
-    for single_query_passage in query_passage_tokens["input_ids"]:
-        query_passage_lengths.append(len(single_query_passage))
-
     pre_batch = {}
 
     # for the retriever in-batch negats
@@ -112,9 +90,5 @@ def preprocess_function(
         pre_batch[f"retriever_query_{k}"] = v
     for k, v in retriever_passage_tokens.items():
         pre_batch[f"retriever_passage_{k}"] = v
-
-    # for the generator
-    for k, v in causal_input_tokens.items():
-        pre_batch[f"generator_input_{k}"] = v
 
     return pre_batch
