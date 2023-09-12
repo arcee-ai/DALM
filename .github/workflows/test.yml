@@ -25,12 +25,9 @@ jobs:
 
       - name: Install
         run: pip install -U '.[dev]'
-        working-directory: backend
 
       - name: Run inv lint
         run: inv lint
-        working-directory: backend
 
       - name: Run tests
         run: inv test
-        working-directory: backend
