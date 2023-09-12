@@ -176,23 +176,49 @@ def main():
     #     .merge_and_unload()
     # )
 
+    def get_query_embeddings(
+        retriever_query_input_ids: torch.Tensor,
+        retriever_query_attention_masks: torch.Tensor,
+    ) -> np.ndarray:
+        return (
+            rag_model.forward(
+                "retrieval",
+                retriever_with_peft_layers,
+                retriever_query_input_ids.to("cuda"),
+                retriever_query_attention_masks.to("cuda"),
+            )
+            .detach()
+            .float()
+            .cpu()
+            .numpy()
+        )
+
+    def get_passage_embeddings(
+        retriever_passage_input_ids: torch.Tensor,
+        retriever_passage_attention_masks: torch.Tensor,
+    ) -> np.ndarray:
+        return (
+            rag_model.forward(
+                "retrieval",
+                retriever_with_peft_layers,
+                retriever_passage_input_ids.to("cuda"),
+                retriever_passage_attention_masks.to("cuda"),
+            )
+            .detach()
+            .float()
+            .cpu()
+            .numpy()
+        )
+
     num_passages = len(unique_passage_dataset)
 
     passage_embeddings_array = np.zeros((num_passages, args.embed_dim))
     for step, batch in enumerate(tqdm(unique_passage_dataloader)):
         with torch.no_grad():
             with torch.amp.autocast(dtype=torch.float16, device_type="cuda"):
-                passage_embs = (
-                    rag_model.forward(
-                        "retrieval",
-                        retriever_with_peft_layers,
-                        batch["retriever_passage_input_ids"].to("cuda"),
-                        batch["retriever_passage_attention_mask"].to("cuda"),
-                    )
-                    .detach()
-                    .float()
-                    .cpu()
-                    .numpy()
+                passage_embs = get_passage_embeddings(
+                    batch["retriever_passage_input_ids"],
+                    batch["retriever_passage_attention_mask"],
                 )
 
         start_index = step * args.test_batch_size
@@ -220,7 +246,6 @@ def main():
     # to do : convert this to batches by examples from the dataset to make it effcient
     # to:do : remove hard-coded args like device cpu  or cuda
     # to:do : torch_dtype make a varaibles float16 or bfloat16
-    # to:do :  remove bilterplate codes and create two functios to get_query_embeds and get_passage_embedins
     for step, test_example in enumerate(processed_datasets):
         with torch.no_grad():
             with torch.amp.autocast(dtype=torch.float16, device_type="cuda"):
@@ -233,17 +258,9 @@ def main():
                     test_example["retriever_query_attention_mask"]
                 ).view(1, -1)
 
-                query_embeddings = (
-                    rag_model.forward(
-                        "retrieval",
-                        retriever_with_peft_layers,
-                        retriever_query_input_ids.to("cuda"),
-                        retriever_query__attention_mask.to("cuda"),
-                    )
-                    .detach()
-                    .float()
-                    .cpu()
-                    .numpy()
+                query_embeddings = get_query_embeddings(
+                    retriever_query_input_ids,
+                    retriever_query__attention_mask,
                 )
 
         search_results = get_nearest_neighbours(
@@ -297,17 +314,9 @@ def main():
                     test_example["retriever_query_attention_mask"]
                 ).view(1, -1)
 
-                query_embeddings = (
-                    rag_model.forward(
-                        "retrieval",
-                        retriever_with_peft_layers,
-                        retriever_query_input_ids.to("cuda"),
-                        retriever_query__attention_mask.to("cuda"),
-                    )
-                    .detach()
-                    .float()
-                    .cpu()
-                    .numpy()
+                query_embeddings = get_query_embeddings(
+                    retriever_query_input_ids,
+                    retriever_query__attention_mask,
                 )
 
         search_result_passage = get_nearest_neighbours(
