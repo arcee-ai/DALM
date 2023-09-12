@@ -19,7 +19,6 @@ certifi==2019.11.28
 chardet==3.0.4
 charset-normalizer==3.2.0
 cleo==2.0.1
-click==8.1.6
 cloud-init==23.2.2
 cloudpickle==2.2.1
 cmake==3.27.2

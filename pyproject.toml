@@ -1,0 +1,120 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[project]
+name = "Dalm"
+authors = [{name = "Shamane Siri", email = "shamane@arcee.ai"}, {name = "Ben Epstein", email = "ben@arcee.ai"}]
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache 2.0"}
+classifiers = ["Private :: Do not Upload"]
+dynamic = ["version", "description"]
+dependencies = [
+    "transformers",
+    "peft",
+    "accelerate",
+    "datasets",
+    "torch",
+    "hnswlib",
+    "evaluate",
+    "tqdm",
+    "peft",
+    "diffusers",
+    "bitsandbytes",
+    "torchvision",
+    "pydantic"
+]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"prefix" = "prefix"
+
+[tool.hatch.version]
+path = "dalm/__init__.py"
+
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "boto3-stubs",
+    "build",
+    "httpx",
+    "invoke",
+    "jupyter",
+    "mypy",
+    "pre-commit",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-timeout",
+    "pytest",
+    "python-dotenv",
+    "rich",
+    "ruff",
+    "types-cachetools",
+    "types-markdown",
+    "types-PyYAML",
+    "types-requests",
+    "types-tqdm",
+]
+
+[project.urls]
+Home = "https://arcee.ai"
+
+
+[tool.black]
+line-length = 120
+
+[tool.ruff]
+target-version = "py311"
+respect-gitignore = true
+line-length = 120
+# Pyflakes, bugbear, pycodestyle, pycodestyle warnings, isort
+select=["TID252", "B", "F", "E", "W", "I001"]
+
+[tool.ruff.isort]
+case-sensitive = true
+order-by-type = true
+known-first-party = ["dalm"]
+
+
+[tool.pytest.ini_options]
+timeout = 180
+addopts = [
+    "-o",
+    "console_output_style=progress",
+    "--disable-warnings",
+    "--cov=dalm",
+    "--cov=tests",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "--cov-report=html",
+]
+
+
+[tool.ruff.flake8-tidy-imports]
+# Disallow all relative imports.
+ban-relative-imports = "all"
+
+[tool.mypy]
+plugins = "pydantic.mypy"
+
+[[tool.mypy.overrides]]
+module = "sentence_transformers.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "transformers.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "accelerate.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "datasets.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "evaluate.*"
+ignore_missing_imports = true

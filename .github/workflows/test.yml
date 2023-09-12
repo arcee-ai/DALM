@@ -1,0 +1,36 @@
+name: PR Test
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "dalm/**"
+      - "tests/**"
+
+jobs:
+  check_backend_changes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version-file: ".python-version"
+          cache: pip
+          cache-dependency-path: "**/pyproject.toml"
+
+      - name: Install
+        run: pip install -U '.[dev]'
+        working-directory: backend
+
+      - name: Run inv lint
+        run: inv lint
+        working-directory: backend
+
+      - name: Run tests
+        run: inv test
+        working-directory: backend
