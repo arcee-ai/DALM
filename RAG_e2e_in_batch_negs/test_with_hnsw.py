@@ -184,8 +184,8 @@ def main():
             rag_model.forward(
                 "retrieval",
                 retriever_with_peft_layers,
-                retriever_query_input_ids.to("cuda"),
-                retriever_query_attention_masks.to("cuda"),
+                retriever_query_input_ids.to(args.device),
+                retriever_query_attention_masks.to(args.device),
             )
             .detach()
             .float()
@@ -201,8 +201,8 @@ def main():
             rag_model.forward(
                 "retrieval",
                 retriever_with_peft_layers,
-                retriever_passage_input_ids.to("cuda"),
-                retriever_passage_attention_masks.to("cuda"),
+                retriever_passage_input_ids.to(args.device),
+                retriever_passage_attention_masks.to(args.device),
             )
             .detach()
             .float()
@@ -215,7 +215,7 @@ def main():
     passage_embeddings_array = np.zeros((num_passages, args.embed_dim))
     for step, batch in enumerate(tqdm(unique_passage_dataloader)):
         with torch.no_grad():
-            with torch.amp.autocast(dtype=torch.float16, device_type="cuda"):
+            with torch.amp.autocast(dtype=torch.float16, device_type=args.device):
                 passage_embs = get_passage_embeddings(
                     batch["retriever_passage_input_ids"],
                     batch["retriever_passage_attention_mask"],
@@ -244,11 +244,10 @@ def main():
     # here we are interacting through the dataset, not a dataloader
     # so we need to convert them to a tensor
     # to do : convert this to batches by examples from the dataset to make it effcient
-    # to:do : remove hard-coded args like device cpu  or cuda
     # to:do : torch_dtype make a varaibles float16 or bfloat16
     for step, test_example in enumerate(processed_datasets):
         with torch.no_grad():
-            with torch.amp.autocast(dtype=torch.float16, device_type="cuda"):
+            with torch.amp.autocast(dtype=torch.float16, device_type=args.device):
                 # use the batch size for the first dim
                 # do not hard-code it
                 retriever_query_input_ids = torch.tensor(
@@ -304,7 +303,7 @@ def main():
     for test_example in processed_datasets:
         # select query:
         with torch.no_grad():
-            with torch.amp.autocast(dtype=torch.float16, device_type="cuda"):
+            with torch.amp.autocast(dtype=torch.float16, device_type=args.device):
                 # use the batch size for the first dim
                 # do not hard-code it
                 retriever_query_input_ids = torch.tensor(
