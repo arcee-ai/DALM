@@ -13,13 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import sys
+
+sys.path.append(os.getcwd())  # This is needed to import modules with absolute paths
+
+# ruff: noqa: E402
 import argparse
 import logging
 import math
-import os
 import random
 from argparse import Namespace
-from typing import Any, Dict, Union
+from typing import Dict, Union
 
 import datasets
 import torch
@@ -28,7 +33,6 @@ import transformers.utils.logging
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import set_seed
-from datasets.formatting.formatting import LazyBatch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import (
@@ -37,8 +41,9 @@ from transformers import (
     get_scheduler,
 )
 
-from dalm.training.rag_e2e.base_model import AutoModelForRagE2E
-from dalm.training.utils.train import (
+from dalm.models.rag_e2e_base_model import AutoModelForRagE2E
+from dalm.training.utils.rag_e2e_training_utils import preprocess_dataset
+from dalm.training.utils.train_utils import (
     compute_marginalized_loss_from_logits,
     get_cosine_sim,
     get_nt_xent_loss,
@@ -246,56 +251,15 @@ def main() -> None:
     generator_tokenizer = rag_model.generator_tokenizer
     generator_tokenizer.pad_token = generator_tokenizer.eos_token
 
-    def preprocess_function(examples: LazyBatch) -> Dict[str, Any]:
-        queries = examples[args.dataset_query_col_name]
-        passages = examples[args.dataset_passage_col_name]
-        answers = examples[args.dataset_answer_col_name]
-
-        # Tokenization for the retriever
-        retriever_query_tokens = retriever_tokenizer(queries, padding="max_length", max_length=128, truncation=True)
-
-        retriever_passage_tokens = retriever_tokenizer(passages, padding="max_length", max_length=128, truncation=True)
-
-        # Tokenize for causal model
-        # Here, we need to combine the query, passage, and the answer as the input, and the answer as the output
-        casual_input_text = [
-            f"#query# {query} #passage# {passage} #answer# {answer}"
-            for passage, query, answer in zip(passages, queries, answers, strict=True)
-        ]
-        causal_input_tokens = generator_tokenizer(
-            casual_input_text, padding="max_length", max_length=128, truncation=True
-        )
-
-        query_passage_text = [
-            f"#query# {query} #passage# {passage} #answer# "
-            for passage, query, answer in zip(passages, queries, answers, strict=True)
-        ]
-
-        query_passage_lengths = []
-
-        query_passage_tokens = generator_tokenizer(query_passage_text)
-
-        for single_query_passage in query_passage_tokens["input_ids"]:
-            query_passage_lengths.append(len(single_query_passage))
-
-        pre_batch = {}
-
-        # for the retriever in-batch negats
-        for k, v in retriever_query_tokens.items():
-            pre_batch[f"retriever_query_{k}"] = v
-        for k, v in retriever_passage_tokens.items():
-            pre_batch[f"retriever_passage_{k}"] = v
-
-        # for the generator
-        for k, v in causal_input_tokens.items():
-            pre_batch[f"generator_input_{k}"] = v
-
-        pre_batch["query_passage_input_len"] = query_passage_lengths
-
-        return pre_batch
-
     processed_datasets = dataset.map(
-        preprocess_function,
+        lambda example: preprocess_dataset(
+            example,
+            retriever_tokenizer=rag_model.retriever_tokenizer,
+            generator_tokenizer=rag_model.generator_tokenizer,
+            dataset_query_col_name=args.dataset_query_col_name,
+            dataset_passage_col_name=args.dataset_passage_col_name,
+            dataset_answer_col_name=args.dataset_answer_col_name,
+        ),
         batched=True,
         remove_columns=dataset.column_names,
         desc="Running tokenizer on dataset",
