@@ -295,14 +295,8 @@ def main() -> None:
         num_training_steps=args.max_train_steps,
     )
 
-    (
-        retriever,
-        generator,
-        optimizer,
-        train_dataloader,
-        lr_scheduler,
-    ) = accelerator.prepare(
-        rag_model.retriever_model, rag_model.generator_model, optimizer, train_dataloader, lr_scheduler
+    (rag_model, optimizer, train_dataloader, lr_scheduler) = accelerator.prepare(
+        rag_model, optimizer, train_dataloader, lr_scheduler
     )
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed
@@ -373,8 +367,7 @@ def main() -> None:
     progress_bar.update(completed_steps)
 
     for epoch in range(starting_epoch, args.num_train_epochs):
-        retriever.train()
-        generator.train()
+        rag_model.train()
         total_loss: Union[float, torch.Tensor] = 0.0
         if args.resume_from_checkpoint and epoch == starting_epoch and resume_step is not None:
             # We skip the first `n` batches in the dataloader when resuming from a checkpoint
@@ -385,12 +378,11 @@ def main() -> None:
         for step, batch in enumerate(active_dataloader):
             with accelerator.accumulate(rag_model):
                 query_embs = rag_model(
-                    "retrieval", retriever, batch["retriever_query_input_ids"], batch["retriever_query_attention_mask"]
+                    "retrieval", batch["retriever_query_input_ids"], batch["retriever_query_attention_mask"]
                 )
 
                 passage_embs = rag_model(
                     "retrieval",
-                    retriever,
                     batch["retriever_passage_input_ids"],
                     batch["retriever_passage_attention_mask"],
                 )
@@ -408,7 +400,7 @@ def main() -> None:
                 ### add the loss casual here
 
                 generator_logits = rag_model(
-                    "generation", generator, batch["generator_input_input_ids"], batch["generator_input_attention_mask"]
+                    "generation", batch["generator_input_input_ids"], batch["generator_input_attention_mask"]
                 )
 
                 marginalize_casual_loss = compute_marginalized_loss_from_logits(
@@ -428,8 +420,7 @@ def main() -> None:
                 accelerator.backward(combined_loss)
                 optimizer.step()
                 lr_scheduler.step()
-                retriever.zero_grad()
-                generator.zero_grad()
+                rag_model.zero_grad()
 
             # Checks if the accelerator has performed an optimization step behind the scenes
             if accelerator.sync_gradients:
@@ -469,16 +460,17 @@ def main() -> None:
                 generator_ckpt_path = args.output_dir + "/generator"
 
                 # retriever saving
-                accelerator.unwrap_model(retriever).save_pretrained(
+                unwrapped_rag_model = accelerator.unwrap_model(rag_model)
+                unwrapped_rag_model.retriever_model.save_pretrained(
                     retriever_ckpt_path,
-                    state_dict=accelerator.get_state_dict(accelerator.unwrap_model(retriever)),
+                    state_dict=accelerator.get_state_dict(unwrapped_rag_model.retriever_model),
                 )
                 retriever_tokenizer.save_pretrained(retriever_ckpt_path)
 
                 # generator saving
-                accelerator.unwrap_model(generator).save_pretrained(
+                unwrapped_rag_model.generator_model.save_pretrained(
                     generator_ckpt_path,
-                    state_dict=accelerator.get_state_dict(accelerator.unwrap_model(generator)),
+                    state_dict=accelerator.get_state_dict(unwrapped_rag_model.generator_model),
                 )
                 generator_tokenizer.save_pretrained(generator_ckpt_path)
             accelerator.wait_for_everyone()

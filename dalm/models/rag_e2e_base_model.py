@@ -50,18 +50,16 @@ class AutoModelForRagE2E(torch.nn.Module):
                 ),
             )
 
-    def forward(
-        self, task: str, model: AutoModel, input_ids: torch.Tensor, attention_mask: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, task: str, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         if task == "retrieval":
-            model_output = model(input_ids=input_ids, attention_mask=attention_mask)
+            model_output = self.retriever_model(input_ids=input_ids, attention_mask=attention_mask)
             embeddings = self.mean_pooling(model_output, attention_mask)
             if self.normalize:
                 embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
 
             return embeddings
         else:
-            gen_outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            gen_outputs = self.generator_model(input_ids=input_ids, attention_mask=attention_mask)
 
             return gen_outputs.logits
 
@@ -69,13 +67,6 @@ class AutoModelForRagE2E(torch.nn.Module):
         token_embeddings = model_output[0]  # First element of model_output contains all token embeddings
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
         return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-
-    def __getattr__(self, name: str) -> Union[torch.Tensor, torch.nn.modules.module.Module]:
-        """Forward missing attributes to the wrapped module."""
-        try:
-            return super().__getattr__(name)  # defer to nn.Module's logic
-        except AttributeError:
-            return getattr(self.model, name)
 
     @staticmethod
     def __get_bnb_config() -> BitsAndBytesConfig:
