@@ -1,10 +1,8 @@
-from typing import List
-
-from typing import Any, Dict
-from datasets.formatting.formatting import LazyBatch
+from typing import Any, Dict, List
 
 import torch
 import torch.nn.functional as F
+from datasets.formatting.formatting import LazyBatch
 from transformers import AutoModel, PreTrainedTokenizer, PreTrainedTokenizerFast
 
 
