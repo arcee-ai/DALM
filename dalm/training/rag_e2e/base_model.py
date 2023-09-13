@@ -1,3 +1,5 @@
+from typing import List, Optional, Union
+
 import torch
 from peft import LoraConfig, TaskType, get_peft_model
 from transformers import (
@@ -68,7 +70,7 @@ class AutoModelForRagE2E(torch.nn.Module):
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
         return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Union[torch.Tensor, torch.nn.modules.module.Module]:
         """Forward missing attributes to the wrapped module."""
         try:
             return super().__getattr__(name)  # defer to nn.Module's logic
@@ -86,11 +88,11 @@ class AutoModelForRagE2E(torch.nn.Module):
     @staticmethod
     def __get_lora_config(
         task_type: TaskType,
-        r=8,
-        lora_alpha=16,
-        lora_dropout=0.05,
-        bias="none",
-        target_modules=None,
+        r: int = 8,
+        lora_alpha: int = 16,
+        lora_dropout: float = 0.05,
+        bias: str = "none",
+        target_modules: Optional[Union[List[str], str]] = None,
     ) -> LoraConfig:
         return LoraConfig(
             task_type=task_type,

@@ -7,7 +7,7 @@ from invoke.context import Context
 PACKAGE_NAME = "dalm"
 VERSION_FILE = f"{PACKAGE_NAME}/__init__.py"
 # TODO: do only dalm
-SOURCES = " ".join(["dalm/training", "tasks.py", "tests"])
+SOURCES = " ".join(["dalm", "tasks.py", "tests"])
 # TODO: Get this to 95
 PYTEST_FAIL_UNDER = 0
 
@@ -103,12 +103,12 @@ def format(ctx: Context) -> None:
     Format the code.
     """
     ctx.run(
-        f"ruff {SOURCES} --fix",
+        f"black {SOURCES}",
         pty=True,
         echo=True,
     )
     ctx.run(
-        f"black {SOURCES}",
+        f"ruff {SOURCES} --fix",
         pty=True,
         echo=True,
     )
