@@ -26,20 +26,19 @@ import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import set_seed
+from peft import LoraConfig, TaskType, get_peft_model
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoTokenizer, SchedulerType, default_data_collator, get_scheduler
 
-from peft import LoraConfig, TaskType, get_peft_model
-from base_model import AutoModelForSentenceEmbedding
-from train_utils import save_model_hook, load_model_hook, get_cosine_sim, get_nt_xent_loss
-
+from dalm.training.retriever_only.base_model import AutoModelForSentenceEmbedding
+from dalm.training.utils.train import get_cosine_sim, get_nt_xent_loss, load_model_hook, save_model_hook
 
 logger = get_logger(__name__)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Training a PEFT model for Sematic Search task")
+    parser = argparse.ArgumentParser(description="training a PEFT model for Sematic Search task")
     parser.add_argument("--dataset_path", type=str, default=None, help="dataset path in the local dir")
     parser.add_argument(
         "--max_length",
@@ -151,6 +150,7 @@ def parse_args():
 
     return args
 
+
 def main():
     args = parse_args()
     accelerator = (
@@ -185,9 +185,10 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
 
     # dataset download and preprocessing
- 
-    dataset = datasets.load_dataset("csv", data_files={"train": f"{args.dataset_path}/train.csv",
-                                                       "validation": f"{args.dataset_path}/valid.csv"})
+
+    dataset = datasets.load_dataset(
+        "csv", data_files={"train": f"{args.dataset_path}/train.csv", "validation": f"{args.dataset_path}/valid.csv"}
+    )
 
     def preprocess_function(examples):
         queries = examples["question"]
@@ -226,8 +227,7 @@ def main():
         )
         model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()
-    
- 
+
     accelerator.print(model)
 
     # get dataloaders
@@ -292,7 +292,6 @@ def main():
 
     total_batch_size = args.per_device_train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
 
-
     if args.use_peft:
         # saving and loading checkpoints for resuming training
         accelerator.register_save_state_pre_hook(save_model_hook)
@@ -356,7 +355,7 @@ def main():
                 loss_query = get_nt_xent_loss(logits)
                 loss_passage = get_nt_xent_loss(logits.t())
 
-                loss = (loss_query +loss_passage) / 2.0
+                loss = (loss_query + loss_passage) / 2.0
                 total_loss += accelerator.reduce(loss.detach().float(), reduction="sum")
                 accelerator.backward(loss)
                 optimizer.step()
@@ -385,16 +384,16 @@ def main():
 
         # for the efficiency we do a per-batch evaluation
         model.eval()
-        for step, batch in enumerate(eval_dataloader):
+        for batch in eval_dataloader:
             with torch.no_grad():
                 query_embs = model(**{k.replace("query_", ""): v for k, v in batch.items() if "query" in k})
                 passage_embs = model(**{k.replace("passage_", ""): v for k, v in batch.items() if "passage" in k})
                 logits = get_cosine_sim(query_embs, passage_embs, args.logit_scale)
-                # we just need an identity matrix 
-                labels = torch.arange(len(logits), device=logits.device) 
+                # we just need an identity matrix
+                labels = torch.arange(len(logits), device=logits.device)
             logits, labels = accelerator.gather_for_metrics((logits, labels))
             metric.add_batch(
-                predictions= torch.argmax(logits, dim=1),
+                predictions=torch.argmax(logits, dim=1),
                 references=labels,
             )
 
@@ -423,7 +422,6 @@ if __name__ == "__main__":
     main()
 
 
-# python contrastive_train/peft_lora_constrastive_learning.py  --dataset_path "./dataset" --model_name_or_path "BAAI/bge-small-en" --output_dir "./contrastive_checkpoints" --use_peft  --with_tracking --report_to tensorboard
-
-                                                                                                                                                                                                             
-                                                         
+# python contrastive_train/peft_lora_constrastive_learning.py  --dataset_path "./dataset" \
+#     --model_name_or_path "BAAI/bge-small-en" --output_dir "./contrastive_checkpoints" --use_peft  \
+#     --with_tracking --report_to tensorboard
