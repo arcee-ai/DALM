@@ -20,6 +20,14 @@ pip install invoke && pyenv rehash
 inv install
 ```
 
+# Contributing
+We use invoke to manage our codebase, and run checks on PRs,
+
+* format the code with `inv format`
+* check linting with `inv lint`
+* test with `inv test`
+  * test coverage must be above 95% for the PR tests to pass
+
 ## Train Retriever Only
 
 ## Train Retriever and Generator Jointly
