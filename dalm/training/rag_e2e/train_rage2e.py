@@ -40,7 +40,7 @@ from transformers import (
     get_scheduler,
 )
 
-from dalm.training.rag_e2e.base_model import AutoModelForRagE2E
+from dalm.models.rag_e2e_base_model import AutoModelForRagE2E
 from dalm.training.utils.train_utils import (
     compute_marginalized_loss_from_logits,
     get_cosine_sim,

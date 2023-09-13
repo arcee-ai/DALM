@@ -18,7 +18,7 @@ from dalm.eval.utils import (
     get_nearest_neighbours,
     preprocess_function,
 )
-from dalm.training.rag_e2e.base_model import AutoModelForRagE2E
+from dalm.models.rag_e2e_base_model import AutoModelForRagE2E
 
 logger = get_logger(__name__)
 
