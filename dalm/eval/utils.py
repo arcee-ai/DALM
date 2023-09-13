@@ -1,12 +1,15 @@
-import numpy as np
+from typing import Any, Dict, List, Tuple
+
 import hnswlib
+import numpy as np
+import torch
+from datasets.formatting.formatting import LazyBatch
+from transformers import AutoTokenizer
 
 
-def construct_search_index(dim, num_elements, data):
+def construct_search_index(dim: int, num_elements: int, data: np.ndarray) -> hnswlib.Index:
     # Declaring index
-    search_index = hnswlib.Index(
-        space="ip", dim=dim
-    )  # possible options are l2, cosine or ip
+    search_index = hnswlib.Index(space="ip", dim=dim)  # possible options are l2, cosine or ip
 
     # A lower value of ef_construction will result in faster index construction
     # but might lead to a lower quality index,
@@ -22,7 +25,6 @@ def construct_search_index(dim, num_elements, data):
 
     # Initializing index - the maximum number of elements should be known beforehand
     search_index.init_index(max_elements=num_elements, ef_construction=200, M=100)
-    
 
     # Element insertion (can be called several times):
     ids = np.arange(num_elements)
@@ -32,22 +34,26 @@ def construct_search_index(dim, num_elements, data):
 
 
 def get_nearest_neighbours(
-    k, search_index, query_embeddings, ids_to_cat_dict, threshold=0.7
-):
+    k: int,
+    search_index: hnswlib.Index,
+    query_embeddings: np.ndarray,
+    ids_to_cat_dict: Dict[int, Any],
+    threshold: float = 0.7,
+) -> List[Tuple[str, float]]:
     # Controlling the recall by setting ef:
     search_index.set_ef(100)  # ef should always be > k
 
     # Query dataset, k - number of the closest elements (returns 2 numpy arrays)
     labels, distances = search_index.knn_query(query_embeddings, k=k)
-       
+
     return [
         (ids_to_cat_dict[label], (1 - distance))
-        for label, distance in zip(labels[0], distances[0])
+        for label, distance in zip(labels[0], distances[0], strict=True)
         if (1 - distance) >= threshold
     ]
 
 
-def calculate_precision_recall(retrieved_items, correct_items):
+def calculate_precision_recall(retrieved_items: List, correct_items: List) -> Tuple[float, float]:
     # Convert lists to sets for efficient intersection and counting
     retrieved_set = set(retrieved_items)
     correct_set = set(correct_items)
@@ -63,25 +69,21 @@ def calculate_precision_recall(retrieved_items, correct_items):
 
 
 def preprocess_function(
-    examples,
-    retriever_tokenizer,
-    generator_tokenizer,
-    query_col_name="query",
-    passage_col_name="passage",
-    answer_col_name="answer",
-):
+    examples: LazyBatch,
+    retriever_tokenizer: AutoTokenizer,
+    generator_tokenizer: AutoTokenizer,
+    query_col_name: str = "query",
+    passage_col_name: str = "passage",
+    answer_col_name: str = "answer",
+) -> Dict[str, torch.Tensor]:
     queries = examples[query_col_name]
     passages = examples[passage_col_name]
-    answers = examples[answer_col_name]
-    
+    # examples[answer_col_name]
+
     # Tokenization for the retriever
-    retriever_query_tokens = retriever_tokenizer(
-        queries, padding="max_length", max_length=128, truncation=True
-    )
-    
-    retriever_passage_tokens = retriever_tokenizer(
-        passages, padding="max_length", max_length=128, truncation=True
-    )
+    retriever_query_tokens = retriever_tokenizer(queries, padding="max_length", max_length=128, truncation=True)
+
+    retriever_passage_tokens = retriever_tokenizer(passages, padding="max_length", max_length=128, truncation=True)
 
     pre_batch = {}
 

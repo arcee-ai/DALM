@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 
 [project]
-name = "dalm"
+name = "indomain"
 authors = [{name = "Shamane Siri", email = "shamane@arcee.ai"}, {name = "Ben Epstein", email = "ben@arcee.ai"}]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -24,6 +24,7 @@ dependencies = [
     "bitsandbytes",
     "torchvision",
     "pydantic",
+    "typer",
 ]
 
 [tool.hatch.build.targets.wheel.shared-data]
@@ -55,7 +56,8 @@ dev = [
     "types-PyYAML",
     "types-requests",
     "types-tqdm",
-    "packaging"
+    "packaging",
+    "pandas-stubs"
 ]
 
 [project.urls]
@@ -98,6 +100,7 @@ ban-relative-imports = "all"
 
 [tool.mypy]
 plugins = "pydantic.mypy"
+disallow_untyped_defs = true
 
 [[tool.mypy.overrides]]
 module = "sentence_transformers.*"
@@ -117,4 +120,8 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "evaluate.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "hnswlib.*"
 ignore_missing_imports = true

@@ -8,7 +8,11 @@ This repository primarily contains code for fine-tuning a **fully differential**
 
 - Additionally, we have data processing codes and synthetic data generation code inside the [Datasets](https://github.com/arcee-ai/DALM/tree/main/Datasets) folder.
 
-# Project Setup
+# Installation
+
+`pip install indomain`
+
+## Local Development
 Create your virtual environment and install. We suggest pyenv
 ```shell
 python -m venv .venv && source .venv/bin/activate

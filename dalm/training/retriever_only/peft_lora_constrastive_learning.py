@@ -18,6 +18,8 @@ import logging
 import math
 import os
 import random
+from argparse import Namespace
+from typing import Dict
 
 import datasets
 import evaluate
@@ -26,6 +28,8 @@ import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import set_seed
+from black import Union
+from datasets.formatting.formatting import LazyBatch
 from peft import LoraConfig, TaskType, get_peft_model
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -37,7 +41,7 @@ from dalm.training.utils.train import get_cosine_sim, get_nt_xent_loss, load_mod
 logger = get_logger(__name__)
 
 
-def parse_args():
+def parse_args() -> Namespace:
     parser = argparse.ArgumentParser(description="training a PEFT model for Sematic Search task")
     parser.add_argument("--dataset_path", type=str, default=None, help="dataset path in the local dir")
     parser.add_argument(
@@ -151,7 +155,7 @@ def parse_args():
     return args
 
 
-def main():
+def main() -> None:
     args = parse_args()
     accelerator = (
         Accelerator(log_with=args.report_to, project_dir=args.output_dir) if args.with_tracking else Accelerator()
@@ -190,17 +194,17 @@ def main():
         "csv", data_files={"train": f"{args.dataset_path}/train.csv", "validation": f"{args.dataset_path}/valid.csv"}
     )
 
-    def preprocess_function(examples):
+    def preprocess_function(examples: LazyBatch) -> Dict[str, torch.Tensor]:
         queries = examples["question"]
-        result = tokenizer(queries, padding="max_length", max_length=512, truncation=True)
-        result = {f"query_{k}": v for k, v in result.items()}
+        result_ = tokenizer(queries, padding="max_length", max_length=512, truncation=True)
+        result_ = {f"query_{k}": v for k, v in result_.items()}
 
         passage = examples["Abstract"]
         result_passage = tokenizer(passage, padding="max_length", max_length=512, truncation=True)
         for k, v in result_passage.items():
-            result[f"passage_{k}"] = v
+            result_[f"passage_{k}"] = v
 
-        return result
+        return result_
 
     processed_datasets = dataset.map(
         preprocess_function,
@@ -339,8 +343,7 @@ def main():
 
     for epoch in range(starting_epoch, args.num_train_epochs):
         model.train()
-        if args.with_tracking:
-            total_loss = 0
+        total_loss: Union[float, torch.Tensor] = 0.0
         if args.resume_from_checkpoint and epoch == starting_epoch and resume_step is not None:
             # We skip the first `n` batches in the dataloader when resuming from a checkpoint
             active_dataloader = accelerator.skip_first_batches(train_dataloader, resume_step)
@@ -402,7 +405,8 @@ def main():
         # Use accelerator.print to print only on the main process.
         accelerator.print(f"epoch {epoch}:", result)
         if args.with_tracking:
-            result["train/epoch_loss"] = total_loss.item() / len(train_dataloader)
+            step_loss = total_loss.item() if isinstance(total_loss, torch.Tensor) else total_loss
+            result["train/epoch_loss"] = step_loss / len(train_dataloader)
             accelerator.log(result, step=completed_steps)
 
         if args.output_dir is not None:
