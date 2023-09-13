@@ -50,7 +50,7 @@ logger = get_logger(__name__)
 
 
 def parse_args() -> Namespace:
-    parser = argparse.ArgumentParser(description="Training a PEFT model for Sematic Search task")
+    parser = argparse.ArgumentParser(description="training a PEFT model for Sematic Search task")
     parser.add_argument(
         "--dataset_path",
         type=str,

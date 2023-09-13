@@ -23,8 +23,11 @@ jobs:
           cache: pip
           cache-dependency-path: "**/pyproject.toml"
 
-      - name: Install
-        run: pip install -U '.[dev]'
+      - name: install invoke
+        run: pip install invoke
+
+      - name: install dependencies
+        run: inv install --no-editable
 
       - name: Run inv lint
         run: inv lint

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 
 [project]
-name = "Dalm"
+name = "dalm"
 authors = [{name = "Shamane Siri", email = "shamane@arcee.ai"}, {name = "Ben Epstein", email = "ben@arcee.ai"}]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,7 +23,7 @@ dependencies = [
     "diffusers",
     "bitsandbytes",
     "torchvision",
-    "pydantic"
+    "pydantic",
 ]
 
 [tool.hatch.build.targets.wheel.shared-data]
@@ -55,6 +55,7 @@ dev = [
     "types-PyYAML",
     "types-requests",
     "types-tqdm",
+    "packaging"
 ]
 
 [project.urls]

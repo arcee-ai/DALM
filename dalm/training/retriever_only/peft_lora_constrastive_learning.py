@@ -38,7 +38,7 @@ logger = get_logger(__name__)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Training a PEFT model for Sematic Search task")
+    parser = argparse.ArgumentParser(description="training a PEFT model for Sematic Search task")
     parser.add_argument("--dataset_path", type=str, default=None, help="dataset path in the local dir")
     parser.add_argument(
         "--max_length",

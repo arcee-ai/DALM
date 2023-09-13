@@ -142,8 +142,13 @@ def build(ctx: Context) -> None:
 
 
 @task
-def deploy(ctx: Context) -> None:
+def publish(ctx: Context) -> None:
     """Deploy to pypi"""
+    ctx.run(
+        "pip install --upgrade twine",
+        pty=True,
+        echo=True,
+    )
     ctx.run("twine upload dist/*", pty=True, echo=True)
 
 
