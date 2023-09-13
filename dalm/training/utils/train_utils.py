@@ -1,9 +1,8 @@
-from typing import Any, Dict, List
+from typing import List
 
 import torch
 import torch.nn.functional as F
-from datasets.formatting.formatting import LazyBatch
-from transformers import AutoModel, PreTrainedTokenizer, PreTrainedTokenizerFast
+from transformers import AutoModel
 
 
 def save_model_hook(models: List[AutoModel], weights: List, output_dir: str) -> None:
@@ -86,56 +85,3 @@ def compute_marginalized_loss_from_logits(
     overall_average_loss = loss_tensor.sum() / attention_mask[:, 1:].sum()
 
     return overall_average_loss
-
-
-def preprocess_dataset(
-    examples: LazyBatch,
-    retriever_tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
-    generator_tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
-    dataset_query_col_name: str,
-    dataset_passage_col_name: str,
-    dataset_answer_col_name: str,
-) -> Dict[str, Any]:
-    queries = examples[dataset_query_col_name]
-    passages = examples[dataset_passage_col_name]
-    answers = examples[dataset_answer_col_name]
-
-    # Tokenization for the retriever
-    retriever_query_tokens = retriever_tokenizer(queries, padding="max_length", max_length=128, truncation=True)
-    retriever_passage_tokens = retriever_tokenizer(passages, padding="max_length", max_length=128, truncation=True)
-
-    # Tokenize for causal model
-    # Here, we need to combine the query, passage, and the answer as the input, and the answer as the output
-    casual_input_text = [
-        f"#query# {query} #passage# {passage} #answer# {answer}"
-        for passage, query, answer in zip(passages, queries, answers, strict=True)
-    ]
-    causal_input_tokens = generator_tokenizer(casual_input_text, padding="max_length", max_length=128, truncation=True)
-
-    query_passage_text = [
-        f"#query# {query} #passage# {passage} #answer# "
-        for passage, query, answer in zip(passages, queries, answers, strict=True)
-    ]
-
-    query_passage_lengths = []
-
-    query_passage_tokens = generator_tokenizer(query_passage_text)
-
-    for single_query_passage in query_passage_tokens["input_ids"]:
-        query_passage_lengths.append(len(single_query_passage))
-
-    pre_batch = {}
-
-    # for the retriever in-batch negats
-    for k, v in retriever_query_tokens.items():
-        pre_batch[f"retriever_query_{k}"] = v
-    for k, v in retriever_passage_tokens.items():
-        pre_batch[f"retriever_passage_{k}"] = v
-
-    # for the generator
-    for k, v in causal_input_tokens.items():
-        pre_batch[f"generator_input_{k}"] = v
-
-    pre_batch["query_passage_input_len"] = query_passage_lengths
-
-    return pre_batch

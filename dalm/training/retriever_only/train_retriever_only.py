@@ -19,7 +19,6 @@ import math
 import os
 import random
 from argparse import Namespace
-from typing import Dict
 
 import datasets
 import evaluate
@@ -29,13 +28,13 @@ from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import set_seed
 from black import Union
-from datasets.formatting.formatting import LazyBatch
 from peft import LoraConfig, TaskType, get_peft_model
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoTokenizer, SchedulerType, default_data_collator, get_scheduler
 
 from dalm.models.retriever_only_base_model import AutoModelForSentenceEmbedding
+from dalm.training.utils.retriever_only_training_utils import preprocess_dataset
 from dalm.training.utils.train_utils import get_cosine_sim, get_nt_xent_loss, load_model_hook, save_model_hook
 
 logger = get_logger(__name__)
@@ -194,20 +193,8 @@ def main() -> None:
         "csv", data_files={"train": f"{args.dataset_path}/train.csv", "validation": f"{args.dataset_path}/valid.csv"}
     )
 
-    def preprocess_function(examples: LazyBatch) -> Dict[str, torch.Tensor]:
-        queries = examples["question"]
-        result_ = tokenizer(queries, padding="max_length", max_length=512, truncation=True)
-        result_ = {f"query_{k}": v for k, v in result_.items()}
-
-        passage = examples["Abstract"]
-        result_passage = tokenizer(passage, padding="max_length", max_length=512, truncation=True)
-        for k, v in result_passage.items():
-            result_[f"passage_{k}"] = v
-
-        return result_
-
     processed_datasets = dataset.map(
-        preprocess_function,
+        lambda example: preprocess_dataset(example, tokenizer),
         batched=True,
         remove_columns=dataset["train"].column_names,
         desc="Running tokenizer on dataset",
