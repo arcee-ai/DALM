@@ -36,7 +36,7 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, SchedulerType, default_data_collator, get_scheduler
 
 from dalm.training.retriever_only.base_model import AutoModelForSentenceEmbedding
-from dalm.training.utils.train import get_cosine_sim, get_nt_xent_loss, load_model_hook, save_model_hook
+from dalm.training.utils.train_utils import get_cosine_sim, get_nt_xent_loss, load_model_hook, save_model_hook
 
 logger = get_logger(__name__)
 
