@@ -284,7 +284,7 @@ def main() -> None:
 
         pipeline = transformers.pipeline(
             "text-generation",
-            model=generator_with_peft_layers,
+            model=rag_model.generator_model,
             tokenizer=rag_model.generator_tokenizer,
             torch_dtype=SELECTED_TORCH_DTYPE,
             trust_remote_code=True,
