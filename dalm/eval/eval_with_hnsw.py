@@ -118,6 +118,7 @@ def main() -> None:
         args.retriever_model_name_or_path,
         args.generator_model_name_or_path,
         get_peft=False,
+        use_bnb=False
     )
 
     # load the test dataset
