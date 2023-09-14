@@ -11,6 +11,7 @@ from accelerate.logging import get_logger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import default_data_collator
+from peft import PeftModel
 
 from dalm.eval.utils import (
     calculate_precision_recall,
@@ -168,22 +169,8 @@ def main() -> None:
     )
 
     # peft config and wrapping
-    retriever_with_peft_layers = rag_model.retriever_model
-    # (
-    #     PeftModel.from_pretrained(rag_model.retriever_model, args.peft_retriever_path)
-    #     .to(args.device)
-    #     .eval()
-    #     .merge_and_unload()
-    # )
-
-    generator_with_peft_layers = rag_model.generator_model
-    # (
-    #     PeftModel.from_pretrained(rag_model.generator_model, args.peft_generator_path)
-    #     .to(args.device)
-    #     .eval()
-    #     .merge_and_unload()
-    # )
-
+    rag_model.attach_pre_trained_peft_layers(args.peft_retriever_path, args.peft_generator_path, args.device)
+    
     def get_query_embeddings(
         retriever_query_input_ids: torch.Tensor,
         retriever_query_attention_masks: torch.Tensor,
@@ -191,7 +178,6 @@ def main() -> None:
         return (
             rag_model.forward(
                 "retrieval",
-                retriever_with_peft_layers,
                 retriever_query_input_ids.to(args.device),
                 retriever_query_attention_masks.to(args.device),
             )
@@ -208,7 +194,6 @@ def main() -> None:
         return (
             rag_model.forward(
                 "retrieval",
-                retriever_with_peft_layers,
                 retriever_passage_input_ids.to(args.device),
                 retriever_passage_attention_masks.to(args.device),
             )
