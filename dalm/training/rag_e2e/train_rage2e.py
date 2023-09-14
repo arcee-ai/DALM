@@ -16,6 +16,9 @@
 import os
 import sys
 
+sys.path.append(os.getcwd())  # This is needed to import modules with absolute paths
+
+# ruff: noqa: E402
 import argparse
 import logging
 import math
