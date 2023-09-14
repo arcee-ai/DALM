@@ -198,3 +198,4 @@ xxhash==3.3.0
 yarl==1.9.2
 zipp==3.16.2
 zope.interface==4.7.1
+sklearn==0.0.post9

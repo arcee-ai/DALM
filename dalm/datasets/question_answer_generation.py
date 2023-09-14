@@ -57,9 +57,9 @@ def generate_question_answer_pairs(documents: dict) -> dict:
     """Generate question answer pairs"""
     texts = documents[args.passage_column_name]
 
-    inputs = tokenizer(texts, return_tensors="pt", padding=True, truncation=True, max_length=512).to(device)
+    inputs = tokenizer(texts, return_tensors="pt", padding=True, truncation=True).to(device)
     outputs = model.generate(**inputs, max_new_tokens=100)
-    question_answers = [tokenizer.decode(out, skip_special_tokens=False) for out in outputs]
+    question_answers = tokenizer.batch_decode(outputs, skip_special_tokens=False)
     question_answers = [
         question_answer.replace(tokenizer.pad_token, "").replace(tokenizer.eos_token, "")
         for question_answer in question_answers
@@ -83,7 +83,7 @@ def filter_malformed_questions(record: dict) -> bool:
     return question != "-" and answer != "-"
 
 
-def split_dataset(shuffled_dataset: datasets.Dataset, test_size=0.2) -> datasets.DatasetDict:
+def split_dataset(shuffled_dataset: datasets.Dataset, test_size: float = 0.2) -> datasets.DatasetDict:
     unique_titles = set(shuffled_dataset[args.title_column_name])
 
     train_titles, test_titles = train_test_split(list(unique_titles), test_size=test_size, random_state=42)
