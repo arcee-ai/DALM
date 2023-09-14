@@ -11,7 +11,6 @@ from accelerate.logging import get_logger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import default_data_collator
-from peft import PeftModel
 
 from dalm.eval.utils import (
     calculate_precision_recall,
@@ -115,10 +114,7 @@ def main() -> None:
 
     # rag retriver and the generator (don't load new peft layers no need)
     rag_model = AutoModelForRagE2E(
-        args.retriever_model_name_or_path,
-        args.generator_model_name_or_path,
-        get_peft=False,
-        use_bnb=False
+        args.retriever_model_name_or_path, args.generator_model_name_or_path, get_peft=False, use_bnb=False
     )
 
     # load the test dataset
@@ -171,7 +167,7 @@ def main() -> None:
 
     # peft config and wrapping
     rag_model.attach_pre_trained_peft_layers(args.peft_retriever_path, args.peft_generator_path, args.device)
-    
+
     def get_query_embeddings(
         retriever_query_input_ids: torch.Tensor,
         retriever_query_attention_masks: torch.Tensor,
