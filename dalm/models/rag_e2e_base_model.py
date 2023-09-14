@@ -67,7 +67,7 @@ class AutoModelForRagE2E(torch.nn.Module):
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
         return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
     
-    def attach_pre_trained_peft_layers(self, peft_retriever_path: str, peft_generator_path: str, device: str) -> Union[PeftModel, PeftModel]:
+    def attach_pre_trained_peft_layers(self, peft_retriever_path: str, peft_generator_path: str, device: str) -> None:
         
         self.retriever_model = (
                         PeftModel.from_pretrained(self.retriever_model, peft_retriever_path, load_in_4bit=True, device_map="auto")
