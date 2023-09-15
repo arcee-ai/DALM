@@ -92,7 +92,7 @@ dataset.shuffle(seed=42)
 small_dataset = dataset.select(range(args.sample_size))
 
 # train-test split
-small_dataset_splits = shuffled_dataset.train_test_split(test_size=TEST_SIZE)
+small_dataset_splits = small_dataset.train_test_split(test_size=TEST_SIZE)
 
 print(
     f"Train dataset size: {len(small_dataset_splits['train'])}, Test dataset size: {len(small_dataset_splits['test'])}"
