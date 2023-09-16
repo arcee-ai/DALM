@@ -1,14 +1,35 @@
-from typing import Union
+from typing import List, Optional, Union
 
 import torch
-from transformers import AutoModel, AutoTokenizer
+from peft import LoraConfig, TaskType, get_peft_model
+from transformers import AutoModel, AutoTokenizer, BitsAndBytesConfig
 
 
 class AutoModelForSentenceEmbedding(torch.nn.Module):
-    def __init__(self, model_name: str, tokenizer: AutoTokenizer, normalize: bool = True) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        tokenizer: AutoTokenizer,
+        normalize: bool = True,
+        use_bnb: bool = True,
+        get_peft: bool = True,
+    ) -> None:
         super(AutoModelForSentenceEmbedding, self).__init__()
 
-        self.model = AutoModel.from_pretrained(model_name, load_in_8bit=True, device_map={"": 0})
+        self.model = AutoModel.from_pretrained(
+            model_name,
+            device_map={"": 0},
+            quantization_config=AutoModelForSentenceEmbedding.__get_bnb_config() if use_bnb else None,
+        )
+
+        if get_peft:
+            self.model = get_peft_model(
+                self.model,
+                peft_config=AutoModelForSentenceEmbedding.__get_lora_config(
+                    target_modules=["key", "query", "value"],
+                ),
+            )
+
         self.normalize = normalize
         self.tokenizer = tokenizer
 
@@ -31,3 +52,26 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
             return super().__getattr__(name)  # defer to nn.Module's logic
         except AttributeError:
             return getattr(self.model, name)
+
+    @staticmethod
+    def __get_bnb_config() -> BitsAndBytesConfig:
+        return BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16,
+        )
+
+    @staticmethod
+    def __get_lora_config(
+        r: int = 8,
+        lora_alpha: int = 16,
+        bias: str = "none",
+        target_modules: Optional[Union[List[str], str]] = None,
+    ) -> LoraConfig:
+        return LoraConfig(
+            task_type=TaskType.FEATURE_EXTRACTION,
+            r=r,
+            lora_alpha=lora_alpha,
+            bias=bias,
+            target_modules=target_modules,
+        )

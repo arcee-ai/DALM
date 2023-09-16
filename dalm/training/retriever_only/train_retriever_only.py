@@ -28,7 +28,6 @@ from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import set_seed
 from black import Union
-from peft import LoraConfig, TaskType, get_peft_model
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoTokenizer, SchedulerType, default_data_collator, get_scheduler
@@ -42,7 +41,14 @@ logger = get_logger(__name__)
 
 def parse_args() -> Namespace:
     parser = argparse.ArgumentParser(description="training a PEFT model for Sematic Search task")
-    parser.add_argument("--dataset_path", type=str, default=None, help="dataset path in the local dir")
+    parser.add_argument("--train_dataset_csv_path", type=str, default=None, help="dataset path in the local dir")
+    parser.add_argument("--test_dataset_csv_path", type=str, default=None, help="dataset path in the local dir")
+    parser.add_argument(
+        "--dataset_query_col_name", type=str, default="Question", help="Name of the query column in the dataset"
+    )
+    parser.add_argument(
+        "--dataset_passage_col_name", type=str, default="Abstract", help="Name of the passage column in the dataset"
+    )
     parser.add_argument(
         "--max_length",
         type=int,
@@ -73,7 +79,7 @@ def parse_args() -> Namespace:
     parser.add_argument(
         "--learning_rate",
         type=float,
-        default=5e-5,
+        default=1e-4,
         help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument(
@@ -190,11 +196,16 @@ def main() -> None:
     # dataset download and preprocessing
 
     dataset = datasets.load_dataset(
-        "csv", data_files={"train": f"{args.dataset_path}/train.csv", "validation": f"{args.dataset_path}/valid.csv"}
+        "csv", data_files={"train": args.train_dataset_csv_path, "validation": args.test_dataset_csv_path}
     )
 
     processed_datasets = dataset.map(
-        lambda example: preprocess_dataset(example, tokenizer),
+        lambda example: preprocess_dataset(
+            example,
+            tokenizer,
+            query_col_name=args.dataset_query_col_name,
+            passage_col_name=args.dataset_passage_col_name,
+        ),
         batched=True,
         remove_columns=dataset["train"].column_names,
         desc="Running tokenizer on dataset",
@@ -205,19 +216,8 @@ def main() -> None:
         logger.info(f"Sample {index} of the training set: {processed_datasets['train'][index]}.")
 
     # base model
-    model = AutoModelForSentenceEmbedding(args.model_name_or_path, tokenizer)
-
-    if args.use_peft:
-        # peft config and wrapping
-        peft_config = LoraConfig(
-            r=8,
-            lora_alpha=16,
-            bias="none",
-            task_type=TaskType.FEATURE_EXTRACTION,
-            target_modules=["key", "query", "value"],
-        )
-        model = get_peft_model(model, peft_config)
-        model.print_trainable_parameters()
+    model = AutoModelForSentenceEmbedding(args.model_name_or_path, tokenizer, use_bnb=True, get_peft=args.use_peft)
+    model.print_trainable_parameters()  # type: ignore # No idea what mypy is complaining about.
 
     accelerator.print(model)
 
@@ -413,6 +413,7 @@ if __name__ == "__main__":
     main()
 
 
-# python contrastive_train/peft_lora_constrastive_learning.py  --dataset_path "./dataset" \
+# python contrastive_train/peft_lora_constrastive_learning.py  --train_dataset_csv_path "xxxx.csv" \
+#     --test_dataset_csv_path "yyyy.csv" \
 #     --model_name_or_path "BAAI/bge-small-en" --output_dir "./contrastive_checkpoints" --use_peft  \
 #     --with_tracking --report_to tensorboard
