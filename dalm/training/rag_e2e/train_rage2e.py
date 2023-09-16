@@ -95,19 +95,13 @@ def parse_args() -> Namespace:
     parser.add_argument(
         "--per_device_train_batch_size",
         type=int,
-        default=8,
+        default=32,
         help="Batch size (per device) for the training dataloader.",
-    )
-    parser.add_argument(
-        "--per_device_eval_batch_size",
-        type=int,
-        default=8,
-        help="Batch size (per device) for the evaluation dataloader.",
     )
     parser.add_argument(
         "--learning_rate",
         type=float,
-        default=5e-5,
+        default=1e-4,
         help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument(
@@ -152,7 +146,7 @@ def parse_args() -> Namespace:
     parser.add_argument(
         "--num_warmup_steps",
         type=int,
-        default=0,
+        default=100,
         help="Number of steps for the warmup in the lr scheduler.",
     )
     parser.add_argument("--output_dir", type=str, default=None, help="Where to store the final model.")
@@ -480,7 +474,11 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 
-
-# python train_rage2e.py  --dataset_path "./dataset" --retriever_name_or_path "BAAI/bge-small-en" \
-#   --generator_name_or_path "tiiuae/falcon-7b"   --output_dir "./contrastive_checkpoints" --use_peft  \
-#   --with_tracking --report_to tensorboard
+# python dalm/training/rag_e2e/train_rage2e.py
+#   --dataset_path "/root/DALM/dataset/out/question_answer_pairs_train"
+#   --retriever_name_or_path "BAAI/bge-large-en"
+#   --generator_name_or_path "meta-llama/Llama-2-7b-hf"
+#   --output_dir "./rag_e2e_checkpoints"
+#   --with_tracking
+#   --report_to all
+#   --per_device_train_batch_size 32

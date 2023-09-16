@@ -12,9 +12,12 @@ def preprocess_dataset(
     dataset_passage_col_name: str,
     dataset_answer_col_name: str,
 ) -> Dict[str, Any]:
-    queries = examples[dataset_query_col_name]
-    passages = examples[dataset_passage_col_name]
+    querie_list = examples[dataset_query_col_name]
+    passage_list = examples[dataset_passage_col_name]
     answers = examples[dataset_answer_col_name]
+
+    queries = [f"#query# {query}" for query in querie_list]
+    passages = [f"#passage# {passage}" for passage in passage_list]
 
     # Tokenization for the retriever
     retriever_query_tokens = retriever_tokenizer(queries, padding="max_length", max_length=128, truncation=True)
