@@ -360,7 +360,8 @@ def main() -> None:
             if (step + 1) % 100 == 0:
                 logger.info(f"Step: {step+1}, Loss: {total_loss/(step+1)}")
                 if args.with_tracking:
-                    accelerator.log({"train/loss": total_loss / (step + 1)}, step=completed_steps)
+                    step_loss = total_loss.item() if isinstance(total_loss, torch.Tensor) else total_loss
+                    accelerator.log({"train/loss": step_loss / (step + 1)}, step=completed_steps)
 
             if isinstance(checkpointing_steps, int):
                 if completed_steps % checkpointing_steps == 0:
