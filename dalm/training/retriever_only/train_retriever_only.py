@@ -33,7 +33,7 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, SchedulerType, default_data_collator, get_scheduler
 
 from dalm.models.retriever_only_base_model import AutoModelForSentenceEmbedding
-from dalm.training.utils.retriever_only_training_utils import preprocess_dataset
+from dalm.training.utils.retriever_only_dataloader_utils import preprocess_dataset
 from dalm.training.utils.train_utils import get_cosine_sim, get_nt_xent_loss, load_model_hook, save_model_hook
 
 logger = get_logger(__name__)
@@ -416,5 +416,5 @@ if __name__ == "__main__":
 
 # python contrastive_train/peft_lora_constrastive_learning.py  --train_dataset_csv_path "xxxx.csv" \
 #     --test_dataset_csv_path "yyyy.csv" \
-#     --model_name_or_path "BAAI/bge-small-en" --output_dir "./contrastive_checkpoints" --use_peft  \
-#     --with_tracking --report_to tensorboard
+#     --model_name_or_path "BAAI/bge-small-en" --output_dir "./retriever_only_checkpoints" --use_peft  \
+#     --with_tracking --report_to all --per_device_train_batch_size 30
