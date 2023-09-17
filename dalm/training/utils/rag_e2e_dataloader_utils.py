@@ -41,7 +41,7 @@ def preprocess_dataset(
 
     query_passage_lengths = []
 
-    query_passage_tokens = generator_tokenizer(query_passage_text)
+    query_passage_tokens = generator_tokenizer(query_passage_text, padding=False)
 
     for single_query_passage in query_passage_tokens["input_ids"]:
         query_passage_lengths.append(len(single_query_passage))
