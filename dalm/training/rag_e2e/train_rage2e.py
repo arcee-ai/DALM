@@ -77,7 +77,6 @@ def parse_args() -> Namespace:
         default=50,
         help=(
             "The maximum total query sequence length after tokenization. Sequences longer than this will be truncated,"
-            " sequences shorter will be padded if `--pad_to_max_length` is passed."
         ),
     )
     parser.add_argument(
@@ -86,7 +85,6 @@ def parse_args() -> Namespace:
         default=128,
         help=(
             "The maximum total passage sequence length after tokenization. Sequences longer than this will be truncated,"
-            " sequences shorter will be padded if `--pad_to_max_length` is passed."
         ),
     )
     parser.add_argument(
@@ -95,7 +93,6 @@ def parse_args() -> Namespace:
         default=256,
         help=(
             "The maximum total generator input sequence length after tokenization. Sequences longer than this will be truncated,"
-            " sequences shorter will be padded if `--pad_to_max_length` is passed."
         ),
     )
     parser.add_argument(
