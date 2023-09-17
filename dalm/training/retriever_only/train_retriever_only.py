@@ -205,6 +205,7 @@ def main() -> None:
             tokenizer,
             query_col_name=args.dataset_query_col_name,
             passage_col_name=args.dataset_passage_col_name,
+            max_length=args.max_length,
         ),
         batched=True,
         remove_columns=dataset["train"].column_names,
