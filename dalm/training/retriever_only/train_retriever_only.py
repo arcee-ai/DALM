@@ -13,10 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import sys
+
+sys.path.append(os.getcwd())  # This is needed to import modules with absolute paths
+# ruff: noqa: E402
+
 import argparse
 import logging
 import math
-import os
 import random
 from argparse import Namespace
 
@@ -50,12 +55,19 @@ def parse_args() -> Namespace:
         "--dataset_passage_col_name", type=str, default="Abstract", help="Name of the passage column in the dataset"
     )
     parser.add_argument(
-        "--max_length",
+        "--query_max_len",
+        type=int,
+        default=50,
+        help=(
+            "The maximum total query sequence length after tokenization. Sequences longer than this will be truncated,"
+        ),
+    )
+    parser.add_argument(
+        "--passage_max_len",
         type=int,
         default=128,
         help=(
-            "The maximum total input sequence length after tokenization. Sequences longer than this will be truncated,"
-            " sequences shorter will be padded if `--pad_to_max_length` is passed."
+            "The maximum total passage sequence length after tokenization. Sequences longer than this will be truncated,"
         ),
     )
     parser.add_argument(
@@ -206,6 +218,8 @@ def main() -> None:
             query_col_name=args.dataset_query_col_name,
             passage_col_name=args.dataset_passage_col_name,
             max_length=args.max_length,
+            query_max_len=args.query_max_len,
+            passage_max_len=args.passage_max_len,
         ),
         batched=True,
         remove_columns=dataset["train"].column_names,
