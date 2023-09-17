@@ -25,7 +25,7 @@ To perform training and evaluation for both the retriever model and the new rag-
 
 You can install this repo directly via `pip install indomain`
 
-Alternatively, for development, you can clone and install the repo locally. From the root directory `DALM`:
+Alternatively, for development, you can clone and install the repo locally:
 ```shell
 git clone https://github.com/arcee-ai/DALM.git && cd DALM
 python -m venv .venv && source .venv/bin/activate
