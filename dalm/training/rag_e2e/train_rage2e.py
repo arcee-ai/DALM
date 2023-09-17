@@ -42,7 +42,7 @@ from transformers import (
 )
 
 from dalm.models.rag_e2e_base_model import AutoModelForRagE2E
-from dalm.training.utils.rag_e2e_training_utils import preprocess_dataset
+from dalm.training.utils.rag_e2e_dataloader_utils import preprocess_dataset
 from dalm.training.utils.train_utils import (
     compute_marginalized_loss_from_logits,
     get_cosine_sim,
