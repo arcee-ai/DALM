@@ -1,5 +1,10 @@
 import argparse
 import os
+import sys
+
+sys.path.append(os.getcwd())
+
+# ruff:noqa
 from argparse import Namespace
 from typing import Any, Dict, Final
 
@@ -166,7 +171,9 @@ def main() -> None:
     )
 
     # peft config and wrapping
-    rag_model.attach_pre_trained_peft_layers(args.peft_retriever_path, args.peft_generator_path, args.device)
+    rag_model.attach_pre_trained_peft_layers(
+        args.retriever_peft_model_path, args.generator_peft_model_path, args.device
+    )
 
     def get_query_embeddings(
         retriever_query_input_ids: torch.Tensor,
@@ -201,6 +208,7 @@ def main() -> None:
         )
 
     num_passages = len(unique_passage_dataset)
+    print(f"Starting to generate passage embeddings (Number of passages: {num_passages})")
 
     passage_embeddings_array = np.zeros((num_passages, args.embed_dim))
     for step, batch in enumerate(tqdm(unique_passage_dataloader)):
@@ -218,6 +226,7 @@ def main() -> None:
         passage_embeddings_array[start_index:end_index] = passage_embs
         del passage_embs, batch
 
+    print("Construct passage index")
     passage_search_index = construct_search_index(args.embed_dim, num_passages, passage_embeddings_array)
 
     # Initialize counters
@@ -285,12 +294,12 @@ def main() -> None:
             tokenizer=rag_model.generator_tokenizer,
             torch_dtype=SELECTED_TORCH_DTYPE,
             trust_remote_code=True,
-            device_map="auto",
+            device=(0 if args.device == "cuda" else args.device),
         )
 
         sequences = pipeline(
             query,
-            max_length=200,
+            max_new_tokens=200,
             do_sample=True,
             top_k=10,
             num_return_sequences=1,
