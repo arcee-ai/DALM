@@ -19,15 +19,20 @@ For the first time in the literature, we modified the initial RAG-end2end model 
 - Additionally, we have data processing codes and synthetic data generation code inside the [Datasets](https://github.com/arcee-ai/DALM/tree/main/Datasets) folder.
 
 ## Code execution
-Please follow the steps below to conduct training and evaluation for both the retriever model and the new rag-e2e model.
+- To perform training and evaluation for both the retriever model and the new rag-e2e model, please adhere to the following steps. 
+- The setup for training and evaluation can be effortlessly executed provided you possess a CSV file containing three columns: passage, query, and answer. You can utilize the script damn/datasets/qa_gen/question_answer_generation.py to generate this CSV. 
+- It's important to highlight that the retriever-only training method employs solely the passages and queries, whereas the rag-e2e training code utilizes all three columns.
+- In our experiments, we utilize BAAI/bge-large-en as the retriever and employ meta-llama/Llama-2-7b-hf as the generator. It's important to note that this code is designed to be compatible with any embedding model or autoregressive model available in the Hugging Face model repository at https://huggingface.co/models.
+
 
 
 ## Clone the repositary
-`git clone https://github.com/arcee-ai/DALM.git`
+- `git clone https://github.com/arcee-ai/DALM.git`
+-  `cd DALM`
 
 ## Install the necesarry libraries
 Create your desired virtual environment isntall all necasary librries.
-`pip install -r requirements.txt`
+- `pip install -r requirements.txt`
 
 ## Training
 
