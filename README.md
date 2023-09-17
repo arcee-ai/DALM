@@ -18,18 +18,22 @@ For the first time in the literature, we modified the initial RAG-end2end model 
 
 - Additionally, we have data processing codes and synthetic data generation code inside the [Datasets](https://github.com/arcee-ai/DALM/tree/main/Datasets) folder.
 
-# Code execution
+## Code execution
+Please follow the steps below to conduct training and evaluation for both the retriever model and the new rag-e2e model.
+
 
 ## Clone the repositary
 `git clone https://github.com/arcee-ai/DALM.git`
 
-## Install the necesarry libraries for your local environment
+## Install the necesarry libraries
 Create your desired virtual environment isntall all necasary librries.
 ```
 pip install -r requirements.txt
 ```
 
-## Train Retriever Only
+## Training
+
+### Train Retriever Only
 ```
 python contrastive_train/peft_lora_constrastive_learning.py  --train_dataset_csv_path "xxxx.csv" \
     --test_dataset_csv_path "yyyy.csv" \
@@ -37,7 +41,7 @@ python contrastive_train/peft_lora_constrastive_learning.py  --train_dataset_csv
     --with_tracking --report_to all --per_device_train_batch_size 30
 ```
 
-## Train Retriever and Generator Jointly
+### Train Retriever and Generator Jointly (RAG-e2e)
 ```
 python dalm/training/rag_e2e/train_rage2e.py
   --dataset_path "/root/DALM/dataset/out/question_answer_pairs_train"
@@ -48,6 +52,13 @@ python dalm/training/rag_e2e/train_rage2e.py
   --report_to all
   --per_device_train_batch_size 32
 ```
+## Evaluation
+
+### Evaluate the top-k recall of the retriver that trained only with constrstive learning
+
+
+### Evaluate the top-k recall of the  retriever and the exact match of the generator in the RAG-e2e models
+
 
 ## Domain Pretrained Models - DPT (Coming Soon)
 
