@@ -1,0 +1,124 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    python_version: 3.10.6
+    cli_version: 0.15.10
+    framework: huggingface
+    huggingface_version: 4.33.1
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1694940263.305212
+    t:
+      1:
+      - 1
+      - 5
+      - 11
+      - 49
+      - 51
+      - 53
+      - 55
+      - 71
+      - 98
+      2:
+      - 1
+      - 5
+      - 11
+      - 49
+      - 51
+      - 53
+      - 55
+      - 71
+      - 98
+      3:
+      - 23
+      4: 3.10.6
+      5: 0.15.10
+      6: 4.33.1
+      8:
+      - 5
+dataset_path:
+  desc: null
+  value: /root/DALM/dataset/out/question_answer_pairs_train
+dataset_passage_col_name:
+  desc: null
+  value: Abstract
+dataset_query_col_name:
+  desc: null
+  value: Question
+dataset_answer_col_name:
+  desc: null
+  value: Answer
+query_max_len:
+  desc: null
+  value: 50
+passage_max_len:
+  desc: null
+  value: 128
+generator_max_len:
+  desc: null
+  value: 256
+retriever_name_or_path:
+  desc: null
+  value: BAAI/bge-large-en
+generator_name_or_path:
+  desc: null
+  value: meta-llama/Llama-2-7b-hf
+per_device_train_batch_size:
+  desc: null
+  value: 16
+learning_rate:
+  desc: null
+  value: 0.0001
+logit_scale:
+  desc: null
+  value: 100
+weight_decay:
+  desc: null
+  value: 0.0
+num_train_epochs:
+  desc: null
+  value: 1
+max_train_steps:
+  desc: null
+  value: 49918
+gradient_accumulation_steps:
+  desc: null
+  value: 1
+lr_scheduler_type:
+  desc: null
+  value: linear
+num_warmup_steps:
+  desc: null
+  value: 100
+output_dir:
+  desc: null
+  value: ./dalm/training/rag_e2e/rag_e2e_checkpoints
+seed:
+  desc: null
+  value: null
+hub_model_id:
+  desc: null
+  value: null
+hub_token:
+  desc: null
+  value: null
+checkpointing_steps:
+  desc: null
+  value: null
+resume_from_checkpoint:
+  desc: null
+  value: null
+with_tracking:
+  desc: null
+  value: true
+report_to:
+  desc: null
+  value: all
+sanity_test:
+  desc: null
+  value: false
+use_peft:
+  desc: null
+  value: false

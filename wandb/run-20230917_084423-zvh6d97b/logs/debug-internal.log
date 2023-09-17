@@ -1,0 +1,328 @@
+2023-09-17 08:44:23,305 INFO    StreamThr :16946 [internal.py:wandb_internal():86] W&B internal server running at pid: 16946, started at: 2023-09-17 08:44:23.305056
+2023-09-17 08:44:23,307 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status
+2023-09-17 08:44:23,309 INFO    WriterThread:16946 [datastore.py:open_for_write():85] open: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/run-zvh6d97b.wandb
+2023-09-17 08:44:23,311 DEBUG   SenderThread:16946 [sender.py:send():379] send: header
+2023-09-17 08:44:23,312 DEBUG   SenderThread:16946 [sender.py:send():379] send: run
+2023-09-17 08:44:23,565 INFO    SenderThread:16946 [dir_watcher.py:__init__():211] watching files in: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files
+2023-09-17 08:44:23,565 INFO    SenderThread:16946 [sender.py:_start_run_threads():1121] run started: zvh6d97b with start time 1694940263.305212
+2023-09-17 08:44:23,713 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: check_version
+2023-09-17 08:44:23,713 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: check_version
+2023-09-17 08:44:23,831 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: run_start
+2023-09-17 08:44:23,862 DEBUG   HandlerThread:16946 [system_info.py:__init__():32] System info init
+2023-09-17 08:44:23,862 DEBUG   HandlerThread:16946 [system_info.py:__init__():47] System info init done
+2023-09-17 08:44:23,862 INFO    HandlerThread:16946 [system_monitor.py:start():181] Starting system monitor
+2023-09-17 08:44:23,863 INFO    SystemMonitor:16946 [system_monitor.py:_start():145] Starting system asset monitoring threads
+2023-09-17 08:44:23,863 INFO    HandlerThread:16946 [system_monitor.py:probe():201] Collecting system info
+2023-09-17 08:44:23,864 INFO    SystemMonitor:16946 [interfaces.py:start():190] Started cpu monitoring
+2023-09-17 08:44:23,865 INFO    SystemMonitor:16946 [interfaces.py:start():190] Started disk monitoring
+2023-09-17 08:44:23,866 INFO    SystemMonitor:16946 [interfaces.py:start():190] Started gpu monitoring
+2023-09-17 08:44:23,867 INFO    SystemMonitor:16946 [interfaces.py:start():190] Started memory monitoring
+2023-09-17 08:44:23,868 INFO    SystemMonitor:16946 [interfaces.py:start():190] Started network monitoring
+2023-09-17 08:44:23,937 DEBUG   HandlerThread:16946 [system_info.py:probe():196] Probing system
+2023-09-17 08:44:23,940 DEBUG   HandlerThread:16946 [system_info.py:_probe_git():181] Probing git
+2023-09-17 08:44:23,949 DEBUG   HandlerThread:16946 [system_info.py:_probe_git():189] Probing git done
+2023-09-17 08:44:23,949 DEBUG   HandlerThread:16946 [system_info.py:probe():244] Probing system done
+2023-09-17 08:44:23,949 DEBUG   HandlerThread:16946 [system_monitor.py:probe():210] {'os': 'Linux-5.4.0-155-generic-x86_64-with-glibc2.35', 'python': '3.10.6', 'heartbeatAt': '2023-09-17T08:44:23.937898', 'startedAt': '2023-09-17T08:44:23.298354', 'docker': None, 'cuda': None, 'args': ('--dataset_path', '/root/DALM/dataset/out/question_answer_pairs_train', '--retriever_name_or_path', 'BAAI/bge-large-en', '--generator_name_or_path', 'meta-llama/Llama-2-7b-hf', '--output_dir', './dalm/training/rag_e2e/rag_e2e_checkpoints', '--with_tracking', '--report_to', 'all', '--per_device_train_batch_size', '16'), 'state': 'running', 'program': '/root/latest-rage2e/DALM/dalm/training/rag_e2e/train_rage2e.py', 'codePathLocal': 'dalm/training/rag_e2e/train_rage2e.py', 'codePath': 'dalm/training/rag_e2e/train_rage2e.py', 'git': {'remote': 'https://github.com/arcee-ai/DALM.git', 'commit': '5385992832c479130f5d67af8917cf75a83337fd'}, 'email': 'gayal.sha92@gmail.com', 'root': '/root/latest-rage2e/DALM', 'host': 'f4ec1ae23983', 'username': 'root', 'executable': '/usr/bin/python', 'cpu_count': 96, 'cpu_count_logical': 192, 'cpu_freq': {'current': 2199.6896510416664, 'min': 1500.0, 'max': 2300.0}, 'cpu_freq_per_core': [{'current': 1498.921, 'min': 1500.0, 'max': 2300.0}, {'current': 1488.215, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.518, 'min': 1500.0, 'max': 2300.0}, {'current': 2032.726, 'min': 1500.0, 'max': 2300.0}, {'current': 1795.459, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.684, 'min': 1500.0, 'max': 2300.0}, {'current': 2754.962, 'min': 1500.0, 'max': 2300.0}, {'current': 2735.832, 'min': 1500.0, 'max': 2300.0}, {'current': 3459.665, 'min': 1500.0, 'max': 2300.0}, {'current': 2756.48, 'min': 1500.0, 'max': 2300.0}, {'current': 2756.85, 'min': 1500.0, 'max': 2300.0}, {'current': 2758.664, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.504, 'min': 1500.0, 'max': 2300.0}, {'current': 1494.747, 'min': 1500.0, 'max': 2300.0}, {'current': 1794.986, 'min': 1500.0, 'max': 2300.0}, {'current': 1795.231, 'min': 1500.0, 'max': 2300.0}, {'current': 1796.308, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.559, 'min': 1500.0, 'max': 2300.0}, {'current': 1796.327, 'min': 1500.0, 'max': 2300.0}, {'current': 1634.245, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.734, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.153, 'min': 1500.0, 'max': 2300.0}, {'current': 1490.009, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.561, 'min': 1500.0, 'max': 2300.0}, {'current': 2998.56, 'min': 1500.0, 'max': 2300.0}, {'current': 2246.35, 'min': 1500.0, 'max': 2300.0}, {'current': 2325.005, 'min': 1500.0, 'max': 2300.0}, {'current': 2237.462, 'min': 1500.0, 'max': 2300.0}, {'current': 2232.742, 'min': 1500.0, 'max': 2300.0}, {'current': 2232.477, 'min': 1500.0, 'max': 2300.0}, {'current': 2756.769, 'min': 1500.0, 'max': 2300.0}, {'current': 3017.842, 'min': 1500.0, 'max': 2300.0}, {'current': 2758.668, 'min': 1500.0, 'max': 2300.0}, {'current': 3154.049, 'min': 1500.0, 'max': 2300.0}, {'current': 3459.685, 'min': 1500.0, 'max': 2300.0}, {'current': 2756.864, 'min': 1500.0, 'max': 2300.0}, {'current': 1795.606, 'min': 1500.0, 'max': 2300.0}, {'current': 1795.442, 'min': 1500.0, 'max': 2300.0}, {'current': 1795.546, 'min': 1500.0, 'max': 2300.0}, {'current': 1493.796, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.605, 'min': 1500.0, 'max': 2300.0}, {'current': 1791.324, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.642, 'min': 1500.0, 'max': 2300.0}, {'current': 1794.423, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.149, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.132, 'min': 1500.0, 'max': 2300.0}, {'current': 1492.427, 'min': 1500.0, 'max': 2300.0}, {'current': 1794.257, 'min': 1500.0, 'max': 2300.0}, {'current': 1798.721, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.984, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.286, 'min': 1500.0, 'max': 2300.0}, {'current': 1795.304, 'min': 1500.0, 'max': 2300.0}, {'current': 1498.827, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.849, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.242, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.722, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.751, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.147, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.592, 'min': 1500.0, 'max': 2300.0}, {'current': 1498.659, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.905, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.874, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.904, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.295, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.139, 'min': 1500.0, 'max': 2300.0}, {'current': 1793.087, 'min': 1500.0, 'max': 2300.0}, {'current': 1795.783, 'min': 1500.0, 'max': 2300.0}, {'current': 1796.829, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.246, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.049, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.111, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.037, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.635, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.318, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.077, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.447, 'min': 1500.0, 'max': 2300.0}, {'current': 1796.056, 'min': 1500.0, 'max': 2300.0}, {'current': 1798.175, 'min': 1500.0, 'max': 2300.0}, {'current': 2751.779, 'min': 1500.0, 'max': 2300.0}, {'current': 2761.56, 'min': 1500.0, 'max': 2300.0}, {'current': 3595.029, 'min': 1500.0, 'max': 2300.0}, {'current': 2756.64, 'min': 1500.0, 'max': 2300.0}, {'current': 2756.047, 'min': 1500.0, 'max': 2300.0}, {'current': 2752.877, 'min': 1500.0, 'max': 2300.0}, {'current': 3594.445, 'min': 1500.0, 'max': 2300.0}, {'current': 2752.862, 'min': 1500.0, 'max': 2300.0}, {'current': 2760.875, 'min': 1500.0, 'max': 2300.0}, {'current': 2750.528, 'min': 1500.0, 'max': 2300.0}, {'current': 2751.509, 'min': 1500.0, 'max': 2300.0}, {'current': 2754.158, 'min': 1500.0, 'max': 2300.0}, {'current': 1795.896, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.892, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.957, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.131, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.183, 'min': 1500.0, 'max': 2300.0}, {'current': 2014.95, 'min': 1500.0, 'max': 2300.0}, {'current': 1494.173, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.181, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.079, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.801, 'min': 1500.0, 'max': 2300.0}, {'current': 1792.473, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.081, 'min': 1500.0, 'max': 2300.0}, {'current': 2756.609, 'min': 1500.0, 'max': 2300.0}, {'current': 2750.181, 'min': 1500.0, 'max': 2300.0}, {'current': 3302.167, 'min': 1500.0, 'max': 2300.0}, {'current': 2751.629, 'min': 1500.0, 'max': 2300.0}, {'current': 2756.447, 'min': 1500.0, 'max': 2300.0}, {'current': 2745.697, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.776, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.13, 'min': 1500.0, 'max': 2300.0}, {'current': 1794.624, 'min': 1500.0, 'max': 2300.0}, {'current': 1793.555, 'min': 1500.0, 'max': 2300.0}, {'current': 1799.143, 'min': 1500.0, 'max': 2300.0}, {'current': 1498.254, 'min': 1500.0, 'max': 2300.0}, {'current': 1796.119, 'min': 1500.0, 'max': 2300.0}, {'current': 1798.227, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.58, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.595, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.758, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.072, 'min': 1500.0, 'max': 2300.0}, {'current': 2879.59, 'min': 1500.0, 'max': 2300.0}, {'current': 2480.423, 'min': 1500.0, 'max': 2300.0}, {'current': 2690.26, 'min': 1500.0, 'max': 2300.0}, {'current': 2228.352, 'min': 1500.0, 'max': 2300.0}, {'current': 2217.318, 'min': 1500.0, 'max': 2300.0}, {'current': 2765.189, 'min': 1500.0, 'max': 2300.0}, {'current': 2756.387, 'min': 1500.0, 'max': 2300.0}, {'current': 3362.214, 'min': 1500.0, 'max': 2300.0}, {'current': 2758.15, 'min': 1500.0, 'max': 2300.0}, {'current': 3259.909, 'min': 1500.0, 'max': 2300.0}, {'current': 3444.243, 'min': 1500.0, 'max': 2300.0}, {'current': 2747.151, 'min': 1500.0, 'max': 2300.0}, {'current': 1795.595, 'min': 1500.0, 'max': 2300.0}, {'current': 1796.014, 'min': 1500.0, 'max': 2300.0}, {'current': 1795.231, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.936, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.059, 'min': 1500.0, 'max': 2300.0}, {'current': 1796.531, 'min': 1500.0, 'max': 2300.0}, {'current': 1925.095, 'min': 1500.0, 'max': 2300.0}, {'current': 2122.03, 'min': 1500.0, 'max': 2300.0}, {'current': 1805.64, 'min': 1500.0, 'max': 2300.0}, {'current': 1890.025, 'min': 1500.0, 'max': 2300.0}, {'current': 2024.66, 'min': 1500.0, 'max': 2300.0}, {'current': 2327.464, 'min': 1500.0, 'max': 2300.0}, {'current': 1796.783, 'min': 1500.0, 'max': 2300.0}, {'current': 1498.593, 'min': 1500.0, 'max': 2300.0}, {'current': 1499.506, 'min': 1500.0, 'max': 2300.0}, {'current': 1799.388, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.107, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.916, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.146, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.702, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.34, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.098, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.403, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.43, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.32, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.908, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.679, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.537, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.924, 'min': 1500.0, 'max': 2300.0}, {'current': 1795.909, 'min': 1500.0, 'max': 2300.0}, {'current': 1795.473, 'min': 1500.0, 'max': 2300.0}, {'current': 1798.484, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.677, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.224, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.62, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.142, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.832, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.274, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.157, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.19, 'min': 1500.0, 'max': 2300.0}, {'current': 1797.686, 'min': 1500.0, 'max': 2300.0}, {'current': 1797.477, 'min': 1500.0, 'max': 2300.0}, {'current': 2892.128, 'min': 1500.0, 'max': 2300.0}, {'current': 2894.349, 'min': 1500.0, 'max': 2300.0}, {'current': 3799.625, 'min': 1500.0, 'max': 2300.0}, {'current': 2887.206, 'min': 1500.0, 'max': 2300.0}, {'current': 2890.842, 'min': 1500.0, 'max': 2300.0}, {'current': 2897.967, 'min': 1500.0, 'max': 2300.0}, {'current': 3623.854, 'min': 1500.0, 'max': 2300.0}, {'current': 2893.043, 'min': 1500.0, 'max': 2300.0}, {'current': 2892.129, 'min': 1500.0, 'max': 2300.0}, {'current': 2893.352, 'min': 1500.0, 'max': 2300.0}, {'current': 2891.841, 'min': 1500.0, 'max': 2300.0}, {'current': 2892.23, 'min': 1500.0, 'max': 2300.0}, {'current': 1795.995, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.362, 'min': 1500.0, 'max': 2300.0}, {'current': 1497.582, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.768, 'min': 1500.0, 'max': 2300.0}, {'current': 1495.723, 'min': 1500.0, 'max': 2300.0}, {'current': 1496.734, 'min': 1500.0, 'max': 2300.0}], 'disk': {'/': {'total': 100.0, 'used': 49.886959075927734}}, 'gpu': 'NVIDIA A100 80GB PCIe', 'gpu_count': 1, 'gpu_devices': [{'name': 'NVIDIA A100 80GB PCIe', 'memory_total': 85899345920}], 'memory': {'total': 1007.7755241394043}}
+2023-09-17 08:44:23,950 INFO    HandlerThread:16946 [system_monitor.py:probe():211] Finished collecting system info
+2023-09-17 08:44:23,950 INFO    HandlerThread:16946 [system_monitor.py:probe():214] Publishing system info
+2023-09-17 08:44:23,950 DEBUG   HandlerThread:16946 [system_info.py:_save_pip():52] Saving list of pip packages installed into the current environment
+2023-09-17 08:44:23,950 DEBUG   HandlerThread:16946 [system_info.py:_save_pip():68] Saving pip packages done
+2023-09-17 08:44:23,952 INFO    HandlerThread:16946 [system_monitor.py:probe():216] Finished publishing system info
+2023-09-17 08:44:23,954 DEBUG   SenderThread:16946 [sender.py:send():379] send: files
+2023-09-17 08:44:23,954 INFO    SenderThread:16946 [sender.py:_save_file():1375] saving file wandb-metadata.json with policy now
+2023-09-17 08:44:23,960 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:44:23,961 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:44:23,965 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:44:24,173 DEBUG   SenderThread:16946 [sender.py:send():379] send: telemetry
+2023-09-17 08:44:24,173 DEBUG   SenderThread:16946 [sender.py:send():379] send: config
+2023-09-17 08:44:24,265 INFO    wandb-upload_0:16946 [upload_job.py:push():131] Uploaded file /tmp/tmp62soumg0wandb/iu6azwwr-wandb-metadata.json
+2023-09-17 08:44:24,566 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_created():271] file/dir created: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/requirements.txt
+2023-09-17 08:44:24,567 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_created():271] file/dir created: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/wandb-metadata.json
+2023-09-17 08:44:24,567 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_created():271] file/dir created: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:26,566 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:28,566 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:29,133 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:44:30,567 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:32,568 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:34,364 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:44:34,569 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:36,569 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:38,570 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:38,960 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:44:38,961 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:44:38,964 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:44:40,343 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:44:40,571 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:42,572 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:44,572 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:45,592 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:44:46,573 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:48,574 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:50,575 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:50,598 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:44:52,575 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:53,961 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:44:53,962 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:44:53,965 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:44:54,576 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:56,577 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:44:56,592 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:44:57,577 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/config.yaml
+2023-09-17 08:44:58,578 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:00,578 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:01,848 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:45:02,579 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:04,580 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:06,581 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:06,852 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:45:08,581 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:08,961 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:45:08,961 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:45:08,964 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:45:10,582 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:11,876 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:45:12,583 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:14,584 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:16,584 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:16,910 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:45:18,585 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:20,586 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:22,586 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:22,874 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:45:23,869 DEBUG   SystemMonitor:16946 [system_monitor.py:_start():159] Starting system metrics aggregation loop
+2023-09-17 08:45:23,871 DEBUG   SenderThread:16946 [sender.py:send():379] send: stats
+2023-09-17 08:45:23,961 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:45:23,962 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:45:23,965 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:45:24,587 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:26,589 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:28,132 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:45:28,590 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:30,590 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:32,591 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:33,246 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:45:34,592 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:36,592 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:38,297 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:45:38,593 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:38,962 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:45:38,963 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:45:38,963 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:45:40,594 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:42,595 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:44,270 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:45:44,595 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:46,596 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:48,598 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:49,418 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:45:50,598 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:52,599 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:53,874 DEBUG   SenderThread:16946 [sender.py:send():379] send: stats
+2023-09-17 08:45:53,961 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:45:53,962 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:45:53,966 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:45:54,600 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:54,650 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:45:56,601 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:45:58,601 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:00,602 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:00,629 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:46:02,603 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:04,604 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:05,864 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:46:06,604 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:08,605 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:08,961 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:46:08,962 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:46:08,964 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:46:10,606 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:10,889 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:46:12,606 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:14,607 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:15,891 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:46:16,607 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:18,608 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:20,609 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:20,902 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:46:22,609 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:23,876 DEBUG   SenderThread:16946 [sender.py:send():379] send: stats
+2023-09-17 08:46:23,962 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:46:23,962 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:46:23,964 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:46:24,610 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:25,909 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:46:26,610 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:28,611 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:29,654 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-17 08:46:30,612 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:31,890 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:46:32,612 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:34,613 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:36,614 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:36,895 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:46:38,615 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:38,962 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:46:38,962 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:46:38,965 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:46:40,615 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:41,919 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:46:42,616 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:44,616 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:46,617 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:47,127 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:46:48,618 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:50,618 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:52,619 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:53,124 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:46:53,878 DEBUG   SenderThread:16946 [sender.py:send():379] send: stats
+2023-09-17 08:46:53,962 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:46:53,962 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:46:53,964 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:46:54,620 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:56,620 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:46:58,316 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:46:58,621 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:00,622 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:02,622 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:03,359 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:47:04,624 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:06,624 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:08,423 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:47:08,624 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:08,962 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:47:08,963 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:47:08,965 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:47:10,625 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:12,626 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:13,438 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:47:14,628 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:17,630 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:18,676 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:47:19,630 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:21,631 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:23,631 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:23,691 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:47:23,883 DEBUG   SenderThread:16946 [sender.py:send():379] send: stats
+2023-09-17 08:47:23,962 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:47:23,962 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:47:23,965 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:47:25,632 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:27,633 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:28,707 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:47:29,633 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:31,634 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:33,634 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:33,717 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:47:35,635 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:37,636 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:38,720 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:47:38,962 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:47:38,963 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:47:38,967 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:47:39,636 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:41,637 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:43,637 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:43,727 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:47:45,638 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:47,639 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:48,923 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:47:49,639 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:51,640 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:53,641 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:53,887 DEBUG   SenderThread:16946 [sender.py:send():379] send: stats
+2023-09-17 08:47:53,962 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:47:53,963 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:47:53,967 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:47:54,107 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:47:55,641 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:57,642 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:59,643 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:47:59,926 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:48:01,643 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:03,644 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:04,947 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:48:05,645 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:07,646 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:08,963 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:48:08,963 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:48:08,966 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:48:09,646 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:10,030 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:48:11,647 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:13,648 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:15,267 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:48:15,648 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:17,649 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:19,650 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:21,234 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:48:21,650 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:23,651 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:23,890 DEBUG   SenderThread:16946 [sender.py:send():379] send: stats
+2023-09-17 08:48:23,972 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:48:23,972 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:48:23,973 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:48:25,652 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:26,452 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:48:27,653 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:29,653 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:31,519 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:48:31,654 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:33,655 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:35,312 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-17 08:48:35,313 DEBUG   SenderThread:16946 [sender.py:send():379] send: history
+2023-09-17 08:48:35,313 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: summary_record
+2023-09-17 08:48:35,314 INFO    SenderThread:16946 [sender.py:_save_file():1375] saving file wandb-summary.json with policy end
+2023-09-17 08:48:35,656 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:35,656 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_created():271] file/dir created: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/wandb-summary.json
+2023-09-17 08:48:36,580 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:48:37,656 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:38,964 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:48:38,964 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:48:38,970 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:48:39,657 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:41,658 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:41,659 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:48:43,659 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:45,659 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:46,667 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:48:47,660 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:49,661 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:51,661 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:52,666 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:48:53,662 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:53,893 DEBUG   SenderThread:16946 [sender.py:send():379] send: stats
+2023-09-17 08:48:53,964 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:48:53,965 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:48:53,971 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:48:55,663 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:57,664 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:48:57,920 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:48:59,665 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:01,665 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:02,921 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:49:03,667 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:05,667 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:07,668 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:07,933 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:49:08,964 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:49:08,965 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:49:08,971 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:49:09,669 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:11,670 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:12,939 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:49:13,671 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:15,671 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:17,672 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:18,115 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:49:19,673 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:21,674 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:23,128 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:49:23,675 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:23,895 DEBUG   SenderThread:16946 [sender.py:send():379] send: stats
+2023-09-17 08:49:23,964 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-17 08:49:23,965 DEBUG   SenderThread:16946 [sender.py:send_request():406] send_request: stop_status
+2023-09-17 08:49:23,971 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: internal_messages
+2023-09-17 08:49:25,675 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:27,676 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log
+2023-09-17 08:49:28,137 DEBUG   HandlerThread:16946 [handler.py:handle_request():144] handle_request: status_report
+2023-09-17 08:49:29,677 INFO    Thread-12 :16946 [dir_watcher.py:_on_file_modified():288] file/dir modified: /root/latest-rage2e/DALM/wandb/run-20230917_084423-zvh6d97b/files/output.log

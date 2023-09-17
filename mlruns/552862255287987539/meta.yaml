@@ -1,0 +1,6 @@
+artifact_location: file:///root/latest-rage2e/DALM/mlruns/552862255287987539
+creation_time: 1694940263974
+experiment_id: '552862255287987539'
+last_update_time: 1694940263974
+lifecycle_stage: active
+name: peft_rag_e2e_learning
