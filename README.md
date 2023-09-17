@@ -27,30 +27,32 @@ Please follow the steps below to conduct training and evaluation for both the re
 
 ## Install the necesarry libraries
 Create your desired virtual environment isntall all necasary librries.
-```
-pip install -r requirements.txt
-```
+`pip install -r requirements.txt`
 
 ## Training
 
 ### Train Retriever Only
 ```
-python contrastive_train/peft_lora_constrastive_learning.py  --train_dataset_csv_path "xxxx.csv" \
-    --test_dataset_csv_path "yyyy.csv" \
-    --model_name_or_path "BAAI/bge-small-en" --output_dir "./retriever_only_checkpoints" --use_peft  \
-    --with_tracking --report_to all --per_device_train_batch_size 30
+python dalm/training/retriever_only/train_retriever_only.py 
+--train_dataset_csv_path "/dalm/dataset/toy_data_train.csv" \
+--model_name_or_path "BAAI/bge-large-en" \
+--output_dir "dalm/training/rag_e2e/retriever_only_checkpoints" \
+--use_peft \
+--with_tracking \
+--report_to all \
+--per_device_train_batch_size 150
 ```
 
 ### Train Retriever and Generator Jointly (RAG-e2e)
 ```
-python dalm/training/rag_e2e/train_rage2e.py
-  --dataset_path "/root/DALM/dataset/out/question_answer_pairs_train"
-  --retriever_name_or_path "BAAI/bge-large-en"
-  --generator_name_or_path "meta-llama/Llama-2-7b-hf"
-  --output_dir "./rag_e2e_checkpoints"
-  --with_tracking
-  --report_to all
-  --per_device_train_batch_size 32
+python dalm/training/rag_e2e/train_rage2e.py \
+  --dataset_path "/dalm/dataset/toy_data_train.csv" \
+  --retriever_name_or_path "BAAI/bge-large-en" \
+  --generator_name_or_path "meta-llama/Llama-2-7b-hf" \
+  --output_dir "dalm/training/rag_e2e/rag_e2e_checkpoints" \
+  --with_tracking \
+  --report_to all \
+  --per_device_train_batch_size 24
 ```
 ## Evaluation
 
