@@ -18,16 +18,15 @@ For the first time in the literature, we modified the initial RAG-end2end model 
 
 - Additionally, we have data processing codes and synthetic data generation code inside the [Datasets](https://github.com/arcee-ai/DALM/tree/main/Datasets) folder.
 
-# Installation
+# Code execution
 
+## Clone the repositary
 `git clone https://github.com/arcee-ai/DALM.git`
 
-## Local Development
-Create your virtual environment and install. We suggest pyenv
-```shell
-python -m venv .venv && source .venv/bin/activate
-pip install invoke && pyenv rehash
-inv install
+## Install the necesarry libraries for your local environment
+Create your desired virtual environment isntall all necasary librries.
+```
+pip install -r requirements.txt
 ```
 
 ## Train Retriever Only
