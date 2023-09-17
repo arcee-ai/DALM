@@ -28,7 +28,6 @@ You can install this repo directly via `pip install indomain`
 Alternatively, for development, you can clone and install the repo locally:
 ```shell
 git clone https://github.com/arcee-ai/DALM.git && cd DALM
-python -m venv .venv && source .venv/bin/activate
 ```
 We use invoke to manage this repo
 ```shell
@@ -38,7 +37,6 @@ inv install
 Or you can install without it
 ```shell
 pip install --upgrade -e '.[dev]'
-# run `pyenv rehash` if you use pyenv to manage your venv
 ```
 This will install the DALM repo and all necessary dependencies.
 
