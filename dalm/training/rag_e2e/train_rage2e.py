@@ -123,7 +123,7 @@ def parse_args() -> Namespace:
         "--logit_scale",
         type=int,
         default=100,
-        help="Batch size (per device) for the evaluation dataloader.",
+        help="logit scale for the constrastive learning.",
     )
     parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
     parser.add_argument(

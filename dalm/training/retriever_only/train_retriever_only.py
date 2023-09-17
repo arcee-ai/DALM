@@ -24,9 +24,9 @@ import logging
 import math
 import random
 from argparse import Namespace
+from typing import Dict, Union
 
 import datasets
-import evaluate
 import torch
 import transformers
 from accelerate import Accelerator
@@ -83,12 +83,6 @@ def parse_args() -> Namespace:
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
-        "--per_device_eval_batch_size",
-        type=int,
-        default=8,
-        help="Batch size (per device) for the evaluation dataloader.",
-    )
-    parser.add_argument(
         "--learning_rate",
         type=float,
         default=1e-4,
@@ -98,7 +92,7 @@ def parse_args() -> Namespace:
         "--logit_scale",
         type=int,
         default=100,
-        help="Batch size (per device) for the evaluation dataloader.",
+        help="logit scale for the constrastive learning.",
     )
     parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
     parser.add_argument("--num_train_epochs", type=int, default=3, help="Total number of training epochs to perform.")
@@ -244,15 +238,6 @@ def main() -> None:
         batch_size=args.per_device_train_batch_size,
         pin_memory=True,
     )
-
-    eval_dataloader = DataLoader(
-        processed_datasets["validation"],
-        shuffle=False,
-        collate_fn=default_data_collator,
-        batch_size=args.per_device_eval_batch_size,
-        pin_memory=True,
-    )
-
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
     # Scheduler and math around the number of training steps.
@@ -270,8 +255,8 @@ def main() -> None:
     )
 
     # Prepare everything with our `accelerator`.
-    model, optimizer, train_dataloader, eval_dataloader, lr_scheduler = accelerator.prepare(
-        model, optimizer, train_dataloader, eval_dataloader, lr_scheduler
+    model, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+        model, optimizer, train_dataloader, lr_scheduler
     )
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed
@@ -293,8 +278,6 @@ def main() -> None:
         # TensorBoard cannot log Enums, need the raw value
         experiment_config["lr_scheduler_type"] = experiment_config["lr_scheduler_type"].value
         accelerator.init_trackers("peft_contrastive_learning", experiment_config)
-
-    metric = evaluate.load("accuracy")
 
     total_batch_size = args.per_device_train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
 
@@ -387,23 +370,7 @@ def main() -> None:
             if completed_steps >= args.max_train_steps:
                 break
 
-        # for the efficiency we do a per-batch evaluation
-        model.eval()
-        for batch in eval_dataloader:
-            with torch.no_grad():
-                query_embs = model(**{k.replace("query_", ""): v for k, v in batch.items() if "query" in k})
-                passage_embs = model(**{k.replace("passage_", ""): v for k, v in batch.items() if "passage" in k})
-                logits = get_cosine_sim(query_embs, passage_embs, args.logit_scale)
-                # we just need an identity matrix
-                labels = torch.arange(len(logits), device=logits.device)
-            logits, labels = accelerator.gather_for_metrics((logits, labels))
-            metric.add_batch(
-                predictions=torch.argmax(logits, dim=1),
-                references=labels,
-            )
-
-        result = metric.compute()
-        result = {f"eval/{k}": v for k, v in result.items()}
+        result: Dict[str, Union[int, float, torch.Tensor]] = {}
         # Use accelerator.print to print only on the main process.
         accelerator.print(f"epoch {epoch}:", result)
         if args.with_tracking:
