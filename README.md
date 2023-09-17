@@ -39,8 +39,24 @@ We use invoke to manage our codebase, and run checks on PRs,
   * test coverage must be above 95% for the PR tests to pass
 
 ## Train Retriever Only
+```
+python contrastive_train/peft_lora_constrastive_learning.py  --train_dataset_csv_path "xxxx.csv" \
+    --test_dataset_csv_path "yyyy.csv" \
+    --model_name_or_path "BAAI/bge-small-en" --output_dir "./retriever_only_checkpoints" --use_peft  \
+    --with_tracking --report_to all --per_device_train_batch_size 30
+```
 
 ## Train Retriever and Generator Jointly
+```
+python dalm/training/rag_e2e/train_rage2e.py
+  --dataset_path "/root/DALM/dataset/out/question_answer_pairs_train"
+  --retriever_name_or_path "BAAI/bge-large-en"
+  --generator_name_or_path "meta-llama/Llama-2-7b-hf"
+  --output_dir "./rag_e2e_checkpoints"
+  --with_tracking
+  --report_to all
+  --per_device_train_batch_size 32
+```
 
 ## Domain Pretrained Models - DPT (Coming Soon)
 
