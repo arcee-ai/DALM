@@ -72,11 +72,29 @@ def parse_args() -> Namespace:
         "--dataset_answer_col_name", type=str, default="Answer", help="Name of the column containing the answer"
     )
     parser.add_argument(
-        "--max_length",
+        "--query_max_len",
+        type=int,
+        default=50,
+        help=(
+            "The maximum total query sequence length after tokenization. Sequences longer than this will be truncated,"
+            " sequences shorter will be padded if `--pad_to_max_length` is passed."
+        ),
+    )
+    parser.add_argument(
+        "--passage_max_len",
         type=int,
         default=128,
         help=(
-            "The maximum total input sequence length after tokenization. Sequences longer than this will be truncated,"
+            "The maximum total passage sequence length after tokenization. Sequences longer than this will be truncated,"
+            " sequences shorter will be padded if `--pad_to_max_length` is passed."
+        ),
+    )
+    parser.add_argument(
+        "--generator_max_len",
+        type=int,
+        default=256,
+        help=(
+            "The maximum total generator input sequence length after tokenization. Sequences longer than this will be truncated,"
             " sequences shorter will be padded if `--pad_to_max_length` is passed."
         ),
     )
@@ -114,7 +132,7 @@ def parse_args() -> Namespace:
     parser.add_argument(
         "--num_train_epochs",
         type=int,
-        default=5,
+        default=1,
         help="Total number of training epochs to perform.",
     )
     parser.add_argument(
@@ -239,9 +257,7 @@ def main() -> None:
         if os.path.isdir(args.dataset_path)
         else datasets.load_dataset("csv", data_files=args.dataset_path)["train"]
     )
-
     retriever_tokenizer = rag_model.retriever_tokenizer
-
     generator_tokenizer = rag_model.generator_tokenizer
     generator_tokenizer.pad_token = generator_tokenizer.eos_token
 
@@ -253,13 +269,15 @@ def main() -> None:
             dataset_query_col_name=args.dataset_query_col_name,
             dataset_passage_col_name=args.dataset_passage_col_name,
             dataset_answer_col_name=args.dataset_answer_col_name,
+            query_max_len=args.query_max_len,
+            passage_max_len=args.passage_max_len,
+            generator_max_len=args.generator_max_len
         ),
         batched=True,
         remove_columns=dataset.column_names,
         desc="Running tokenizer on dataset",
         num_proc=1,
     )
-
     # Log a few random samples from the training set:
     for index in random.sample(range(len(processed_datasets)), 2):
         logger.info(f"Sample {index} of the training set: {processed_datasets[index]}.")

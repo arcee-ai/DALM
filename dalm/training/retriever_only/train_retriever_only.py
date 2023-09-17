@@ -13,10 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import sys
+
+sys.path.append(os.getcwd())  # This is needed to import modules with absolute paths
+
+# ruff: noqa: E402
+
 import argparse
 import logging
 import math
-import os
 import random
 from argparse import Namespace
 
