@@ -28,7 +28,11 @@ dependencies = [
     "torchvision",
     "pydantic",
     "typer",
+    "scipy"
 ]
+
+[project.scripts]
+dalm = "dalm.cli:cli"
 
 [tool.hatch.build.targets.wheel.shared-data]
 "prefix" = "prefix"
