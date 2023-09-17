@@ -20,7 +20,7 @@ For the first time in the literature, we modified the initial RAG-end2end model 
 
 # Installation
 
-`pip install indomain`
+`git clone https://github.com/arcee-ai/DALM.git`
 
 ## Local Development
 Create your virtual environment and install. We suggest pyenv
