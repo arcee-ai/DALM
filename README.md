@@ -30,14 +30,6 @@ pip install invoke && pyenv rehash
 inv install
 ```
 
-# Contributing
-We use invoke to manage our codebase, and run checks on PRs,
-
-* format the code with `inv format`
-* check linting with `inv lint`
-* test with `inv test`
-  * test coverage must be above 95% for the PR tests to pass
-
 ## Train Retriever Only
 ```
 python contrastive_train/peft_lora_constrastive_learning.py  --train_dataset_csv_path "xxxx.csv" \
@@ -65,3 +57,12 @@ python dalm/training/rag_e2e/train_rage2e.py
 * DPT-PubMed-7b
 * DPT-Patent-7b
 * DPT-SEC-7b
+* 
+# Contributing
+We use invoke to manage our codebase, and run checks on PRs,
+
+* format the code with `inv format`
+* check linting with `inv lint`
+* test with `inv test`
+  * test coverage must be above 95% for the PR tests to pass
+
