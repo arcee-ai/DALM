@@ -11,11 +11,11 @@ from typing import Any, Dict, Final
 import datasets
 import numpy as np
 import torch
-import transformers
+
 from accelerate.logging import get_logger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import default_data_collator
+from transformers import default_data_collator, AutoTokenizer
 
 from dalm.eval.utils import (
     calculate_precision_recall,
@@ -104,9 +104,11 @@ def main() -> None:
     args = parse_args()
     SELECTED_TORCH_DTYPE: Final[torch.dtype] = torch.float16 if args.torch_dtype == "float16" else torch.bfloat16
 
+    tokenizer = AutoTokenizer.from_pretrained(args.retriever_model_name_or_path)
+
     # rag retriver and the generator (don't load new peft layers no need)
     retriever_model = AutoModelForSentenceEmbedding(
-        args.retriever_model_name_or_path, get_peft=False, use_bnb=False
+        args.retriever_model_name_or_path, tokenizer, get_peft=False, use_bnb=False
     )
 
     # load the test dataset
@@ -117,17 +119,18 @@ def main() -> None:
     )
 
     # test_dataset = datasets.load_from_disk("/home/datasets/question_answer_pairs")
-    
-    retriever_tokenizer = retriever_model.retriever_tokenizer
+
+    # TODO: ask if this is a mistake
+    # retriever_tokenizer = retriever_model.retriever_tokenizer
 
     processed_datasets = test_dataset.map(
         lambda example: preprocess_function(
             example,
-            retriever_tokenizer,
-            retriever_tokenizer,
+            tokenizer,
+            tokenizer,
             query_col_name=args.query_column_name,
             passage_col_name=args.passage_column_name,
-            answer_col_name=args.answer_column_name,
+            # answer_col_name=args.answer_column_name,
         ),
         batched=True,
         # remove_columns=test_dataset.column_names,
@@ -155,9 +158,7 @@ def main() -> None:
     )
 
     # peft config and wrapping
-    retriever_model.attach_pre_trained_peft_layers(
-        args.retriever_peft_model_path, args.generator_peft_model_path, args.device
-    )
+    retriever_model.attach_pre_trained_peft_layers(args.retriever_peft_model_path, args.device)
 
     def get_query_embeddings(
         retriever_query_input_ids: torch.Tensor,
@@ -165,8 +166,8 @@ def main() -> None:
     ) -> np.ndarray:
         return (
             retriever_model.forward(
-                retriever_query_input_ids.to(args.device),
-                retriever_query_attention_masks.to(args.device),
+                input_ids=retriever_query_input_ids.to(args.device),
+                attention_mask=retriever_query_attention_masks.to(args.device),
             )
             .detach()
             .float()
@@ -180,8 +181,8 @@ def main() -> None:
     ) -> np.ndarray:
         return (
             retriever_model.forward(
-                retriever_passage_input_ids.to(args.device),
-                retriever_passage_attention_masks.to(args.device),
+                input_ids=retriever_passage_input_ids.to(args.device),
+                attention_mask=retriever_passage_attention_masks.to(args.device),
             )
             .detach()
             .float()
@@ -215,7 +216,6 @@ def main() -> None:
     batch_precision = []
     batch_recall = []
     total_hit = 0
-
 
     print("Evaluation start")
 
@@ -270,7 +270,6 @@ def main() -> None:
     print("Hit Rate:", hit_rate)
 
     print("*************")
-
 
 
 if __name__ == "__main__":
