@@ -115,15 +115,16 @@ def parse_args() -> Namespace:
 
 
 def run_model_on_passages(model: PreTrainedModel, tokenizer: PreTrainedTokenizer, data) -> List[str]:
+    # TODO: Is the max_length correct here? not sure
     inputs = tokenizer(
         data,
         return_tensors="pt",
         padding=True,
         truncation=True,
-        max_length=512,
+        max_length=200,
     )
     with torch.autocast("cuda"), torch.no_grad():
-        outputs = model.generate(**inputs.to("cuda"), max_length=512, early_stopping=True)
+        outputs = model.generate(**inputs.to("cuda"), max_length=200, early_stopping=True)
     return [tokenizer.decode(out.cpu(), skip_special_tokens=True) for out in outputs]
 
 
