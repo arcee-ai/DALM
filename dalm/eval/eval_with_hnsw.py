@@ -252,16 +252,7 @@ def main() -> None:
 
     print("Evaluation start")
 
-    # initialize the pipeline for the answer generation
-    transformers.pipeline(
-        "text-generation",
-        model=rag_model.generator_model,
-        tokenizer=rag_model.generator_tokenizer,
-        torch_dtype=SELECTED_TORCH_DTYPE,
-        trust_remote_code=True,
-        device=(0 if args.device == "cuda" else args.device),
-    )
-
+    # Model for eval
     model = AutoModelForCausalLM(
         rag_model.generator_model,
         torch_dtype=SELECTED_TORCH_DTYPE,
