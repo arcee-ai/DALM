@@ -253,7 +253,13 @@ def main() -> None:
 
     print("Evaluation start")
 
+    # For evaluating the generator
     queries_for_gen_eval = []
+    generated_answers_for_eval = []
+    query_batch_size = 16
+    model = rag_model.generator_model
+    tokenizer = rag_model.generator_tokenizer
+    tokenizer.pad_token = tokenizer.eos_token
 
     # here we are interacting through the dataset, not a dataloader
     # so we need to convert them to a tensor
@@ -303,19 +309,16 @@ def main() -> None:
         # this query comes without the answer
         query = f"#query# {test_example[args.query_column_name]} #passage# {search_result_passage} #answer# "
         queries_for_gen_eval.append(query)
+        # Generate answers in batch
+        if len(queries_for_gen_eval) > query_batch_size:
+            batch_answers = run_generator_on_prompts(model, tokenizer, queries_for_gen_eval, max_length=args.max_length)
+            generated_answers_for_eval.extend(batch_answers)
+            queries_for_gen_eval.clear()
 
     if args.evaluate_generator:
-        # Model for eval
-        model = rag_model.generator_model
-        tokenizer = rag_model.generator_tokenizer
-        tokenizer.pad_token = tokenizer.eos_token
-
-        all_generated_answers = run_generator_on_prompts(
-            model, tokenizer, queries_for_gen_eval, max_length=args.max_length
-        )
         answers = processed_datasets[args.answer_column_name]
 
-        for generated_answer, answer in zip(all_generated_answers, answers, strict=True):
+        for generated_answer, answer in zip(generated_answers_for_eval, answers, strict=True):
             generated_answer_strings = generated_answer.split("#answer#")
 
             if len(generated_answer_strings) < 2:
