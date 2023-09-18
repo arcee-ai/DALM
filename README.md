@@ -28,15 +28,7 @@ You can install this repo directly via `pip install indomain`
 Alternatively, for development, you can clone and install the repo locally:
 ```shell
 git clone https://github.com/arcee-ai/DALM.git && cd DALM
-```
-We use invoke to manage this repo
-```shell
-pip install invoke
-inv install
-```
-Or you can install without it
-```shell
-pip install --upgrade -e '.[dev]'
+pip install --upgrade -d '.[dev]'
 ```
 This will install the DALM repo and all necessary dependencies.
 
@@ -121,3 +113,6 @@ For all available arguments and options, see `dalm train-rag-e2e --help`
 * DPT-PubMed-7b
 * DPT-Patent-7b
 * DPT-SEC-7b
+
+## Contributing
+See [CONTRIBUTING](https://github.com/arcee-ai/DALM/tree/main/CONTRIBUTING.md)
