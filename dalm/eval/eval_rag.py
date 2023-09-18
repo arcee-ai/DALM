@@ -111,12 +111,13 @@ def parse_args() -> Namespace:
     return args
 
 
-def run_model_on_passages(
-    model: PreTrainedModel, tokenizer: PreTrainedTokenizer, data: List[str], max_length: int = 200
+def run_generator_on_prompts(
+    model: PreTrainedModel, tokenizer: PreTrainedTokenizer, prompts: List[str], max_length: int = 200
 ) -> List[str]:
+    """Runs the generator model over the prompts (query + passage)"""
     # TODO: Is the max_length correct here? not sure
     inputs = tokenizer(
-        data,
+        prompts,
         return_tensors="pt",
         padding=True,
         truncation=True,
@@ -124,7 +125,7 @@ def run_model_on_passages(
     )
     with torch.autocast("cuda"), torch.no_grad():
         outputs = model.generate(**inputs.to("cuda"), max_length=max_length, early_stopping=True)
-    return [tokenizer.decode(out.cpu(), skip_special_tokens=True) for out in outputs]
+    return tokenizer.batch_decode(outputs.cpu(), skip_special_tokens=True)
 
 
 def main() -> None:
@@ -154,10 +155,8 @@ def main() -> None:
         lambda example: preprocess_function(
             example,
             retriever_tokenizer,
-            retriever_tokenizer,
             query_col_name=args.query_column_name,
             passage_col_name=args.passage_column_name,
-            answer_col_name=args.answer_column_name,
         ),
         batched=True,
         # remove_columns=test_dataset.column_names,
@@ -226,12 +225,11 @@ def main() -> None:
 
     passage_embeddings_array = np.zeros((num_passages, args.embed_dim))
     for step, batch in enumerate(tqdm(unique_passage_dataloader)):
-        with torch.no_grad():
-            with torch.amp.autocast(dtype=SELECTED_TORCH_DTYPE, device_type=args.device):
-                passage_embs = get_passage_embeddings(
-                    batch["retriever_passage_input_ids"],
-                    batch["retriever_passage_attention_mask"],
-                )
+        with torch.no_grad(), torch.amp.autocast(dtype=SELECTED_TORCH_DTYPE, device_type=args.device):
+            passage_embs = get_passage_embeddings(
+                batch["retriever_passage_input_ids"],
+                batch["retriever_passage_attention_mask"],
+            )
 
         start_index = step * args.test_batch_size
         end_index = (
@@ -252,7 +250,13 @@ def main() -> None:
 
     print("Evaluation start")
 
+    # For evaluating the generator
     queries_for_gen_eval = []
+    generated_answers_for_eval = []
+    query_batch_size = 16
+    model = rag_model.generator_model
+    tokenizer = rag_model.generator_tokenizer
+    tokenizer.pad_token = tokenizer.eos_token
 
     # here we are interacting through the dataset, not a dataloader
     # so we need to convert them to a tensor
@@ -302,19 +306,16 @@ def main() -> None:
         # this query comes without the answer
         query = f"#query# {test_example[args.query_column_name]} #passage# {search_result_passage} #answer# "
         queries_for_gen_eval.append(query)
+        # Generate answers in batch
+        if len(queries_for_gen_eval) > query_batch_size:
+            batch_answers = run_generator_on_prompts(model, tokenizer, queries_for_gen_eval, max_length=args.max_length)
+            generated_answers_for_eval.extend(batch_answers)
+            queries_for_gen_eval.clear()
 
     if args.evaluate_generator:
-        # Model for eval
-        model = rag_model.generator_model
-        tokenizer = rag_model.generator_tokenizer
-        tokenizer.pad_token = tokenizer.eos_token
-
-        all_generated_answers = run_model_on_passages(
-            model, tokenizer, queries_for_gen_eval, max_length=args.max_length
-        )
         answers = processed_datasets[args.answer_column_name]
 
-        for generated_answer, answer in zip(all_generated_answers, answers, strict=True):
+        for generated_answer, answer in zip(generated_answers_for_eval, answers, strict=True):
             generated_answer_strings = generated_answer.split("#answer#")
 
             if len(generated_answer_strings) < 2:
