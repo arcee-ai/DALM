@@ -4,7 +4,7 @@ import hnswlib
 import numpy as np
 import torch
 from datasets.formatting.formatting import LazyBatch
-from transformers import AutoTokenizer
+from transformers import PreTrainedTokenizer
 
 
 def construct_search_index(dim: int, num_elements: int, data: np.ndarray) -> hnswlib.Index:
@@ -70,24 +70,20 @@ def calculate_precision_recall(retrieved_items: List, correct_items: List) -> Tu
 
 def preprocess_function(
     examples: LazyBatch,
-    retriever_tokenizer: AutoTokenizer,
-    generator_tokenizer: AutoTokenizer,
+    retriever_tokenizer: PreTrainedTokenizer,
     query_col_name: str = "query",
     passage_col_name: str = "passage",
-    answer_col_name: str = "answer",
 ) -> Dict[str, torch.Tensor]:
     queries = examples[query_col_name]
     passages = examples[passage_col_name]
-    # examples[answer_col_name]
 
     # Tokenization for the retriever
     retriever_query_tokens = retriever_tokenizer(queries, padding="max_length", max_length=128, truncation=True)
-
     retriever_passage_tokens = retriever_tokenizer(passages, padding="max_length", max_length=128, truncation=True)
 
     pre_batch = {}
 
-    # for the retriever in-batch negats
+    # for the retriever in-batch negatives
     for k, v in retriever_query_tokens.items():
         pre_batch[f"retriever_query_{k}"] = v
     for k, v in retriever_passage_tokens.items():

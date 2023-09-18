@@ -155,10 +155,8 @@ def main() -> None:
         lambda example: preprocess_function(
             example,
             retriever_tokenizer,
-            retriever_tokenizer,
             query_col_name=args.query_column_name,
             passage_col_name=args.passage_column_name,
-            answer_col_name=args.answer_column_name,
         ),
         batched=True,
         # remove_columns=test_dataset.column_names,
