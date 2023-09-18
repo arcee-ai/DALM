@@ -238,6 +238,16 @@ def main() -> None:
 
     print("Evaluation start")
 
+    # initialize the pipleline for the answer generation
+    pipeline = transformers.pipeline(
+    "text-generation",
+    model=rag_model.generator_model,
+    tokenizer=rag_model.generator_tokenizer,
+    torch_dtype=SELECTED_TORCH_DTYPE,
+    trust_remote_code=True,
+    device=(0 if args.device == "cuda" else args.device),
+    )
+
     # here we are interacting through the dataset, not a dataloader
     # so we need to convert them to a tensor
     # to do : convert this to batches by examples from the dataset to make it effcient
@@ -287,16 +297,7 @@ def main() -> None:
         query = f"#query# {test_example[args.query_column_name]} #passage# {search_result_passage} #answer# "
 
         answer = test_example[args.answer_column_name]
-
-        pipeline = transformers.pipeline(
-            "text-generation",
-            model=rag_model.generator_model,
-            tokenizer=rag_model.generator_tokenizer,
-            torch_dtype=SELECTED_TORCH_DTYPE,
-            trust_remote_code=True,
-            device=(0 if args.device == "cuda" else args.device),
-        )
-
+        
         sequences = pipeline(
             query,
             max_new_tokens=200,
