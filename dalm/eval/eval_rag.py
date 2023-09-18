@@ -111,12 +111,13 @@ def parse_args() -> Namespace:
     return args
 
 
-def run_model_on_passages(
-    model: PreTrainedModel, tokenizer: PreTrainedTokenizer, data: List[str], max_length: int = 200
+def run_generator_on_prompts(
+    model: PreTrainedModel, tokenizer: PreTrainedTokenizer, prompts: List[str], max_length: int = 200
 ) -> List[str]:
+    """Runs the generator model over the prompts (query + passage)"""
     # TODO: Is the max_length correct here? not sure
     inputs = tokenizer(
-        data,
+        prompts,
         return_tensors="pt",
         padding=True,
         truncation=True,
@@ -309,7 +310,7 @@ def main() -> None:
         tokenizer = rag_model.generator_tokenizer
         tokenizer.pad_token = tokenizer.eos_token
 
-        all_generated_answers = run_model_on_passages(
+        all_generated_answers = run_generator_on_prompts(
             model, tokenizer, queries_for_gen_eval, max_length=args.max_length
         )
         answers = processed_datasets[args.answer_column_name]
