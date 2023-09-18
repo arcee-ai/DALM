@@ -6,7 +6,7 @@ sys.path.append(os.getcwd())
 
 # ruff:noqa
 from argparse import Namespace
-from typing import Any, Dict, Final
+from typing import Any, Dict, Final, List
 
 import datasets
 import numpy as np
@@ -219,6 +219,25 @@ def main() -> None:
 
     print("Evaluation start")
 
+    # ruff:noqa
+    def my_collate_fn(batch: List[Dict[str, torch.Tensor | str]]) -> Dict[str, torch.Tensor | List[str]]:
+        new_batch = {}
+
+        keys = batch[0].keys()
+        for key in keys:
+            if isinstance(batch[0][key], str) or batch[0][key] is None:
+                new_batch[key] = [sample[key] for sample in batch]
+            else:
+                new_batch[key] = torch.stack([torch.tensor(sample[key]) for sample in batch])
+
+        return new_batch
+
+    actual_length = len(processed_datasets)
+
+    processed_datasets = DataLoader(
+        processed_datasets, batch_size=args.test_batch_size, shuffle=True, collate_fn=my_collate_fn
+    )
+
     # here we are interacting through the dataset, not a dataloader
     # so we need to convert them to a tensor
     # to do : convert this to batches by examples from the dataset to make it effcient
@@ -228,10 +247,8 @@ def main() -> None:
             with torch.amp.autocast(dtype=SELECTED_TORCH_DTYPE, device_type=args.device):
                 # use the batch size for the first dim
                 # do not hard-code it
-                retriever_query_input_ids = torch.tensor(test_example["retriever_query_input_ids"]).view(1, -1)
-                retriever_query__attention_mask = torch.tensor(test_example["retriever_query_attention_mask"]).view(
-                    1, -1
-                )
+                retriever_query_input_ids = test_example["retriever_query_input_ids"]
+                retriever_query__attention_mask = test_example["retriever_query_attention_mask"]
 
                 query_embeddings = get_query_embeddings(
                     retriever_query_input_ids,
@@ -246,19 +263,22 @@ def main() -> None:
             threshold=0.0,
         )
 
-        retrieved_passages = [item[0] for item in search_results]
+        correct_passages = test_example[args.passage_column_name]
 
-        correct_passages = [test_example[args.passage_column_name]]
+        for i, s in enumerate(search_results):
+            retrieved_passages = [item[0] for item in s]
 
-        precision, recall = calculate_precision_recall(retrieved_passages, correct_passages)
+            correct_passage = [correct_passages[i]]
 
-        batch_precision.append(precision)
-        batch_recall.append(recall)
+            precision, recall = calculate_precision_recall(retrieved_passages, correct_passage)
 
-        hit = any(passage in retrieved_passages for passage in correct_passages)
-        total_hit += hit
+            batch_precision.append(precision)
+            batch_recall.append(recall)
 
-    total_examples = len(processed_datasets)
+            hit = any(passage in retrieved_passages for passage in correct_passage)
+            total_hit += hit
+
+    total_examples = actual_length
     recall = sum(batch_recall) / total_examples
     precision = sum(batch_precision) / total_examples
     hit_rate = total_hit / float(total_examples)

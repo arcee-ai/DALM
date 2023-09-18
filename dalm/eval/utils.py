@@ -39,18 +39,25 @@ def get_nearest_neighbours(
     query_embeddings: np.ndarray,
     ids_to_cat_dict: Dict[int, Any],
     threshold: float = 0.7,
-) -> List[Tuple[str, float]]:
+) -> List[List[Tuple[str, float]]]:
     # Controlling the recall by setting ef:
     search_index.set_ef(100)  # ef should always be > k
 
     # Query dataset, k - number of the closest elements (returns 2 numpy arrays)
     labels, distances = search_index.knn_query(query_embeddings, k=k)
 
-    return [
-        (ids_to_cat_dict[label], (1 - distance))
-        for label, distance in zip(labels[0], distances[0], strict=True)
-        if (1 - distance) >= threshold
-    ]
+    results = []
+
+    for i in range(len(labels)):
+        results.append(
+            [
+                (ids_to_cat_dict[label], (1 - distance))
+                for label, distance in zip(labels[i], distances[i], strict=True)
+                if (1 - distance) >= threshold
+            ]
+        )
+
+    return results
 
 
 def calculate_precision_recall(retrieved_items: List, correct_items: List) -> Tuple[float, float]:
