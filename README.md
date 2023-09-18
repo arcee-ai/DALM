@@ -28,7 +28,7 @@ You can install this repo directly via `pip install indomain`
 Alternatively, for development, you can clone and install the repo locally:
 ```shell
 git clone https://github.com/arcee-ai/DALM.git && cd DALM
-pip install --upgrade -d '.[dev]'
+pip install --upgrade -e '.[dev]'
 ```
 This will install the DALM repo and all necessary dependencies.
 
