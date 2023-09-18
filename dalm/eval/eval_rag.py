@@ -124,7 +124,7 @@ def run_model_on_passages(
     )
     with torch.autocast("cuda"), torch.no_grad():
         outputs = model.generate(**inputs.to("cuda"), max_length=max_length, early_stopping=True)
-    return [tokenizer.decode(out.cpu(), skip_special_tokens=True) for out in outputs]
+    return tokenizer.batch_decode(outputs.cpu(), skip_special_tokens=True)
 
 
 def main() -> None:
