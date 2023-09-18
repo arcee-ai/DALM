@@ -227,12 +227,11 @@ def main() -> None:
 
     passage_embeddings_array = np.zeros((num_passages, args.embed_dim))
     for step, batch in enumerate(tqdm(unique_passage_dataloader)):
-        with torch.no_grad():
-            with torch.amp.autocast(dtype=SELECTED_TORCH_DTYPE, device_type=args.device):
-                passage_embs = get_passage_embeddings(
-                    batch["retriever_passage_input_ids"],
-                    batch["retriever_passage_attention_mask"],
-                )
+        with torch.no_grad(), torch.amp.autocast(dtype=SELECTED_TORCH_DTYPE, device_type=args.device):
+            passage_embs = get_passage_embeddings(
+                batch["retriever_passage_input_ids"],
+                batch["retriever_passage_attention_mask"],
+            )
 
         start_index = step * args.test_batch_size
         end_index = (
