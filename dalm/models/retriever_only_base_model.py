@@ -1,4 +1,5 @@
 from typing import List, Optional, Union
+
 import torch
 from peft import LoraConfig, PeftModel, TaskType, get_peft_model
 from transformers import AutoModel, AutoTokenizer, BitsAndBytesConfig
@@ -51,10 +52,10 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
             return super().__getattr__(name)  # defer to nn.Module's logic
         except AttributeError:
             return getattr(self.model, name)
-        
+
     def attach_pre_trained_peft_layers(self, peft_retriever_path: str, device: str) -> None:
         self.model = (
-            PeftModel.from_pretrained(self.retriever_model, peft_retriever_path, load_in_4bit=True, device_map="auto")
+            PeftModel.from_pretrained(self.model, peft_retriever_path, load_in_4bit=True, device_map="auto")
             .to(device)
             .eval()
             .merge_and_unload()
