@@ -6,13 +6,10 @@ from typing import Any, Dict, Final, List
 import datasets
 import numpy as np
 import torch
-import transformers
 from accelerate.logging import get_logger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
     PreTrainedModel,
     PreTrainedTokenizer,
     default_data_collator,
@@ -114,17 +111,19 @@ def parse_args() -> Namespace:
     return args
 
 
-def run_model_on_passages(model: PreTrainedModel, tokenizer: PreTrainedTokenizer, data) -> List[str]:
+def run_model_on_passages(
+    model: PreTrainedModel, tokenizer: PreTrainedTokenizer, data: List[str], max_length: int = 200
+) -> List[str]:
     # TODO: Is the max_length correct here? not sure
     inputs = tokenizer(
         data,
         return_tensors="pt",
         padding=True,
         truncation=True,
-        max_length=200,
+        max_length=max_length,
     )
     with torch.autocast("cuda"), torch.no_grad():
-        outputs = model.generate(**inputs.to("cuda"), max_length=200, early_stopping=True)
+        outputs = model.generate(**inputs.to("cuda"), max_length=max_length, early_stopping=True)
     return [tokenizer.decode(out.cpu(), skip_special_tokens=True) for out in outputs]
 
 
@@ -186,9 +185,9 @@ def main() -> None:
     )
 
     # peft config and wrapping
-    rag_model.attach_pre_trained_peft_layers(
-        args.retriever_peft_model_path, args.generator_peft_model_path, args.device
-    )
+    # rag_model.attach_pre_trained_peft_layers(
+    #    args.retriever_peft_model_path, args.generator_peft_model_path, args.device
+    # )
 
     def get_query_embeddings(
         retriever_query_input_ids: torch.Tensor,
@@ -248,19 +247,11 @@ def main() -> None:
     batch_precision = []
     batch_recall = []
     total_hit = 0
-    # For the geneator. hint: use chatGPT to see what is Exact match when evaluating question answer models
+    # For the generator. hint: use chatGPT to see what is Exact match when evaluating question answer models
     total_em_hit = 0
 
     print("Evaluation start")
 
-    # Model for eval
-    model = AutoModelForCausalLM(
-        rag_model.generator_model,
-        torch_dtype=SELECTED_TORCH_DTYPE,
-        device=(0 if args.device == "cuda" else args.device),
-    )
-    tokenizer = AutoTokenizer.from_pretrained(rag_model.generator_tokenizer)
-    tokenizer.pad_token = tokenizer.eos_token
     queries_for_gen_eval = []
 
     # here we are interacting through the dataset, not a dataloader
@@ -313,11 +304,24 @@ def main() -> None:
         queries_for_gen_eval.append(query)
 
     if args.evaluate_generator:
-        all_generated_answers = run_model_on_passages(model, tokenizer, queries_for_gen_eval)
+        # Model for eval
+        model = rag_model.generator_model
+        tokenizer = rag_model.generator_tokenizer
+        tokenizer.pad_token = tokenizer.eos_token
+
+        all_generated_answers = run_model_on_passages(
+            model, tokenizer, queries_for_gen_eval, max_length=args.max_length
+        )
         answers = processed_datasets[args.answer_column_name]
 
-        for generated_answer, answer in zip(all_generated_answers, answers):
-            generated_answer_string = generated_answer.split("#answer#")[1].strip()
+        for generated_answer, answer in zip(all_generated_answers, answers, strict=True):
+            generated_answer_strings = generated_answer.split("#answer#")
+
+            if len(generated_answer_strings) < 2:
+                continue
+
+            generated_answer_string = generated_answer_strings[1].strip()
+
             if generated_answer_string == answer:
                 total_em_hit = total_em_hit + 1
 
@@ -336,7 +340,7 @@ def main() -> None:
 
     if args.evaluate_generator:
         print("Generator evaluation:")
-        print("Exact mactch:", total_em_hit / len(processed_datasets))
+        print("Exact match:", total_em_hit / len(processed_datasets))
 
 
 if __name__ == "__main__":
