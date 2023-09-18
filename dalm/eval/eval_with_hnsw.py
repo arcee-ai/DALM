@@ -1,12 +1,7 @@
 import argparse
 import os
-import sys
-
-sys.path.append(os.getcwd())
-
-# ruff:noqa
 from argparse import Namespace
-from typing import Any, Dict, Final
+from typing import Any, Dict, Final, List
 
 import datasets
 import numpy as np
@@ -15,7 +10,13 @@ import transformers
 from accelerate.logging import get_logger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import default_data_collator
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    PreTrainedModel,
+    PreTrainedTokenizer,
+    default_data_collator,
+)
 
 from dalm.eval.utils import (
     calculate_precision_recall,
@@ -111,6 +112,19 @@ def parse_args() -> Namespace:
     args = parser.parse_args()
 
     return args
+
+
+def run_model_on_passages(model: PreTrainedModel, tokenizer: PreTrainedTokenizer, data) -> List[str]:
+    inputs = tokenizer(
+        data,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=512,
+    )
+    with torch.autocast("cuda"), torch.no_grad():
+        outputs = model.generate(**inputs.to("cuda"), max_length=512, early_stopping=True)
+    return [tokenizer.decode(out.cpu(), skip_special_tokens=True) for out in outputs]
 
 
 def main() -> None:
@@ -238,15 +252,24 @@ def main() -> None:
 
     print("Evaluation start")
 
-    # initialize the pipleline for the answer generation
-    pipeline = transformers.pipeline(
-    "text-generation",
-    model=rag_model.generator_model,
-    tokenizer=rag_model.generator_tokenizer,
-    torch_dtype=SELECTED_TORCH_DTYPE,
-    trust_remote_code=True,
-    device=(0 if args.device == "cuda" else args.device),
+    # initialize the pipeline for the answer generation
+    transformers.pipeline(
+        "text-generation",
+        model=rag_model.generator_model,
+        tokenizer=rag_model.generator_tokenizer,
+        torch_dtype=SELECTED_TORCH_DTYPE,
+        trust_remote_code=True,
+        device=(0 if args.device == "cuda" else args.device),
     )
+
+    model = AutoModelForCausalLM(
+        rag_model.generator_model,
+        torch_dtype=SELECTED_TORCH_DTYPE,
+        device=(0 if args.device == "cuda" else args.device),
+    )
+    tokenizer = AutoTokenizer.from_pretrained(rag_model.generator_tokenizer)
+    tokenizer.pad_token = tokenizer.eos_token
+    queries_for_gen_eval = []
 
     # here we are interacting through the dataset, not a dataloader
     # so we need to convert them to a tensor
@@ -295,22 +318,16 @@ def main() -> None:
 
         # this query comes without the answer
         query = f"#query# {test_example[args.query_column_name]} #passage# {search_result_passage} #answer# "
+        queries_for_gen_eval.append(query)
 
-        answer = test_example[args.answer_column_name]
-        
-        sequences = pipeline(
-            query,
-            max_new_tokens=200,
-            do_sample=True,
-            top_k=10,
-            num_return_sequences=1,
-            eos_token_id=rag_model.generator_tokenizer.eos_token_id,
-        )
+    if args.evaluate_generator:
+        all_generated_answers = run_model_on_passages(model, tokenizer, queries_for_gen_eval)
+        answers = processed_datasets[args.answer_column_name]
 
-        generated_answer_string = (sequences[0]["generated_text"].split("#answer#")[1]).strip()
-
-        if generated_answer_string == answer:
-            total_em_hit = total_em_hit + 1
+        for generated_answer, answer in zip(all_generated_answers, answers):
+            generated_answer_string = generated_answer.split("#answer#")[1].strip()
+            if generated_answer_string == answer:
+                total_em_hit = total_em_hit + 1
 
     total_examples = len(processed_datasets)
     recall = sum(batch_recall) / total_examples
