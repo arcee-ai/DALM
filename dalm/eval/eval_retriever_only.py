@@ -20,6 +20,7 @@ from dalm.eval.utils import (
     construct_search_index,
     get_nearest_neighbours,
     preprocess_function,
+    mixed_collate_fn,
 )
 from dalm.models.retriever_only_base_model import AutoModelForSentenceEmbedding
 
@@ -210,23 +211,10 @@ def main() -> None:
 
     print("Evaluation start")
 
-    # ruff:noqa
-    def my_collate_fn(batch: List[Dict[str, torch.Tensor | str]]) -> Dict[str, torch.Tensor | List[str]]:
-        new_batch = {}
-
-        keys = batch[0].keys()
-        for key in keys:
-            if isinstance(batch[0][key], str) or batch[0][key] is None:
-                new_batch[key] = [sample[key] for sample in batch]
-            else:
-                new_batch[key] = torch.stack([torch.tensor(sample[key]) for sample in batch])
-
-        return new_batch
-
     actual_length = len(processed_datasets)
 
     processed_datasets = DataLoader(
-        processed_datasets, batch_size=args.test_batch_size, shuffle=True, collate_fn=my_collate_fn
+        processed_datasets, batch_size=args.test_batch_size, shuffle=True, collate_fn=mixed_collate_fn
     )
 
     # here we are interacting through the dataset, not a dataloader

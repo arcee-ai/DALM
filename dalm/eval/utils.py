@@ -97,3 +97,19 @@ def preprocess_function(
         pre_batch[f"retriever_passage_{k}"] = v
 
     return pre_batch
+
+
+def mixed_collate_fn(batch: List[Dict[str, torch.Tensor | str]]) -> Dict[str, torch.Tensor | List[str]]:
+    """
+    This is able to account for string values which the default PyTorch collate_fn would silently ignore
+    """
+    new_batch = {}
+
+    keys = batch[0].keys()
+    for key in keys:
+        if isinstance(batch[0][key], str) or batch[0][key] is None:
+            new_batch[key] = [sample[key] for sample in batch]
+        else:
+            new_batch[key] = torch.stack([torch.tensor(sample[key]) for sample in batch])
+
+    return new_batch

@@ -19,6 +19,7 @@ from dalm.eval.utils import (
     calculate_precision_recall,
     construct_search_index,
     get_nearest_neighbours,
+    mixed_collate_fn,
     preprocess_function,
 )
 from dalm.models.rag_e2e_base_model import AutoModelForRagE2E
@@ -69,13 +70,13 @@ def parse_args() -> Namespace:
         "--retriever_peft_model_path",
         type=str,
         help="Path to the finetunned retriever peft layers",
-        required=True,
+        required=False,
     )
     parser.add_argument(
         "--generator_peft_model_path",
         type=str,
         help="Path to the finetunned generator peft layers",
-        required=True,
+        required=False,
     )
     parser.add_argument(
         "--test_batch_size",
@@ -184,9 +185,9 @@ def main() -> None:
     )
 
     # peft config and wrapping
-    # rag_model.attach_pre_trained_peft_layers(
-    #    args.retriever_peft_model_path, args.generator_peft_model_path, args.device
-    # )
+    rag_model.attach_pre_trained_peft_layers(
+        args.retriever_peft_model_path, args.generator_peft_model_path, args.device
+    )
 
     def get_query_embeddings(
         retriever_query_input_ids: torch.Tensor,
@@ -258,19 +259,18 @@ def main() -> None:
     tokenizer = rag_model.generator_tokenizer
     tokenizer.pad_token = tokenizer.eos_token
 
-    # here we are interacting through the dataset, not a dataloader
-    # so we need to convert them to a tensor
-    # to do : convert this to batches by examples from the dataset to make it effcient
-    # to:do : torch_dtype make a varaibles float16 or bfloat16
-    for test_example in processed_datasets:
+    processed_datasets_dataloader = DataLoader(
+        processed_datasets, batch_size=args.test_batch_size, shuffle=True, collate_fn=mixed_collate_fn
+    )
+
+    # to:do : torch_dtype make a variables float16 or bfloat16
+    for test_example in processed_datasets_dataloader:
         with torch.no_grad():
             with torch.amp.autocast(dtype=SELECTED_TORCH_DTYPE, device_type=args.device):
                 # use the batch size for the first dim
                 # do not hard-code it
-                retriever_query_input_ids = torch.tensor(test_example["retriever_query_input_ids"]).view(1, -1)
-                retriever_query__attention_mask = torch.tensor(test_example["retriever_query_attention_mask"]).view(
-                    1, -1
-                )
+                retriever_query_input_ids = test_example["retriever_query_input_ids"]
+                retriever_query__attention_mask = test_example["retriever_query_attention_mask"]
 
                 query_embeddings = get_query_embeddings(
                     retriever_query_input_ids,
@@ -285,35 +285,52 @@ def main() -> None:
             threshold=0.0,
         )
 
-        retrieved_passages = [item[0] for item in search_results]
+        correct_passages = test_example[args.passage_column_name]
+        queries = test_example[args.query_column_name]
 
-        correct_passages = [test_example[args.passage_column_name]]
+        for i, s in enumerate(search_results):
+            retrieved_passages = [item[0] for item in s]
 
-        precision, recall = calculate_precision_recall(retrieved_passages, correct_passages)
+            correct_passage = [correct_passages[i]]
 
-        batch_precision.append(precision)
-        batch_recall.append(recall)
+            precision, recall = calculate_precision_recall(retrieved_passages, correct_passage)
 
-        hit = any(passage in retrieved_passages for passage in correct_passages)
-        total_hit += hit
+            batch_precision.append(precision)
+            batch_recall.append(recall)
 
-        if not args.evaluate_generator:
-            continue
+            hit = any(passage in retrieved_passages for passage in correct_passage)
+            total_hit += hit
 
-        # Evaluate the generator
-        search_result_passage = search_results[0][0]
+            if not args.evaluate_generator:
+                continue
 
-        # this query comes without the answer
-        query = f"#query# {test_example[args.query_column_name]} #passage# {search_result_passage} #answer# "
-        queries_for_gen_eval.append(query)
-        # Generate answers in batch
-        if len(queries_for_gen_eval) > query_batch_size:
+            # Evaluate the generator
+            search_result_passage = retrieved_passages[0]
+
+            # this query comes without the answer
+            query = f"#query# {queries[i]} #passage# {search_result_passage} #answer# "
+            queries_for_gen_eval.append(query)
+            # Generate answers in batch
+            if len(queries_for_gen_eval) == query_batch_size:
+                batch_answers = run_generator_on_prompts(
+                    model, tokenizer, queries_for_gen_eval, max_length=args.max_length
+                )
+                generated_answers_for_eval.extend(batch_answers)
+                queries_for_gen_eval.clear()
+
+    if args.evaluate_generator:
+        # TODO: imperative style ode, refactor in future but works for now
+        if len(queries_for_gen_eval) > 0:
             batch_answers = run_generator_on_prompts(model, tokenizer, queries_for_gen_eval, max_length=args.max_length)
             generated_answers_for_eval.extend(batch_answers)
             queries_for_gen_eval.clear()
 
-    if args.evaluate_generator:
         answers = processed_datasets[args.answer_column_name]
+
+        print("Generated answers:", generated_answers_for_eval)
+        print("Length of generated answers:", len(generated_answers_for_eval))
+        print("Answers:", answers)
+        print("Length of answers:", len(answers))
 
         for generated_answer, answer in zip(generated_answers_for_eval, answers, strict=True):
             generated_answer_strings = generated_answer.split("#answer#")
