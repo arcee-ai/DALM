@@ -45,7 +45,7 @@ def parse_args() -> Namespace:
         help="name of the passage col",
     )
     parser.add_argument("--answer_column_name", type=str, default="answer", help="name of the query col")
-    parser.add_argument("--embed_dim", type=int, default=384, help="dimension of the model embedding")
+    parser.add_argument("--embed_dim", type=int, default=1024, help="dimension of the model embedding")
     parser.add_argument(
         "--max_length",
         type=int,
