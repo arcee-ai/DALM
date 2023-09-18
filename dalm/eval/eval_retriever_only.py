@@ -2,8 +2,6 @@ import argparse
 import os
 import sys
 
-sys.path.append(os.getcwd())
-
 # ruff:noqa
 from argparse import Namespace
 from typing import Any, Dict, Final, List
@@ -15,7 +13,7 @@ import torch
 from accelerate.logging import get_logger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import default_data_collator, AutoTokenizer
+from transformers import default_data_collator
 
 from dalm.eval.utils import (
     calculate_precision_recall,
@@ -104,12 +102,8 @@ def main() -> None:
     args = parse_args()
     SELECTED_TORCH_DTYPE: Final[torch.dtype] = torch.float16 if args.torch_dtype == "float16" else torch.bfloat16
 
-    tokenizer = AutoTokenizer.from_pretrained(args.retriever_model_name_or_path)
-
     # rag retriver and the generator (don't load new peft layers no need)
-    retriever_model = AutoModelForSentenceEmbedding(
-        args.retriever_model_name_or_path, tokenizer, get_peft=False, use_bnb=False
-    )
+    retriever_model = AutoModelForSentenceEmbedding(args.retriever_model_name_or_path, get_peft=False, use_bnb=False)
 
     # load the test dataset
     test_dataset = (
@@ -120,13 +114,12 @@ def main() -> None:
 
     # test_dataset = datasets.load_from_disk("/home/datasets/question_answer_pairs")
 
-    # TODO: ask if this is a mistake
-    # retriever_tokenizer = retriever_model.retriever_tokenizer
+    retriever_tokenizer = retriever_model.tokenizer
 
     processed_datasets = test_dataset.map(
         lambda example: preprocess_function(
             example,
-            tokenizer,
+            retriever_tokenizer,
             query_col_name=args.query_column_name,
             passage_col_name=args.passage_column_name,
         ),

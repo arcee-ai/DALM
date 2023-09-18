@@ -9,7 +9,6 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
     def __init__(
         self,
         model_name: str,
-        tokenizer: AutoTokenizer,
         normalize: bool = True,
         use_bnb: bool = True,
         get_peft: bool = True,
@@ -31,7 +30,7 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
             )
 
         self.normalize = normalize
-        self.tokenizer = tokenizer
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     def forward(self, **kwargs: torch.Tensor) -> torch.Tensor:
         model_output = self.model(**kwargs)
