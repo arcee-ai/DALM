@@ -2,9 +2,17 @@
 
 ## Manifesto
 
-A great rift has emerged between general LLMs and the vector stores that are providing them with contextual information. The unification of these systems is an important step in grounding AI systems in efficient, factual domains, where they are utilized not only for their generality, but for their specificity and uniqueness. To this end, we are excited to open source the Arcee Domain Adapted Language Model (DALM) toolkit for developers to build on top of our Arcee open source Domain Pretrained (DPT) LLMs. We believe that our efforts will help usher in the next phase of language modeling, where organization's deeply tailor AI to operate according to their unique intellectual property and worldview. 
+A great rift has emerged between general LLMs and the vector stores that are providing them with contextual information. The unification of these systems is an important step in grounding AI systems in efficient, factual domains, where they are utilized not only for their generality, but for their specificity and uniqueness. To this end, we are excited to open source the Arcee Domain Adapted Language Model (DALM) toolkit for developers to build on top of our Arcee open source Domain Pretrained (DPT) LLMs. We believe that our efforts will help as we begin next phase of language modeling, where organizations deeply tailor AI to operate according to their unique intellectual property and worldview. 
 
-## Research Progress
+## Demo DALMs
+
+Query example DALMs created by the Arcee Team.
+
+[DALM-Patent](https://app.arcee.ai)            |  [DALM-PubMed](https://app.arcee.ai)             |  [DALM-SEC](https://app.arcee.ai)               | [DALM-Yours](https://app.arcee.ai)  
+:-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:
+[![](https://i.imgur.com/Geh28Q8.jpg)](https://app.arcee.ai)  |  [![](https://i.imgur.com/IY73TcV.jpg)](https://app.arcee.ai)  |  [![](https://i.imgur.com/XgWn1VI.jpg)](https://app.arcee.ai)  |  [![](https://i.imgur.com/7KOgcEX.png)](https://app.arcee.ai)
+
+## Research Contents
 
 This repository primarily contains code for fine-tuning a **fully differential** Retrieval Augmented Generation (RAG-end2end) architecture. 
 
@@ -25,10 +33,10 @@ To perform training and evaluation for both the retriever model and the new rag-
 
 You can install this repo directly via `pip install indomain`
 
-Alternatively, for development, you can clone and install the repo locally:
+Alternatively, for development or research, you can clone and install the repo locally:
 ```shell
 git clone https://github.com/arcee-ai/DALM.git && cd DALM
-pip install --upgrade -e '.[dev]'
+pip install --upgrade -e .
 ```
 This will install the DALM repo and all necessary dependencies.
 
@@ -45,12 +53,13 @@ dalm qa-gen dalm/datasets/toy_data_train.csv
 - It's important to highlight that the retriever-only training method employs solely the passages and queries, whereas the rag-e2e training code utilizes all three columns.
 - In our experiments, we utilize `BAAI/bge-large-en` as the default retriever and employ `meta-llama/Llama-2-7b-hf` as the default generator. The code is designed to be compatible with any embedding model or autoregressive model available in the Hugging Face model repository at https://huggingface.co/models.
 
-
 ## Training
 
 You can leverage our scripts directly if you'd like, or you can use the `dalm` cli. The arguments for both are identical
 
 ### Train Retriever Only
+
+Train `BAAI/bge-large-en` retriever with contrastive learning.
 ```shell
 dalm train-retriever-only "BAAI/bge-large-en" "./dalm/datasets/toy_data_train.csv" \
 --output-dir "./dalm/training/rag_e2e/retriever_only_checkpoints" \
@@ -74,6 +83,8 @@ python dalm/training/retriever_only/train_retriever_only.py \
 For all available arguments and options, see `dalm train-retriever-only --help`
 
 ### Train Retriever and Generator Jointly (RAG-e2e)
+Train `Llama-2-7b` generator jointly with the retriever model `BAAI/bge-large-en`.
+
 ```shell
 dalm train-rag-e2e \
 "./dalm/datasets/toy_data_train.csv" \

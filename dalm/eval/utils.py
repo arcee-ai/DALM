@@ -1,10 +1,10 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, cast
 
 import hnswlib
 import numpy as np
 import torch
 from datasets.formatting.formatting import LazyBatch
-from transformers import AutoTokenizer
+from transformers import PreTrainedTokenizer
 
 
 def construct_search_index(dim: int, num_elements: int, data: np.ndarray) -> hnswlib.Index:
@@ -39,18 +39,25 @@ def get_nearest_neighbours(
     query_embeddings: np.ndarray,
     ids_to_cat_dict: Dict[int, Any],
     threshold: float = 0.7,
-) -> List[Tuple[str, float]]:
+) -> List[List[Tuple[str, float]]]:
     # Controlling the recall by setting ef:
     search_index.set_ef(100)  # ef should always be > k
 
     # Query dataset, k - number of the closest elements (returns 2 numpy arrays)
     labels, distances = search_index.knn_query(query_embeddings, k=k)
 
-    return [
-        (ids_to_cat_dict[label], (1 - distance))
-        for label, distance in zip(labels[0], distances[0], strict=True)
-        if (1 - distance) >= threshold
-    ]
+    results = []
+
+    for i in range(len(labels)):
+        results.append(
+            [
+                (ids_to_cat_dict[label], (1 - distance))
+                for label, distance in zip(labels[i], distances[i], strict=True)
+                if (1 - distance) >= threshold
+            ]
+        )
+
+    return results
 
 
 def calculate_precision_recall(retrieved_items: List, correct_items: List) -> Tuple[float, float]:
@@ -70,27 +77,41 @@ def calculate_precision_recall(retrieved_items: List, correct_items: List) -> Tu
 
 def preprocess_function(
     examples: LazyBatch,
-    retriever_tokenizer: AutoTokenizer,
-    generator_tokenizer: AutoTokenizer,
+    retriever_tokenizer: PreTrainedTokenizer,
     query_col_name: str = "query",
     passage_col_name: str = "passage",
-    answer_col_name: str = "answer",
 ) -> Dict[str, torch.Tensor]:
     queries = examples[query_col_name]
     passages = examples[passage_col_name]
-    # examples[answer_col_name]
 
     # Tokenization for the retriever
     retriever_query_tokens = retriever_tokenizer(queries, padding="max_length", max_length=128, truncation=True)
-
     retriever_passage_tokens = retriever_tokenizer(passages, padding="max_length", max_length=128, truncation=True)
 
     pre_batch = {}
 
-    # for the retriever in-batch negats
+    # for the retriever in-batch negatives
     for k, v in retriever_query_tokens.items():
         pre_batch[f"retriever_query_{k}"] = v
     for k, v in retriever_passage_tokens.items():
         pre_batch[f"retriever_passage_{k}"] = v
 
     return pre_batch
+
+
+def mixed_collate_fn(batch: List[Dict[str, torch.Tensor | str]]) -> Dict[str, torch.Tensor | List[str]]:
+    """
+    This is able to account for string values which the default PyTorch collate_fn would silently ignore
+    """
+    new_batch: Dict[str, torch.Tensor | List[str]] = {}
+
+    keys = batch[0].keys()
+    for key in keys:
+        if isinstance(batch[0][key], str) or batch[0][key] is None:
+            # We cast because if the first element is a string, all elements in the batch are strings
+            new_batch[key] = cast(List[str], [sample[key] for sample in batch])
+        else:
+            # Otherwise all elements in the batch are tensors
+            new_batch[key] = torch.stack([torch.tensor(sample[key]) for sample in batch])
+
+    return new_batch
