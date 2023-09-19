@@ -2,6 +2,7 @@ import argparse
 
 import datasets
 import torch
+from sklearn.model_selection import train_test_split
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -83,6 +84,24 @@ def filter_malformed_questions(record: dict) -> bool:
     return question != "-" and answer != "-"
 
 
+def split_dataset(shuffled_dataset: datasets.Dataset, test_size: float = TEST_SIZE) -> datasets.DatasetDict:
+    unique_titles = set(shuffled_dataset[args.title_column_name])
+
+    train_titles, test_titles = train_test_split(list(unique_titles), test_size=test_size, random_state=42)
+
+    train_dataset = shuffled_dataset.filter(
+        lambda example: example[args.title_column_name] in train_titles, num_proc=128
+    )
+    test_dataset = shuffled_dataset.filter(lambda example: example[args.title_column_name] in test_titles, num_proc=128)
+
+    return datasets.DatasetDict(
+        {
+            "train": train_dataset,
+            "test": test_dataset,
+        }
+    )
+
+
 dataset = datasets.load_dataset("csv", data_files={"data": args.dataset_path})["data"]
 
 # shuffle data
@@ -92,7 +111,7 @@ dataset.shuffle(seed=42)
 small_dataset = dataset.select(range(args.sample_size))
 
 # train-test split
-small_dataset_splits = small_dataset.train_test_split(test_size=TEST_SIZE)
+small_dataset_splits = split_dataset(small_dataset)
 
 print(
     f"Train dataset size: {len(small_dataset_splits['train'])}, Test dataset size: {len(small_dataset_splits['test'])}"

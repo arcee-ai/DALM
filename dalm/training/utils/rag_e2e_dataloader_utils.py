@@ -13,7 +13,7 @@ def preprocess_dataset(
     dataset_answer_col_name: str,
     query_max_len: int,
     passage_max_len: int,
-    generator_max_len: int
+    generator_max_len: int,
 ) -> Dict[str, Any]:
     querie_list = examples[dataset_query_col_name]
     passage_list = examples[dataset_passage_col_name]
@@ -23,13 +23,12 @@ def preprocess_dataset(
     passages = [f"#passage# {passage}" for passage in passage_list]
 
     # Tokenization for the retriever
-    retriever_query_tokens = retriever_tokenizer(queries, padding="max_length", 
-                                                 max_length=query_max_len, 
-                                                 truncation=True)
-    retriever_passage_tokens = retriever_tokenizer(passages, 
-                                                   padding="max_length", 
-                                                   max_length=passage_max_len, 
-                                                   truncation=True)
+    retriever_query_tokens = retriever_tokenizer(
+        queries, padding="max_length", max_length=query_max_len, truncation=True
+    )
+    retriever_passage_tokens = retriever_tokenizer(
+        passages, padding="max_length", max_length=passage_max_len, truncation=True
+    )
 
     # Tokenize for causal model
     # Here, we need to combine the query, passage, and the answer as the input, and the answer as the output
@@ -37,20 +36,17 @@ def preprocess_dataset(
         f"#query# {query} #passage# {passage} #answer# {answer}"
         for passage, query, answer in zip(passages, queries, answers, strict=True)
     ]
-    causal_input_tokens = generator_tokenizer(casual_input_text, 
-                                              padding="max_length", 
-                                              max_length=generator_max_len, 
-                                              truncation=True)
+    causal_input_tokens = generator_tokenizer(
+        casual_input_text, padding="max_length", max_length=generator_max_len, truncation=True
+    )
 
     query_passage_text = [
-        f"#query# {query} #passage# {passage} #answer#"
-        for passage, query in zip(passages, queries, strict=True)
+        f"#query# {query} #passage# {passage} #answer#" for passage, query in zip(passages, queries, strict=True)
     ]
 
     query_passage_lengths = []
 
-    query_passage_tokens = generator_tokenizer(query_passage_text, 
-                                               padding=False)
+    query_passage_tokens = generator_tokenizer(query_passage_text, padding=False)
 
     for single_query_passage in query_passage_tokens["input_ids"]:
         query_passage_lengths.append(len(single_query_passage))
