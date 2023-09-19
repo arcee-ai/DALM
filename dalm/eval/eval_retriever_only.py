@@ -2,16 +2,14 @@ import argparse
 import os
 import sys
 
-sys.path.append(os.getcwd())
-
 # ruff:noqa
 from argparse import Namespace
-from typing import Any, Dict, Final
+from typing import Any, Dict, Final, List
 
 import datasets
 import numpy as np
 import torch
-import transformers
+
 from accelerate.logging import get_logger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -22,8 +20,9 @@ from dalm.eval.utils import (
     construct_search_index,
     get_nearest_neighbours,
     preprocess_function,
+    mixed_collate_fn,
 )
-from dalm.models.rag_e2e_base_model import AutoModelForRagE2E
+from dalm.models.retriever_only_base_model import AutoModelForSentenceEmbedding
 
 logger = get_logger(__name__)
 
@@ -44,8 +43,7 @@ def parse_args() -> Namespace:
         default="passage",
         help="name of the passage col",
     )
-    parser.add_argument("--answer_column_name", type=str, default="answer", help="name of the query col")
-    parser.add_argument("--embed_dim", type=int, default=384, help="dimension of the model embedding")
+    parser.add_argument("--embed_dim", type=int, default=1024, help="dimension of the model embedding")
     parser.add_argument(
         "--max_length",
         type=int,
@@ -62,21 +60,9 @@ def parse_args() -> Namespace:
         required=True,
     )
     parser.add_argument(
-        "--generator_model_name_or_path",
-        type=str,
-        help="Path to pretrained generator model or model identifier from huggingface.co/models.",
-        required=True,
-    )
-    parser.add_argument(
         "--retriever_peft_model_path",
         type=str,
         help="Path to the finetunned retriever peft layers",
-        required=True,
-    )
-    parser.add_argument(
-        "--generator_peft_model_path",
-        type=str,
-        help="Path to the finetunned generator peft layers",
         required=True,
     )
     parser.add_argument(
@@ -118,9 +104,7 @@ def main() -> None:
     SELECTED_TORCH_DTYPE: Final[torch.dtype] = torch.float16 if args.torch_dtype == "float16" else torch.bfloat16
 
     # rag retriver and the generator (don't load new peft layers no need)
-    rag_model = AutoModelForRagE2E(
-        args.retriever_model_name_or_path, args.generator_model_name_or_path, get_peft=False, use_bnb=False
-    )
+    retriever_model = AutoModelForSentenceEmbedding(args.retriever_model_name_or_path, get_peft=False, use_bnb=False)
 
     # load the test dataset
     test_dataset = (
@@ -131,19 +115,14 @@ def main() -> None:
 
     # test_dataset = datasets.load_from_disk("/home/datasets/question_answer_pairs")
 
-    generator_tokenizer = rag_model.generator_tokenizer
-    generator_tokenizer.pad_token = generator_tokenizer.eos_token
-
-    retriever_tokenizer = rag_model.retriever_tokenizer
+    retriever_tokenizer = retriever_model.tokenizer
 
     processed_datasets = test_dataset.map(
         lambda example: preprocess_function(
             example,
             retriever_tokenizer,
-            retriever_tokenizer,
             query_col_name=args.query_column_name,
             passage_col_name=args.passage_column_name,
-            answer_col_name=args.answer_column_name,
         ),
         batched=True,
         # remove_columns=test_dataset.column_names,
@@ -171,19 +150,16 @@ def main() -> None:
     )
 
     # peft config and wrapping
-    rag_model.attach_pre_trained_peft_layers(
-        args.retriever_peft_model_path, args.generator_peft_model_path, args.device
-    )
+    retriever_model.attach_pre_trained_peft_layers(args.retriever_peft_model_path, args.device)
 
     def get_query_embeddings(
         retriever_query_input_ids: torch.Tensor,
         retriever_query_attention_masks: torch.Tensor,
     ) -> np.ndarray:
         return (
-            rag_model.forward(
-                "retrieval",
-                retriever_query_input_ids.to(args.device),
-                retriever_query_attention_masks.to(args.device),
+            retriever_model.forward(
+                input_ids=retriever_query_input_ids.to(args.device),
+                attention_mask=retriever_query_attention_masks.to(args.device),
             )
             .detach()
             .float()
@@ -196,10 +172,9 @@ def main() -> None:
         retriever_passage_attention_masks: torch.Tensor,
     ) -> np.ndarray:
         return (
-            rag_model.forward(
-                "retrieval",
-                retriever_passage_input_ids.to(args.device),
-                retriever_passage_attention_masks.to(args.device),
+            retriever_model.forward(
+                input_ids=retriever_passage_input_ids.to(args.device),
+                attention_mask=retriever_passage_attention_masks.to(args.device),
             )
             .detach()
             .float()
@@ -233,19 +208,13 @@ def main() -> None:
     batch_precision = []
     batch_recall = []
     total_hit = 0
-    # For the geneator. hint: use chatGPT to see what is Exact match when evaluating question answer models
-    total_em_hit = 0
 
     print("Evaluation start")
 
-    # initialize the pipleline for the answer generation
-    pipeline = transformers.pipeline(
-    "text-generation",
-    model=rag_model.generator_model,
-    tokenizer=rag_model.generator_tokenizer,
-    torch_dtype=SELECTED_TORCH_DTYPE,
-    trust_remote_code=True,
-    device=(0 if args.device == "cuda" else args.device),
+    actual_length = len(processed_datasets)
+
+    processed_datasets = DataLoader(
+        processed_datasets, batch_size=args.test_batch_size, shuffle=True, collate_fn=mixed_collate_fn
     )
 
     # here we are interacting through the dataset, not a dataloader
@@ -257,10 +226,8 @@ def main() -> None:
             with torch.amp.autocast(dtype=SELECTED_TORCH_DTYPE, device_type=args.device):
                 # use the batch size for the first dim
                 # do not hard-code it
-                retriever_query_input_ids = torch.tensor(test_example["retriever_query_input_ids"]).view(1, -1)
-                retriever_query__attention_mask = torch.tensor(test_example["retriever_query_attention_mask"]).view(
-                    1, -1
-                )
+                retriever_query_input_ids = test_example["retriever_query_input_ids"]
+                retriever_query__attention_mask = test_example["retriever_query_attention_mask"]
 
                 query_embeddings = get_query_embeddings(
                     retriever_query_input_ids,
@@ -275,44 +242,22 @@ def main() -> None:
             threshold=0.0,
         )
 
-        retrieved_passages = [item[0] for item in search_results]
+        correct_passages = test_example[args.passage_column_name]
 
-        correct_passages = [test_example[args.passage_column_name]]
+        for i, s in enumerate(search_results):
+            retrieved_passages = [item[0] for item in s]
 
-        precision, recall = calculate_precision_recall(retrieved_passages, correct_passages)
+            correct_passage = [correct_passages[i]]
 
-        batch_precision.append(precision)
-        batch_recall.append(recall)
+            precision, recall = calculate_precision_recall(retrieved_passages, correct_passage)
 
-        hit = any(passage in retrieved_passages for passage in correct_passages)
-        total_hit += hit
+            batch_precision.append(precision)
+            batch_recall.append(recall)
 
-        if not args.evaluate_generator:
-            continue
+            hit = any(passage in retrieved_passages for passage in correct_passage)
+            total_hit += hit
 
-        # Evaluate the generator
-        search_result_passage = search_results[0][0]
-
-        # this query comes without the answer
-        query = f"#query# {test_example[args.query_column_name]} #passage# {search_result_passage} #answer# "
-
-        answer = test_example[args.answer_column_name]
-        
-        sequences = pipeline(
-            query,
-            max_new_tokens=200,
-            do_sample=True,
-            top_k=10,
-            num_return_sequences=1,
-            eos_token_id=rag_model.generator_tokenizer.eos_token_id,
-        )
-
-        generated_answer_string = (sequences[0]["generated_text"].split("#answer#")[1]).strip()
-
-        if generated_answer_string == answer:
-            total_em_hit = total_em_hit + 1
-
-    total_examples = len(processed_datasets)
+    total_examples = actual_length
     recall = sum(batch_recall) / total_examples
     precision = sum(batch_precision) / total_examples
     hit_rate = total_hit / float(total_examples)
@@ -324,10 +269,6 @@ def main() -> None:
     print("Hit Rate:", hit_rate)
 
     print("*************")
-
-    if args.evaluate_generator:
-        print("Generator evaluation:")
-        print("Exact mactch:", total_em_hit / len(processed_datasets))
 
 
 if __name__ == "__main__":
