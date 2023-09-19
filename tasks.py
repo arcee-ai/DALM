@@ -135,6 +135,11 @@ def build(ctx: Context) -> None:
     Build the package.
     """
     ctx.run(
+        "pip install --upgrade build",
+        pty=True,
+        echo=True,
+    )
+    ctx.run(
         "python -m build",
         pty=True,
         echo=True,
