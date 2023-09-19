@@ -268,7 +268,7 @@ def main() -> None:
             dataset_answer_col_name=args.dataset_answer_col_name,
             query_max_len=args.query_max_len,
             passage_max_len=args.passage_max_len,
-            generator_max_len=args.generator_max_len
+            generator_max_len=args.generator_max_len,
         ),
         batched=True,
         remove_columns=dataset.column_names,

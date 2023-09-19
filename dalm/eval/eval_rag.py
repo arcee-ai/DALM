@@ -1,26 +1,25 @@
 import argparse
 import os
-import sys
-
-sys.path.append(os.getcwd())
-
-# ruff:noqa
 from argparse import Namespace
-from typing import Any, Dict, Final
+from typing import Any, Dict, Final, List
 
 import datasets
 import numpy as np
 import torch
-import transformers
 from accelerate.logging import get_logger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import default_data_collator
+from transformers import (
+    PreTrainedModel,
+    PreTrainedTokenizer,
+    default_data_collator,
+)
 
 from dalm.eval.utils import (
     calculate_precision_recall,
     construct_search_index,
     get_nearest_neighbours,
+    mixed_collate_fn,
     preprocess_function,
 )
 from dalm.models.rag_e2e_base_model import AutoModelForRagE2E
@@ -86,6 +85,12 @@ def parse_args() -> Namespace:
         help="Batch size (per device) for the test dataloader.",
     )
     parser.add_argument(
+        "--query_batch_size",
+        type=int,
+        default=16,
+        help="Batch size for generator input",
+    )
+    parser.add_argument(
         "--device",
         type=str,
         default="cuda",
@@ -111,6 +116,23 @@ def parse_args() -> Namespace:
     args = parser.parse_args()
 
     return args
+
+
+def run_generator_on_prompts(
+    model: PreTrainedModel, tokenizer: PreTrainedTokenizer, prompts: List[str], max_length: int = 200
+) -> List[str]:
+    """Runs the generator model over the prompts (query + passage)"""
+    # TODO: Is the max_length correct here? not sure
+    inputs = tokenizer(
+        prompts,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=max_length,
+    )
+    with torch.autocast("cuda"), torch.no_grad():
+        outputs = model.generate(**inputs.to("cuda"), max_length=max_length, early_stopping=True)
+    return tokenizer.batch_decode(outputs.cpu(), skip_special_tokens=True)
 
 
 def main() -> None:
@@ -140,10 +162,8 @@ def main() -> None:
         lambda example: preprocess_function(
             example,
             retriever_tokenizer,
-            retriever_tokenizer,
             query_col_name=args.query_column_name,
             passage_col_name=args.passage_column_name,
-            answer_col_name=args.answer_column_name,
         ),
         batched=True,
         # remove_columns=test_dataset.column_names,
@@ -212,12 +232,11 @@ def main() -> None:
 
     passage_embeddings_array = np.zeros((num_passages, args.embed_dim))
     for step, batch in enumerate(tqdm(unique_passage_dataloader)):
-        with torch.no_grad():
-            with torch.amp.autocast(dtype=SELECTED_TORCH_DTYPE, device_type=args.device):
-                passage_embs = get_passage_embeddings(
-                    batch["retriever_passage_input_ids"],
-                    batch["retriever_passage_attention_mask"],
-                )
+        with torch.no_grad(), torch.amp.autocast(dtype=SELECTED_TORCH_DTYPE, device_type=args.device):
+            passage_embs = get_passage_embeddings(
+                batch["retriever_passage_input_ids"],
+                batch["retriever_passage_attention_mask"],
+            )
 
         start_index = step * args.test_batch_size
         end_index = (
@@ -233,34 +252,30 @@ def main() -> None:
     batch_precision = []
     batch_recall = []
     total_hit = 0
-    # For the geneator. hint: use chatGPT to see what is Exact match when evaluating question answer models
+    # For the generator. hint: use chatGPT to see what is Exact match when evaluating question answer models
     total_em_hit = 0
 
     print("Evaluation start")
 
-    # initialize the pipleline for the answer generation
-    pipeline = transformers.pipeline(
-    "text-generation",
-    model=rag_model.generator_model,
-    tokenizer=rag_model.generator_tokenizer,
-    torch_dtype=SELECTED_TORCH_DTYPE,
-    trust_remote_code=True,
-    device=(0 if args.device == "cuda" else args.device),
+    # For evaluating the generator
+    queries_for_gen_eval = []
+    generated_answers_for_eval = []
+    model = rag_model.generator_model
+    tokenizer = rag_model.generator_tokenizer
+    tokenizer.pad_token = tokenizer.eos_token
+
+    processed_datasets_dataloader = DataLoader(
+        processed_datasets, batch_size=args.test_batch_size, shuffle=True, collate_fn=mixed_collate_fn
     )
 
-    # here we are interacting through the dataset, not a dataloader
-    # so we need to convert them to a tensor
-    # to do : convert this to batches by examples from the dataset to make it effcient
-    # to:do : torch_dtype make a varaibles float16 or bfloat16
-    for test_example in processed_datasets:
+    # to:do : torch_dtype make a variables float16 or bfloat16
+    for test_example in processed_datasets_dataloader:
         with torch.no_grad():
             with torch.amp.autocast(dtype=SELECTED_TORCH_DTYPE, device_type=args.device):
                 # use the batch size for the first dim
                 # do not hard-code it
-                retriever_query_input_ids = torch.tensor(test_example["retriever_query_input_ids"]).view(1, -1)
-                retriever_query__attention_mask = torch.tensor(test_example["retriever_query_attention_mask"]).view(
-                    1, -1
-                )
+                retriever_query_input_ids = test_example["retriever_query_input_ids"]
+                retriever_query__attention_mask = test_example["retriever_query_attention_mask"]
 
                 query_embeddings = get_query_embeddings(
                     retriever_query_input_ids,
@@ -275,42 +290,58 @@ def main() -> None:
             threshold=0.0,
         )
 
-        retrieved_passages = [item[0] for item in search_results]
+        correct_passages = test_example[args.passage_column_name]
+        queries = test_example[args.query_column_name]
 
-        correct_passages = [test_example[args.passage_column_name]]
+        for i, s in enumerate(search_results):
+            retrieved_passages = [item[0] for item in s]
 
-        precision, recall = calculate_precision_recall(retrieved_passages, correct_passages)
+            correct_passage = [correct_passages[i]]
 
-        batch_precision.append(precision)
-        batch_recall.append(recall)
+            precision, recall = calculate_precision_recall(retrieved_passages, correct_passage)
 
-        hit = any(passage in retrieved_passages for passage in correct_passages)
-        total_hit += hit
+            batch_precision.append(precision)
+            batch_recall.append(recall)
 
-        if not args.evaluate_generator:
-            continue
+            hit = any(passage in retrieved_passages for passage in correct_passage)
+            total_hit += hit
 
-        # Evaluate the generator
-        search_result_passage = search_results[0][0]
+            if not args.evaluate_generator:
+                continue
 
-        # this query comes without the answer
-        query = f"#query# {test_example[args.query_column_name]} #passage# {search_result_passage} #answer# "
+            # Evaluate the generator
+            search_result_passage = retrieved_passages[0]
 
-        answer = test_example[args.answer_column_name]
-        
-        sequences = pipeline(
-            query,
-            max_new_tokens=200,
-            do_sample=True,
-            top_k=10,
-            num_return_sequences=1,
-            eos_token_id=rag_model.generator_tokenizer.eos_token_id,
-        )
+            # this query comes without the answer
+            query = f"#query# {queries[i]} #passage# {search_result_passage} #answer# "
+            queries_for_gen_eval.append(query)
+            # Generate answers in batch
+            if len(queries_for_gen_eval) == args.query_batch_size:
+                batch_answers = run_generator_on_prompts(
+                    model, tokenizer, queries_for_gen_eval, max_length=args.max_length
+                )
+                generated_answers_for_eval.extend(batch_answers)
+                queries_for_gen_eval.clear()
 
-        generated_answer_string = (sequences[0]["generated_text"].split("#answer#")[1]).strip()
+    if args.evaluate_generator:
+        # TODO: imperative style code, refactor in future but works for now
+        if len(queries_for_gen_eval) > 0:
+            batch_answers = run_generator_on_prompts(model, tokenizer, queries_for_gen_eval, max_length=args.max_length)
+            generated_answers_for_eval.extend(batch_answers)
+            queries_for_gen_eval.clear()
 
-        if generated_answer_string == answer:
-            total_em_hit = total_em_hit + 1
+        answers = processed_datasets[args.answer_column_name]
+
+        for generated_answer, answer in zip(generated_answers_for_eval, answers, strict=True):
+            generated_answer_strings = generated_answer.split("#answer#")
+
+            if len(generated_answer_strings) < 2:
+                continue
+
+            generated_answer_string = generated_answer_strings[1].strip()
+
+            if generated_answer_string == answer:
+                total_em_hit = total_em_hit + 1
 
     total_examples = len(processed_datasets)
     recall = sum(batch_recall) / total_examples
@@ -327,7 +358,7 @@ def main() -> None:
 
     if args.evaluate_generator:
         print("Generator evaluation:")
-        print("Exact mactch:", total_em_hit / len(processed_datasets))
+        print("Exact match:", total_em_hit / len(processed_datasets))
 
 
 if __name__ == "__main__":

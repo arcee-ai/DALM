@@ -35,7 +35,7 @@ from accelerate.utils import set_seed
 from black import Union
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AutoTokenizer, SchedulerType, default_data_collator, get_scheduler
+from transformers import SchedulerType, default_data_collator, get_scheduler
 
 from dalm.models.retriever_only_base_model import AutoModelForSentenceEmbedding
 from dalm.training.utils.retriever_only_dataloader_utils import preprocess_dataset
@@ -196,8 +196,8 @@ def main() -> None:
             os.makedirs(args.output_dir, exist_ok=True)
     accelerator.wait_for_everyone()
 
-    # get the tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
+    model = AutoModelForSentenceEmbedding(args.model_name_or_path, use_bnb=True, get_peft=args.use_peft)
+    tokenizer = model.tokenizer
 
     # dataset download and preprocessing
 
@@ -224,8 +224,6 @@ def main() -> None:
     for index in random.sample(range(len(processed_datasets["train"])), 3):
         logger.info(f"Sample {index} of the training set: {processed_datasets['train'][index]}.")
 
-    # base model
-    model = AutoModelForSentenceEmbedding(args.model_name_or_path, tokenizer, use_bnb=True, get_peft=args.use_peft)
     model.print_trainable_parameters()  # type: ignore # No idea what mypy is complaining about.
 
     accelerator.print(model)
