@@ -2,6 +2,7 @@ import argparse
 
 import datasets
 import torch
+from sklearn.model_selection import train_test_split
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -93,10 +94,12 @@ def split_dataset(shuffled_dataset: datasets.Dataset, test_size: float = TEST_SI
     )
     test_dataset = shuffled_dataset.filter(lambda example: example[args.title_column_name] in test_titles, num_proc=128)
 
-    return {
-        "train": train_dataset,
-        "test": test_dataset,
-    }
+    return datasets.DatasetDict(
+        {
+            "train": train_dataset,
+            "test": test_dataset,
+        }
+    )
 
 
 dataset = datasets.load_dataset("csv", data_files={"data": args.dataset_path})["data"]
