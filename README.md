@@ -111,7 +111,7 @@ For all available arguments and options, see `dalm train-rag-e2e --help`
 
 ## Evaluation
 
-Here's a summary of evaluation results on evaluating on a 200K line test csv
+Here's a summary of evaluation results on evaluating on a 200K line test csv of Patent abstracts
 
 | Type of Retriever | Recall | Hit rate |
 | --- | ----- | ----|
@@ -119,10 +119,19 @@ Here's a summary of evaluation results on evaluating on a 200K line test csv
 | Retriever with contrastive learning | 0.46037 | 0.46038 |
 | Retriever End2End | 0.73634 | 0.73634 |
 
+To run retriever only eval 
+(make sure you have the checkpoints in the project root)
 
-### Evaluate the top-k recall of the retriver that trained only with constrstive learning
+```bash
+ python dalm/eval/eval_retriever_only.py  --dataset_path qa_pairs_test.csv --retriever_model_name_or_path "BAAI/bge-large-en" --passage_column_name Abstract --query_column_name Question --retriever_peft_model_path retriever_only_checkpoints
+```
 
-### Evaluate the top-k recall of the retriever and the exact match of the generator in the RAG-e2e models
+For the e2e eval
+
+```bash
+python dalm/eval/eval_rag.py  --dataset_path qa_pairs_test_2.csv --retriever_model_name_or_path "BAAI/bge-large-en" --generator_model_name_or_path "meta-llama/Llama-2-7b-hf" --passage_column_name Abstract --query_column_name Question --answer_column_name Answer --evaluate_generator --query_batch_size 5 --retriever_peft_model_path retriever_only_checkpoints --generator_peft_model_path generator_only_checkpoints
+```
+
 
 ## Contributing
 See [CONTRIBUTING](https://github.com/arcee-ai/DALM/tree/main/CONTRIBUTING.md)
