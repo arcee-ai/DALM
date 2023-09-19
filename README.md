@@ -76,11 +76,11 @@ python dalm/training/rag_e2e/train_rage2e.py \
 
 Here's a summary of evaluation results on evaluating on a 200K line test csv
 
-| Type of Retriever | Recall | Precision | Hit rate |
-| --- | ----- | ----| ----|
-| Plain Retriever | 0.45984 | 0.04598 | 0.45984 |
-| Retriever with contrastive learning | 0.46037 | 0.04604 | 0.46038 |
-| Retriever End2End | 0.73634 | 0.07363 | 0.73634 |
+| Type of Retriever | Recall | Hit rate |
+| --- | ----- | ----|
+| Plain Retriever | 0.45984 | 0.45984 |
+| Retriever with contrastive learning | 0.46037 | 0.46038 |
+| Retriever End2End | 0.73634 | 0.73634 |
 
 
 ### Evaluate the top-k recall of the retriver that trained only with constrstive learning
