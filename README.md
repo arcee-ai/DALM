@@ -20,11 +20,11 @@ This repository primarily contains code for fine-tuning a **fully differential**
 
 For the first time in the literature, we modified the initial RAG-end2end model ([TACL paper](https://aclanthology.org/2023.tacl-1.1/), [HuggingFace implementation](https://github.com/huggingface/transformers/tree/main/examples/research_projects/rag-end2end-retriever)) to work with decoder-only language models like Llma, Falcon, or GPT. We also incorporated the **in-batch negative concept** alongside the RAG's marginalization to make the entire process **efficient**.
 
-- Inside the [Training](https://github.com/arcee-ai/DALM/tree/main/Training) folder, you'll find two codes to train the RAG-end2end and Retriever with contrastive learning.
+- Inside the [training](https://github.com/arcee-ai/DALM/tree/main/dalm/training) folder, you'll find two codes to train the RAG-end2end and Retriever with contrastive learning.
 
-- All evaluations related to the Retriever and the Generator are located in the [Evaluation](https://github.com/arcee-ai/DALM/tree/main/Evaluation) folder.
+- All evaluations related to the Retriever and the Generator are located in the [eval](https://github.com/arcee-ai/DALM/tree/main/dalm/eval) folder.
 
-- Additionally, we have data processing codes and synthetic data generation code inside the [Datasets](https://github.com/arcee-ai/DALM/tree/main/Datasets) folder.
+- Additionally, we have data processing codes and synthetic data generation code inside the [datasets](https://github.com/arcee-ai/DALM/tree/main/dalm/datasets) folder.
 
 # Usage
 To perform training and evaluation for both the retriever model and the new rag-e2e model, please adhere to the following steps.
@@ -111,19 +111,18 @@ For all available arguments and options, see `dalm train-rag-e2e --help`
 
 ## Evaluation
 
-### Evaluate the top-k recall of the retriever that trained only with contrastive learning
+Here's a summary of evaluation results on evaluating on a 200K line test csv
+
+| Type of Retriever | Recall | Precision | Hit rate |
+| --- | ----- | ----| ----|
+| Plain Retriever | 0.45984 | 0.04598 | 0.45984 |
+| Retriever with contrastive learning | 0.46037 | 0.04604 | 0.46038 |
+| Retriever End2End | 0.73634 | 0.07363 | 0.73634 |
 
 
-### Evaluate the top-k recall of the  retriever and the exact match of the generator in the RAG-e2e models
+### Evaluate the top-k recall of the retriver that trained only with constrstive learning
 
-
-## Domain Pretrained Models - DPT (Coming Soon)
-
-![DALM](https://i.imgur.com/rqW405I.png)
-
-* DPT-PubMed-7b
-* DPT-Patent-7b
-* DPT-SEC-7b
+### Evaluate the top-k recall of the retriever and the exact match of the generator in the RAG-e2e models
 
 ## Contributing
 See [CONTRIBUTING](https://github.com/arcee-ai/DALM/tree/main/CONTRIBUTING.md)
