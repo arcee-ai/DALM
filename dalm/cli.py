@@ -284,6 +284,7 @@ def qa_gen(
     ],
     output_dir: Annotated[str, typer.Option(help="Output directory to store the resulting files")] = str(HERE),
     passage_column_name: Annotated[str, typer.Option(help="Column name for the passage/text")] = "Abstract",
+    title_column_name: Annotated[str, typer.Option(help="Column name for the title of the full document")] = "Title",
     batch_size: Annotated[
         int, typer.Option(help="Batch size (per device) for generating question answer pairs.")
     ] = 100,
@@ -298,7 +299,9 @@ def qa_gen(
     ] = True,
 ) -> None:
     """Generate question-answer pairs for a given input dataset"""
-    generate_qa_from_disk(dataset_path, passage_column_name, sample_size, batch_size, output_dir, as_csv)
+    generate_qa_from_disk(
+        dataset_path, passage_column_name, title_column_name, sample_size, batch_size, output_dir, as_csv
+    )
 
 
 if __name__ == "__main__":

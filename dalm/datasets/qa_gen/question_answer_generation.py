@@ -7,6 +7,7 @@ from pathlib import Path
 import datasets
 import torch
 from datasets import Dataset, DatasetDict
+from sklearn.model_selection import train_test_split
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
 
 DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -91,8 +92,26 @@ def filter_malformed_questions(record: dict) -> bool:
     return record["Question"] != "-" and record["Answer"] != "-"
 
 
+def split_dataset(
+    shuffled_dataset: datasets.Dataset, title_column_name: str, test_size: float = TEST_SIZE
+) -> datasets.DatasetDict:
+    unique_titles = set(shuffled_dataset[title_column_name])
+
+    train_titles, test_titles = train_test_split(list(unique_titles), test_size=test_size, random_state=42)
+
+    train_dataset = shuffled_dataset.filter(lambda example: example[title_column_name] in train_titles, num_proc=128)
+    test_dataset = shuffled_dataset.filter(lambda example: example[title_column_name] in test_titles, num_proc=128)
+
+    return datasets.DatasetDict(
+        {
+            "train": train_dataset,
+            "test": test_dataset,
+        }
+    )
+
+
 def generate_qa_from_dataset(
-    dataset: Dataset, passage_column_name: str, sample_size: int, batch_size: int
+    dataset: Dataset, passage_column_name: str, title_column_name: str, sample_size: int, batch_size: int
 ) -> DatasetDict:
     tokenizer = AutoTokenizer.from_pretrained(QA_MODEL)
     model = AutoModelForSeq2SeqLM.from_pretrained(QA_MODEL, device_map="auto", load_in_8bit=True)
@@ -101,7 +120,7 @@ def generate_qa_from_dataset(
     # select a subset
     small_dataset = dataset.select(range(sample_size))
     # train-test split
-    small_dataset_splits = small_dataset.train_test_split(test_size=TEST_SIZE)
+    small_dataset_splits = split_dataset(small_dataset, title_column_name)
     print(
         f"Train dataset size: {len(small_dataset_splits['train'])}, "
         f"Test dataset size: {len(small_dataset_splits['test'])}"
@@ -140,10 +159,16 @@ def _load_dataset_from_path(dataset_path: str) -> Dataset:
 
 
 def generate_qa_from_disk(
-    dataset_path: str, passage_column_name: str, sample_size: int, batch_size: int, output_dir: str, as_csv: bool
+    dataset_path: str,
+    passage_column_name: str,
+    title_column_name: str,
+    sample_size: int,
+    batch_size: int,
+    output_dir: str,
+    as_csv: bool,
 ) -> None:
     dataset = _load_dataset_from_path(dataset_path)
-    qa_gen_data = generate_qa_from_dataset(dataset, passage_column_name, sample_size, batch_size)
+    qa_gen_data = generate_qa_from_dataset(dataset, passage_column_name, title_column_name, sample_size, batch_size)
     output_path = Path(output_dir)
     output_path.mkdir(exist_ok=True)
     for split_name, split_ds in qa_gen_data.items():
@@ -159,7 +184,13 @@ def generate_qa_from_disk(
 def main() -> None:
     args = parse_args()
     generate_qa_from_disk(
-        args.dataset_path, args.passage_column_name, args.sample_size, args.batch_size, args.output_dir, args.as_csv
+        args.dataset_path,
+        args.passage_column_name,
+        args.title_column_name,
+        args.sample_size,
+        args.batch_size,
+        args.output_dir,
+        args.as_csv,
     )
 
 
