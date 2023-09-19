@@ -70,19 +70,25 @@ def parse_args() -> Namespace:
         "--retriever_peft_model_path",
         type=str,
         help="Path to the finetunned retriever peft layers",
-        required=False,
+        required=True,
     )
     parser.add_argument(
         "--generator_peft_model_path",
         type=str,
         help="Path to the finetunned generator peft layers",
-        required=False,
+        required=True,
     )
     parser.add_argument(
         "--test_batch_size",
         type=int,
         default=8,
         help="Batch size (per device) for the test dataloader.",
+    )
+    parser.add_argument(
+        "--query_batch_size",
+        type=int,
+        default=16,
+        help="Batch size for generator input",
     )
     parser.add_argument(
         "--device",
@@ -254,7 +260,6 @@ def main() -> None:
     # For evaluating the generator
     queries_for_gen_eval = []
     generated_answers_for_eval = []
-    query_batch_size = 16
     model = rag_model.generator_model
     tokenizer = rag_model.generator_tokenizer
     tokenizer.pad_token = tokenizer.eos_token
@@ -311,7 +316,7 @@ def main() -> None:
             query = f"#query# {queries[i]} #passage# {search_result_passage} #answer# "
             queries_for_gen_eval.append(query)
             # Generate answers in batch
-            if len(queries_for_gen_eval) == query_batch_size:
+            if len(queries_for_gen_eval) == args.query_batch_size:
                 batch_answers = run_generator_on_prompts(
                     model, tokenizer, queries_for_gen_eval, max_length=args.max_length
                 )
@@ -319,18 +324,13 @@ def main() -> None:
                 queries_for_gen_eval.clear()
 
     if args.evaluate_generator:
-        # TODO: imperative style ode, refactor in future but works for now
+        # TODO: imperative style code, refactor in future but works for now
         if len(queries_for_gen_eval) > 0:
             batch_answers = run_generator_on_prompts(model, tokenizer, queries_for_gen_eval, max_length=args.max_length)
             generated_answers_for_eval.extend(batch_answers)
             queries_for_gen_eval.clear()
 
         answers = processed_datasets[args.answer_column_name]
-
-        print("Generated answers:", generated_answers_for_eval)
-        print("Length of generated answers:", len(generated_answers_for_eval))
-        print("Answers:", answers)
-        print("Length of answers:", len(answers))
 
         for generated_answer, answer in zip(generated_answers_for_eval, answers, strict=True):
             generated_answer_strings = generated_answer.split("#answer#")
