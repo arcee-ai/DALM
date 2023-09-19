@@ -211,7 +211,6 @@ def main() -> None:
             tokenizer,
             query_col_name=args.dataset_query_col_name,
             passage_col_name=args.dataset_passage_col_name,
-            max_length=args.max_length,
             query_max_len=args.query_max_len,
             passage_max_len=args.passage_max_len,
         ),
