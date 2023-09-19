@@ -22,7 +22,7 @@ For the first time in the literature, we modified the initial RAG-end2end model 
 
 - Inside the [training](https://github.com/arcee-ai/DALM/tree/main/dalm/training) folder, you'll find two codes to train the RAG-end2end and Retriever with contrastive learning.
 
-- All evaluations related to the Retriever and the Generator are located in the [evaluation](https://github.com/arcee-ai/DALM/tree/main/dalm/evaluation) folder.
+- All evaluations related to the Retriever and the Generator are located in the [eval](https://github.com/arcee-ai/DALM/tree/main/dalm/eval) folder.
 
 - Additionally, we have data processing codes and synthetic data generation code inside the [datasets](https://github.com/arcee-ai/DALM/tree/main/dalm/datasets) folder.
 
