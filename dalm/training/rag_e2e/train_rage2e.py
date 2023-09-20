@@ -513,7 +513,8 @@ def train_e2e(
                 )
                 generator_tokenizer.save_pretrained(generator_ckpt_path)
             accelerator.wait_for_everyone()
-    accelerator.end_training()
+    if with_tracking:
+        accelerator.end_training()
 
 
 def main() -> None:

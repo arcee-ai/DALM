@@ -242,20 +242,20 @@ def train_retriever(
             passage_max_len=passage_max_len,
         ),
         batched=True,
-        remove_columns=dataset["train"].column_names,
+        remove_columns=dataset.column_names,
         desc="Running tokenizer on dataset",
     )
 
     # Log a few random samples from the training set:
-    for index in random.sample(range(len(processed_datasets["train"])), 3):
-        logger.info(f"Sample {index} of the training set: {processed_datasets['train'][index]}.")
+    for index in random.sample(range(len(processed_datasets)), 3):
+        logger.info(f"Sample {index} of the training set: {processed_datasets[index]}.")
 
     model.print_trainable_parameters()  # type: ignore # No idea what mypy is complaining about.
     accelerator.print(model)
 
     # get dataloaders
     train_dataloader = DataLoader(
-        processed_datasets["train"],
+        processed_datasets,
         shuffle=True,
         collate_fn=default_data_collator,
         batch_size=per_device_train_batch_size,
@@ -308,7 +308,7 @@ def train_retriever(
         accelerator.register_load_state_pre_hook(load_model_hook)
 
     logger.info("***** Running training *****")
-    logger.info(f"  Num examples = {len(processed_datasets['train'])}")
+    logger.info(f"  Num examples = {len(processed_datasets)}")
     logger.info(f"  Num Epochs = {num_train_epochs}")
     logger.info(f"  Instantaneous batch size per device = {per_device_train_batch_size}")
     logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
@@ -409,7 +409,8 @@ def train_retriever(
                 )
                 tokenizer.save_pretrained(output_dir)
             accelerator.wait_for_everyone()
-    accelerator.end_training()
+    if with_tracking:
+        accelerator.end_training()
 
 
 def main() -> None:
