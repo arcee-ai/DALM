@@ -72,6 +72,7 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
     def __get_lora_config(
         r: int = 8,
         lora_alpha: int = 16,
+        lora_dropout: float = 0.05,
         bias: str = "none",
         target_modules: Optional[Union[List[str], str]] = None,
     ) -> LoraConfig:
@@ -79,6 +80,7 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
             task_type=TaskType.FEATURE_EXTRACTION,
             r=r,
             lora_alpha=lora_alpha,
+            lora_dropout=lora_dropout,
             bias=bias,
             target_modules=target_modules,
         )
