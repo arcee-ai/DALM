@@ -1,2 +1,2 @@
-llama-indexn
-pypdfn
+llama-index
+pypdf
