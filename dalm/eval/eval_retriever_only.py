@@ -4,27 +4,18 @@ import sys
 
 # ruff:noqa
 from argparse import Namespace
-from typing import Any, Dict, Final, List, Literal
+from typing import Final, Literal
 
-import datasets
-import numpy as np
 import torch
 
 from accelerate.logging import get_logger
 from datasets import Dataset
 from torch.utils.data import DataLoader
-from tqdm import tqdm
-from transformers import default_data_collator
 
 from dalm.eval.utils import (
-    calculate_precision_recall,
     construct_search_index,
-    get_nearest_neighbours,
-    preprocess_function,
     mixed_collate_fn,
     preprocess_dataset,
-    filter_unique_passages,
-    get_retriever_embeddings,
     get_passage_embeddings,
     evaluate_retriever_on_batch,
     print_eval_results,
@@ -151,10 +142,6 @@ def evaluate_retriever(
         processed_datasets, batch_size=test_batch_size, shuffle=True, collate_fn=mixed_collate_fn
     )
 
-    # here we are interacting through the dataset, not a dataloader
-    # so we need to convert them to a tensor
-    # to do : convert this to batches by examples from the dataset to make it effcient
-    # to:do : torch_dtype make a varaibles float16 or bfloat16
     for batch in processed_datasets_dataloader:
         _batch_precision, _batch_recall, _total_hit, _ = evaluate_retriever_on_batch(
             batch,
