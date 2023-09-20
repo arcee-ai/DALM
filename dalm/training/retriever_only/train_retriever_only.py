@@ -248,7 +248,7 @@ def train_retriever(
 
     # Log a few random samples from the training set:
     for index in random.sample(range(len(processed_datasets)), 3):
-        logger.info(f"Sample {index} of the training set: {processed_datasets['train'][index]}.")
+        logger.info(f"Sample {index} of the training set: {processed_datasets[index]}.")
 
     model.print_trainable_parameters()  # type: ignore # No idea what mypy is complaining about.
     accelerator.print(model)
@@ -308,7 +308,7 @@ def train_retriever(
         accelerator.register_load_state_pre_hook(load_model_hook)
 
     logger.info("***** Running training *****")
-    logger.info(f"  Num examples = {len(processed_datasets['train'])}")
+    logger.info(f"  Num examples = {len(processed_datasets)}")
     logger.info(f"  Num Epochs = {num_train_epochs}")
     logger.info(f"  Instantaneous batch size per device = {per_device_train_batch_size}")
     logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
