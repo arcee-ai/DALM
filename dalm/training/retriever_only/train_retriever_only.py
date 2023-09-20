@@ -411,7 +411,8 @@ def train_retriever(
                 )
                 tokenizer.save_pretrained(output_dir)
             accelerator.wait_for_everyone()
-    accelerator.end_training()
+    if with_tracking:
+        accelerator.end_training()
 
 
 def main() -> None:

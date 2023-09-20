@@ -118,7 +118,8 @@ def generate_qa_from_dataset(
     # shuffle data
     dataset.shuffle(seed=42)
     # select a subset
-    small_dataset = dataset.select(range(sample_size))
+    num_samples = min(sample_size, len(dataset))
+    small_dataset = dataset.select(range(num_samples))
     # train-test split
     small_dataset_splits = split_dataset(small_dataset, title_column_name)
     print(
