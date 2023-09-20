@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, cast
 
 import hnswlib
 import numpy as np
@@ -103,13 +103,15 @@ def mixed_collate_fn(batch: List[Dict[str, torch.Tensor | str]]) -> Dict[str, to
     """
     This is able to account for string values which the default PyTorch collate_fn would silently ignore
     """
-    new_batch = {}
+    new_batch: Dict[str, torch.Tensor | List[str]] = {}
 
     keys = batch[0].keys()
     for key in keys:
         if isinstance(batch[0][key], str) or batch[0][key] is None:
-            new_batch[key] = [sample[key] for sample in batch]
+            # We cast because if the first element is a string, all elements in the batch are strings
+            new_batch[key] = cast(List[str], [sample[key] for sample in batch])
         else:
+            # Otherwise all elements in the batch are tensors
             new_batch[key] = torch.stack([torch.tensor(sample[key]) for sample in batch])
 
     return new_batch

@@ -1,64 +1,75 @@
 import argparse
+import os.path
+import warnings
+from functools import partial
+from pathlib import Path
 
 import datasets
 import torch
+from datasets import Dataset, DatasetDict
 from sklearn.model_selection import train_test_split
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
 
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
+DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 TEST_SIZE = 0.2
-
-parser = argparse.ArgumentParser(description="Generate question answer pairs from the dataset of passages")
-parser.add_argument(
-    "--dataset_path",
-    type=str,
-    default=None,
-    help="dataset path in the local dir. Can be huggingface dataset directory or a csv file.",
-    required=True,
-)
-parser.add_argument(
-    "--title_column_name",
-    type=str,
-    default="Title",
-    help="This title is used to identify passages from the same text",
-)
-parser.add_argument(
-    "--passage_column_name",
-    type=str,
-    default="Abstract",
-    help="name of the passage column",
-)
-parser.add_argument(
-    "--batch_size",
-    type=int,
-    default=1000,
-    help="Batch size (per device) for generating question answer pairs.",
-)
-parser.add_argument(
-    "--sample_size",
-    type=int,
-    default=1000,
-    help="Number of examples to process",
-)
-parser.add_argument(
-    "--output_dir",
-    type=str,
-    help="Output directory. Without '/' at the end",
-    required=True,
-)
-args = parser.parse_args()
-
-tokenizer = AutoTokenizer.from_pretrained("potsawee/t5-large-generation-squad-QuestionAnswer")
-model = AutoModelForSeq2SeqLM.from_pretrained(
-    "potsawee/t5-large-generation-squad-QuestionAnswer", device_map="auto", load_in_8bit=True
-)
+QA_MODEL = "potsawee/t5-large-generation-squad-QuestionAnswer"
 
 
-def generate_question_answer_pairs(documents: dict) -> dict:
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate question answer pairs from the dataset of passages")
+    parser.add_argument(
+        "--dataset_path",
+        type=str,
+        default=None,
+        help="dataset path in the local dir. Can be huggingface dataset directory or a csv file.",
+        required=True,
+    )
+    parser.add_argument(
+        "--title_column_name",
+        type=str,
+        default="Title",
+        help="This title is used to identify passages from the same text",
+    )
+    parser.add_argument(
+        "--passage_column_name",
+        type=str,
+        default="Abstract",
+        help="name of the passage column",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=1000,
+        help="Batch size (per device) for generating question answer pairs.",
+    )
+    parser.add_argument(
+        "--sample_size",
+        type=int,
+        default=1000,
+        help="Number of examples to process",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        help="Output directory. Without '/' at the end",
+        required=True,
+    )
+    parser.add_argument(
+        "--as_csv",
+        action="store_true",
+        help="Save the files as CSV. If False, will save them as a dataset directory via [`~Dataset.save_to_disk`]",
+    )
+    args = parser.parse_args()
+    return args
+
+
+def generate_question_answer_pairs(
+    documents: dict, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, passage_column_name: str
+) -> dict:
     """Generate question answer pairs"""
-    texts = documents[args.passage_column_name]
+    texts = documents[passage_column_name]
 
-    inputs = tokenizer(texts, return_tensors="pt", padding=True, max_length=150, truncation=True).to(device)
+    inputs = tokenizer(texts, return_tensors="pt", padding=True, max_length=150, truncation=True).to(DEVICE)
     outputs = model.generate(**inputs, max_new_tokens=50)
     question_answers = tokenizer.batch_decode(outputs, skip_special_tokens=False)
     question_answers = [
@@ -78,21 +89,18 @@ def generate_question_answer_pairs(documents: dict) -> dict:
 
 
 def filter_malformed_questions(record: dict) -> bool:
-    question = record["Question"]
-    answer = record["Answer"]
-
-    return question != "-" and answer != "-"
+    return record["Question"] != "-" and record["Answer"] != "-"
 
 
-def split_dataset(shuffled_dataset: datasets.Dataset, test_size: float = TEST_SIZE) -> datasets.DatasetDict:
-    unique_titles = set(shuffled_dataset[args.title_column_name])
+def split_dataset(
+    shuffled_dataset: datasets.Dataset, title_column_name: str, test_size: float = TEST_SIZE
+) -> datasets.DatasetDict:
+    unique_titles = set(shuffled_dataset[title_column_name])
 
     train_titles, test_titles = train_test_split(list(unique_titles), test_size=test_size, random_state=42)
 
-    train_dataset = shuffled_dataset.filter(
-        lambda example: example[args.title_column_name] in train_titles, num_proc=128
-    )
-    test_dataset = shuffled_dataset.filter(lambda example: example[args.title_column_name] in test_titles, num_proc=128)
+    train_dataset = shuffled_dataset.filter(lambda example: example[title_column_name] in train_titles, num_proc=128)
+    test_dataset = shuffled_dataset.filter(lambda example: example[title_column_name] in test_titles, num_proc=128)
 
     return datasets.DatasetDict(
         {
@@ -102,31 +110,92 @@ def split_dataset(shuffled_dataset: datasets.Dataset, test_size: float = TEST_SI
     )
 
 
-dataset = datasets.load_dataset("csv", data_files={"data": args.dataset_path})["data"]
-
-# shuffle data
-dataset.shuffle(seed=42)
-
-# select a subset
-small_dataset = dataset.select(range(args.sample_size))
-
-# train-test split
-small_dataset_splits = split_dataset(small_dataset)
-
-print(
-    f"Train dataset size: {len(small_dataset_splits['train'])}, Test dataset size: {len(small_dataset_splits['test'])}"
-)
-
-for split_name in small_dataset_splits:
-    processed_split = small_dataset_splits[split_name].map(
-        generate_question_answer_pairs, batched=True, batch_size=args.batch_size
+def generate_qa_from_dataset(
+    dataset: Dataset, passage_column_name: str, title_column_name: str, sample_size: int, batch_size: int
+) -> DatasetDict:
+    tokenizer = AutoTokenizer.from_pretrained(QA_MODEL)
+    model = AutoModelForSeq2SeqLM.from_pretrained(QA_MODEL, device_map="auto", load_in_8bit=True)
+    # shuffle data
+    dataset.shuffle(seed=42)
+    # select a subset
+    small_dataset = dataset.select(range(sample_size))
+    # train-test split
+    small_dataset_splits = split_dataset(small_dataset, title_column_name)
+    print(
+        f"Train dataset size: {len(small_dataset_splits['train'])}, "
+        f"Test dataset size: {len(small_dataset_splits['test'])}"
     )
-    filtered_split = processed_split.filter(filter_malformed_questions)
+    qa_gen_map = partial(
+        generate_question_answer_pairs, model=model, tokenizer=tokenizer, passage_column_name=passage_column_name
+    )
+    processed_data = small_dataset_splits.map(qa_gen_map, batched=True, batch_size=batch_size)
+    filtered_data = processed_data.filter(filter_malformed_questions)
+    print(
+        f"Malformed question answer pairs: "
+        f"(train: {len(processed_data['train']) - len(filtered_data['train'])} "
+        f"test: {len(processed_data['test']) - len(filtered_data['test'])})"
+    )
+    return processed_data
 
-    print(f"Malformed question answer pairs: {len(processed_split) - len(filtered_split)}")
 
-    filtered_split.save_to_disk(f"{args.output_dir}/question_answer_pairs_{split_name}")
-    filtered_split.to_csv(f"{args.output_dir}/question_answer_pairs_{split_name}.csv")
+def _load_dataset_from_path(dataset_path: str) -> Dataset:
+    if dataset_path.endswith(".csv"):
+        dataset = Dataset.from_csv(dataset_path)
+    elif not os.path.splitext(dataset_path):
+        if os.path.isdir(dataset_path):
+            dataset = datasets.load_from_disk(dataset_path)
+        else:
+            dataset = datasets.load_dataset(dataset_path)
+            key = next(iter(dataset))
+            if isinstance(dataset, DatasetDict):
+                warnings.warn(f"Found multiple keys in dataset. Generating qa for split {key}", stacklevel=0)
+            dataset = dataset[key]
+    else:
+        raise ValueError(
+            "dataset-path must be one of csv, dataset directory "
+            "(ie saved using [`~Dataset.save_to_disk`] or a dataset on the huggingface hub"
+        )
+    return dataset
+
+
+def generate_qa_from_disk(
+    dataset_path: str,
+    passage_column_name: str,
+    title_column_name: str,
+    sample_size: int,
+    batch_size: int,
+    output_dir: str,
+    as_csv: bool,
+) -> None:
+    dataset = _load_dataset_from_path(dataset_path)
+    qa_gen_data = generate_qa_from_dataset(dataset, passage_column_name, title_column_name, sample_size, batch_size)
+    output_path = Path(output_dir)
+    output_path.mkdir(exist_ok=True)
+    for split_name, split_ds in qa_gen_data.items():
+        full_path = f"{output_path}/question_answer_pairs_{split_name}"
+        if as_csv:
+            full_path = f"{full_path}.csv"
+            split_ds.to_csv(full_path)
+        else:
+            split_ds.save_to_disk(full_path)
+        print(f"Saving split {split_name} to {full_path}")
+
+
+def main() -> None:
+    args = parse_args()
+    generate_qa_from_disk(
+        args.dataset_path,
+        args.passage_column_name,
+        args.title_column_name,
+        args.sample_size,
+        args.batch_size,
+        args.output_dir,
+        args.as_csv,
+    )
+
+
+if __name__ == "__main__":
+    main()
 
 """
 python question_answer_generation.py \

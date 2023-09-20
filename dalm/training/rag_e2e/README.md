@@ -21,12 +21,27 @@ Before you can execute the code, please make sure you have the following compone
 
 - Execute the following script with your desired configuration:
 
-bash
-Copy code
+To train the model using a smaller retriever, and gpt2, you can run
+
+
+```shell
+dalm train-rag-e2e \
+"./dataset" \
+"BAAI/bge-small-en" \
+"gpt2"  \
+--output-dir "./rag_e2e_checkpoints" \
+--with-tracking \
+--report-to tensorboard 
+```
+or, to execute directly,
+```shell
 python train_rag_e2e.py --dataset_path "./dataset" \
                        --retriever_name_or_path "BAAI/bge-small-en" \
                        --generator_name_or_path "gpt2" \
                        --output_dir "./rag_e2e_checkpoints" \
-                       --with_tracking --report_to tensorboard
+                       --with_tracking \
+                       --report_to tensorboard
+```
+
 This script will start training the End2End Differentiable RAG model using the specified dataset and model configurations.
 

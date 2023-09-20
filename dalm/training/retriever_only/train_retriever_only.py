@@ -13,18 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import sys
-
-sys.path.append(os.getcwd())  # This is needed to import modules with absolute paths
-# ruff: noqa: E402
-
 import argparse
 import logging
 import math
+import os
 import random
 from argparse import Namespace
-from typing import Dict, Union
+from types import NoneType
+from typing import Dict, Optional, Union
 
 import datasets
 import torch
@@ -32,7 +28,7 @@ import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import set_seed
-from black import Union
+from datasets import Dataset, DatasetDict
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import SchedulerType, default_data_collator, get_scheduler
@@ -67,7 +63,8 @@ def parse_args() -> Namespace:
         type=int,
         default=128,
         help=(
-            "The maximum total passage sequence length after tokenization. Sequences longer than this will be truncated,"
+            "The maximum total passage sequence length after tokenization. "
+            "Sequences longer than this will be truncated,"
         ),
     )
     parser.add_argument(
@@ -166,11 +163,40 @@ def parse_args() -> Namespace:
     return args
 
 
-def main() -> None:
-    args = parse_args()
-    accelerator = (
-        Accelerator(log_with=args.report_to, project_dir=args.output_dir) if args.with_tracking else Accelerator()
-    )
+def train_retriever(
+    model_name_or_path: str,
+    train_dataset_or_csv_path: str | Dataset,
+    test_dataset_or_csv_path: str | Dataset | None = None,
+    dataset_passage_col_name: str = "Abstract",
+    dataset_query_col_name: str = "Question",
+    query_max_len: int = 50,
+    passage_max_len: int = 128,
+    per_device_train_batch_size: int = 32,
+    learning_rate: float = 1e-4,
+    logit_scale: int = 100,
+    weight_decay: float = 0.0,
+    num_train_epochs: int = 1,
+    max_train_steps: Optional[int] = None,
+    gradient_accumulation_steps: int = 1,
+    lr_scheduler_type: SchedulerType = SchedulerType.LINEAR,
+    num_warmup_steps: int = 0,
+    output_dir: Optional[str] = None,
+    seed: int = 42,
+    hub_model_id: Optional[str] = None,
+    hub_token: Optional[str] = None,
+    checkpointing_steps: Optional[int | str] = None,
+    resume_from_checkpoint: Optional[str] = None,
+    with_tracking: bool = True,
+    report_to: str = "all",
+    sanity_test: bool = True,
+    use_peft: bool = True,
+) -> None:
+    # Get the passed in vars before beginning training, in case we report training
+    args = dict(locals())
+    # TensorBoard cannot log Enums, need the raw value
+    args["lr_scheduler_type"] = args["lr_scheduler_type"].value
+    args = {k: v for k, v in args.items() if v is None or isinstance(v, (float, int, str, NoneType))}
+    accelerator = Accelerator(log_with=report_to, project_dir=output_dir) if with_tracking else Accelerator()
     # Make one log on every process with the configuration for debugging.
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -187,32 +213,33 @@ def main() -> None:
         transformers.utils.logging.set_verbosity_error()
 
     # If passed along, set the training seed now.
-    if args.seed is not None:
-        set_seed(args.seed)
+    if seed is not None:
+        set_seed(seed)
 
     # Handle the repository creation
     if accelerator.is_main_process:
-        if args.output_dir is not None:
-            os.makedirs(args.output_dir, exist_ok=True)
+        if output_dir is not None:
+            os.makedirs(output_dir, exist_ok=True)
     accelerator.wait_for_everyone()
 
-    model = AutoModelForSentenceEmbedding(args.model_name_or_path, use_bnb=True, get_peft=args.use_peft)
+    model = AutoModelForSentenceEmbedding(model_name_or_path, use_bnb=True, get_peft=use_peft)
     tokenizer = model.tokenizer
 
     # dataset download and preprocessing
-
+    if isinstance(train_dataset_or_csv_path, Dataset):
+        dataset = DatasetDict({"train": train_dataset_or_csv_path, "test": test_dataset_or_csv_path})
     dataset = datasets.load_dataset(
-        "csv", data_files={"train": args.train_dataset_csv_path, "validation": args.test_dataset_csv_path}
+        "csv", data_files={"train": train_dataset_or_csv_path, "validation": test_dataset_or_csv_path}
     )
 
     processed_datasets = dataset.map(
         lambda example: preprocess_dataset(
             example,
             tokenizer,
-            query_col_name=args.dataset_query_col_name,
-            passage_col_name=args.dataset_passage_col_name,
-            query_max_len=args.query_max_len,
-            passage_max_len=args.passage_max_len,
+            query_col_name=dataset_query_col_name,
+            passage_col_name=dataset_passage_col_name,
+            query_max_len=query_max_len,
+            passage_max_len=passage_max_len,
         ),
         batched=True,
         remove_columns=dataset["train"].column_names,
@@ -224,7 +251,6 @@ def main() -> None:
         logger.info(f"Sample {index} of the training set: {processed_datasets['train'][index]}.")
 
     model.print_trainable_parameters()  # type: ignore # No idea what mypy is complaining about.
-
     accelerator.print(model)
 
     # get dataloaders
@@ -232,23 +258,23 @@ def main() -> None:
         processed_datasets["train"],
         shuffle=True,
         collate_fn=default_data_collator,
-        batch_size=args.per_device_train_batch_size,
+        batch_size=per_device_train_batch_size,
         pin_memory=True,
     )
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     # Scheduler and math around the number of training steps.
     overrode_max_train_steps = False
-    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
-    if args.max_train_steps is None:
-        args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
+    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / gradient_accumulation_steps)
+    if max_train_steps is None:
+        max_train_steps = num_train_epochs * num_update_steps_per_epoch
         overrode_max_train_steps = True
 
     lr_scheduler = get_scheduler(
-        name=args.lr_scheduler_type,
+        name=lr_scheduler_type,
         optimizer=optimizer,
-        num_warmup_steps=args.num_warmup_steps,
-        num_training_steps=args.max_train_steps,
+        num_warmup_steps=num_warmup_steps,
+        num_training_steps=max_train_steps,
     )
 
     # Prepare everything with our `accelerator`.
@@ -257,50 +283,50 @@ def main() -> None:
     )
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed
-    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
+    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / gradient_accumulation_steps)
     if overrode_max_train_steps:
-        args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
+        max_train_steps = num_train_epochs * num_update_steps_per_epoch
     # Afterwards we recalculate our number of training epochs
-    args.num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
+    num_train_epochs = math.ceil(max_train_steps / num_update_steps_per_epoch)
 
     # Figure out how many steps we should save the Accelerator states
-    checkpointing_steps = args.checkpointing_steps
-    if checkpointing_steps is not None and checkpointing_steps.isdigit():
+    checkpointing_steps = checkpointing_steps
+    if checkpointing_steps is not None and str(checkpointing_steps).isdigit():
         checkpointing_steps = int(checkpointing_steps)
 
     # We need to initialize the trackers we use, and also store our configuration.
-    # The trackers initializes automatically on the main process.
-    if args.with_tracking:
+    # The trackers initialize automatically on the main process.
+    if with_tracking:
         experiment_config = vars(args)
         # TensorBoard cannot log Enums, need the raw value
         experiment_config["lr_scheduler_type"] = experiment_config["lr_scheduler_type"].value
         accelerator.init_trackers("peft_contrastive_learning", experiment_config)
 
-    total_batch_size = args.per_device_train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
+    total_batch_size = per_device_train_batch_size * accelerator.num_processes * gradient_accumulation_steps
 
-    if args.use_peft:
+    if use_peft:
         # saving and loading checkpoints for resuming training
         accelerator.register_save_state_pre_hook(save_model_hook)
         accelerator.register_load_state_pre_hook(load_model_hook)
 
     logger.info("***** Running training *****")
     logger.info(f"  Num examples = {len(processed_datasets['train'])}")
-    logger.info(f"  Num Epochs = {args.num_train_epochs}")
-    logger.info(f"  Instantaneous batch size per device = {args.per_device_train_batch_size}")
+    logger.info(f"  Num Epochs = {num_train_epochs}")
+    logger.info(f"  Instantaneous batch size per device = {per_device_train_batch_size}")
     logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
-    logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
-    logger.info(f"  Total optimization steps = {args.max_train_steps}")
+    logger.info(f"  Gradient Accumulation steps = {gradient_accumulation_steps}")
+    logger.info(f"  Total optimization steps = {max_train_steps}")
 
     # Only show the progress bar once on each machine.
-    progress_bar = tqdm(range(args.max_train_steps), disable=not accelerator.is_local_main_process)
+    progress_bar = tqdm(range(max_train_steps), disable=not accelerator.is_local_main_process)
     completed_steps = 0
     starting_epoch = 0
     # Potentially load in the weights and states from a previous save
-    if args.resume_from_checkpoint:
-        if args.resume_from_checkpoint is not None or args.resume_from_checkpoint != "":
-            accelerator.print(f"Resumed from checkpoint: {args.resume_from_checkpoint}")
-            accelerator.load_state(args.resume_from_checkpoint)
-            path = os.path.basename(args.resume_from_checkpoint)
+    if resume_from_checkpoint:
+        if resume_from_checkpoint is not None or resume_from_checkpoint != "":
+            accelerator.print(f"Resumed from checkpoint: {resume_from_checkpoint}")
+            accelerator.load_state(resume_from_checkpoint)
+            path = os.path.basename(resume_from_checkpoint)
         else:
             # Get the most recent checkpoint
             dirs = [f.name for f in os.scandir(os.getcwd()) if f.is_dir()]
@@ -315,18 +341,18 @@ def main() -> None:
             completed_steps = starting_epoch * num_update_steps_per_epoch
         else:
             # need to multiply `gradient_accumulation_steps` to reflect real steps
-            resume_step = int(training_difference.replace("step_", "")) * args.gradient_accumulation_steps
+            resume_step = int(training_difference.replace("step_", "")) * gradient_accumulation_steps
             starting_epoch = resume_step // len(train_dataloader)
             resume_step -= starting_epoch * len(train_dataloader)
-            completed_steps = resume_step // args.gradient_accumulation_step
+            completed_steps = resume_step // gradient_accumulation_steps
 
     # update the progress_bar if load from checkpoint
     progress_bar.update(completed_steps)
 
-    for epoch in range(starting_epoch, args.num_train_epochs):
+    for epoch in range(starting_epoch, num_train_epochs):
         model.train()
         total_loss: Union[float, torch.Tensor] = 0.0
-        if args.resume_from_checkpoint and epoch == starting_epoch and resume_step is not None:
+        if resume_from_checkpoint and epoch == starting_epoch and resume_step is not None:
             # We skip the first `n` batches in the dataloader when resuming from a checkpoint
             active_dataloader = accelerator.skip_first_batches(train_dataloader, resume_step)
         else:
@@ -335,7 +361,7 @@ def main() -> None:
             with accelerator.accumulate(model):
                 query_embs = model(**{k.replace("query_", ""): v for k, v in batch.items() if "query" in k})
                 passage_embs = model(**{k.replace("passage_", ""): v for k, v in batch.items() if "passage" in k})
-                logits = get_cosine_sim(query_embs, passage_embs, args.logit_scale)
+                logits = get_cosine_sim(query_embs, passage_embs, logit_scale)
 
                 loss_query = get_nt_xent_loss(logits)
                 loss_passage = get_nt_xent_loss(logits.t())
@@ -353,39 +379,71 @@ def main() -> None:
                 completed_steps += 1
 
             if (step + 1) % 100 == 0:
-                logger.info(f"Step: {step+1}, Loss: {total_loss/(step+1)}")
-                if args.with_tracking:
+                logger.info(f"Step: {step + 1}, Loss: {total_loss / (step + 1)}")
+                if with_tracking:
                     accelerator.log({"train/loss": total_loss / (step + 1)}, step=completed_steps)
 
             if isinstance(checkpointing_steps, int):
                 if completed_steps % checkpointing_steps == 0:
-                    output_dir = f"step_{completed_steps }"
-                    if args.output_dir is not None:
-                        output_dir = os.path.join(args.output_dir, output_dir)
+                    step_output_dir = f"step_{completed_steps}"
+                    if output_dir is not None:
+                        output_dir = os.path.join(output_dir, step_output_dir)
                     accelerator.save_state(output_dir)
 
-            if completed_steps >= args.max_train_steps:
+            if completed_steps >= max_train_steps:
                 break
 
         result: Dict[str, Union[int, float, torch.Tensor]] = {}
         # Use accelerator.print to print only on the main process.
         accelerator.print(f"epoch {epoch}:", result)
-        if args.with_tracking:
+        if with_tracking:
             step_loss = total_loss.item() if isinstance(total_loss, torch.Tensor) else total_loss
             result["train/epoch_loss"] = step_loss / len(train_dataloader)
             accelerator.log(result, step=completed_steps)
 
-        if args.output_dir is not None:
+        if output_dir is not None:
             accelerator.wait_for_everyone()
             if accelerator.is_main_process:
                 if isinstance(checkpointing_steps, str):
-                    accelerator.save_state(os.path.join(args.output_dir, f"epoch_{epoch}"))
+                    accelerator.save_state(os.path.join(output_dir, f"epoch_{epoch}"))
                 accelerator.unwrap_model(model).save_pretrained(
-                    args.output_dir, state_dict=accelerator.get_state_dict(accelerator.unwrap_model(model))
+                    output_dir, state_dict=accelerator.get_state_dict(accelerator.unwrap_model(model))
                 )
-                tokenizer.save_pretrained(args.output_dir)
+                tokenizer.save_pretrained(output_dir)
             accelerator.wait_for_everyone()
     accelerator.end_training()
+
+
+def main() -> None:
+    args = parse_args()
+    train_retriever(
+        train_dataset_or_csv_path=args.train_dataset_csv_path,
+        test_dataset_or_csv_path=args.test_dataset_csv_path,
+        model_name_or_path=args.model_name_or_path,
+        dataset_passage_col_name=args.dataset_passage_col_name,
+        dataset_query_col_name=args.dataset_query_col_name,
+        query_max_len=args.query_max_len,
+        passage_max_len=args.passage_max_len,
+        per_device_train_batch_size=args.per_device_train_batch_size,
+        learning_rate=args.learning_rate,
+        logit_scale=args.logit_scale,
+        weight_decay=args.weight_decay,
+        num_train_epochs=args.num_train_epochs,
+        max_train_steps=args.max_train_steps,
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
+        lr_scheduler_type=args.lr_scheduler_type,
+        num_warmup_steps=args.num_warmup_steps,
+        output_dir=args.output_dir,
+        seed=args.seed,
+        hub_model_id=args.hub_model_id,
+        hub_token=args.hub_token,
+        checkpointing_steps=args.checkpointing_steps,
+        resume_from_checkpoint=args.resume_from_checkpoint,
+        with_tracking=args.with_tracking,
+        report_to=args.report_to,
+        sanity_test=args.sanity_test,
+        use_peft=args.use_peft,
+    )
 
 
 if __name__ == "__main__":

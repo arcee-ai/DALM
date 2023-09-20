@@ -2,17 +2,17 @@ from typing import List
 
 import torch
 import torch.nn.functional as F
-from transformers import AutoModel
+from peft import PeftModel
 
 
-def save_model_hook(models: List[AutoModel], weights: List, output_dir: str) -> None:
+def save_model_hook(models: List[PeftModel], weights: List, output_dir: str) -> None:
     for i, model in enumerate(models):
         model.save_pretrained(output_dir, state_dict=weights[i])
         # make sure to pop weight so that corresponding model is not saved again
         weights.pop()
 
 
-def load_model_hook(models: List[AutoModel], input_dir: str) -> None:
+def load_model_hook(models: List[PeftModel], input_dir: str) -> None:
     while len(models) > 0:
         model = models.pop()
         # pop models so that they are not loaded again
@@ -20,9 +20,7 @@ def load_model_hook(models: List[AutoModel], input_dir: str) -> None:
             model.load_adapter(input_dir, model.active_adapter, is_trainable=True)
 
 
-def get_cosine_sim(
-    query_embs: torch.FloatTensor, passage_embs: torch.FloatTensor, logit_scale: torch.FloatTensor
-) -> torch.Tensor:
+def get_cosine_sim(query_embs: torch.FloatTensor, passage_embs: torch.FloatTensor, logit_scale: int) -> torch.Tensor:
     return torch.matmul(query_embs, passage_embs.t()) * logit_scale
 
 
