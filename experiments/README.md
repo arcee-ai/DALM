@@ -35,6 +35,7 @@ Hit Rate: 0.8578767123287672
 dalm train-retriever-only "BAAI/bge-large-en" "train_data.csv" \
 --output-dir "retriever_only_checkpoints" \
 --use-peft \
+--dataset-passage-col-name text \
 --per-device-train-batch-size 150
 
 ```

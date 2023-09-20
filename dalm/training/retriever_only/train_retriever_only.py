@@ -242,7 +242,7 @@ def train_retriever(
             passage_max_len=passage_max_len,
         ),
         batched=True,
-        remove_columns=dataset["train"].column_names,
+        remove_columns=dataset.column_names,
         desc="Running tokenizer on dataset",
     )
 
