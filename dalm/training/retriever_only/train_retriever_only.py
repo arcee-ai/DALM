@@ -28,7 +28,7 @@ import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import set_seed
-from datasets import Dataset, DatasetDict
+from datasets import Dataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import SchedulerType, default_data_collator, get_scheduler
@@ -42,8 +42,7 @@ logger = get_logger(__name__)
 
 def parse_args() -> Namespace:
     parser = argparse.ArgumentParser(description="training a PEFT model for Sematic Search task")
-    parser.add_argument("--train_dataset_csv_path", type=str, default=None, help="dataset path in the local dir")
-    parser.add_argument("--test_dataset_csv_path", type=str, default=None, help="dataset path in the local dir")
+    parser.add_argument("--dataset_path", type=str, default=None, help="dataset path in the local dir")
     parser.add_argument(
         "--dataset_query_col_name", type=str, default="Question", help="Name of the query column in the dataset"
     )
@@ -165,8 +164,7 @@ def parse_args() -> Namespace:
 
 def train_retriever(
     model_name_or_path: str,
-    train_dataset_or_csv_path: str | Dataset,
-    test_dataset_or_csv_path: str | Dataset | None = None,
+    dataset_or_path: str | Dataset,
     dataset_passage_col_name: str = "Abstract",
     dataset_query_col_name: str = "Question",
     query_max_len: int = 50,
@@ -226,10 +224,12 @@ def train_retriever(
     tokenizer = model.tokenizer
 
     # dataset download and preprocessing
-    if isinstance(train_dataset_or_csv_path, Dataset):
-        dataset = DatasetDict({"train": train_dataset_or_csv_path, "test": test_dataset_or_csv_path})
-    dataset = datasets.load_dataset(
-        "csv", data_files={"train": train_dataset_or_csv_path, "validation": test_dataset_or_csv_path}
+    dataset = (
+        dataset_or_path
+        if isinstance(dataset_or_path, Dataset)
+        else datasets.load_from_disk(dataset_or_path)
+        if os.path.isdir(dataset_or_path)
+        else datasets.load_dataset("csv", data_files=dataset_or_path)["train"]
     )
 
     processed_datasets = dataset.map(
@@ -297,9 +297,7 @@ def train_retriever(
     # We need to initialize the trackers we use, and also store our configuration.
     # The trackers initialize automatically on the main process.
     if with_tracking:
-        experiment_config = vars(args)
-        # TensorBoard cannot log Enums, need the raw value
-        experiment_config["lr_scheduler_type"] = experiment_config["lr_scheduler_type"].value
+        experiment_config = args.copy()
         accelerator.init_trackers("peft_contrastive_learning", experiment_config)
 
     total_batch_size = per_device_train_batch_size * accelerator.num_processes * gradient_accumulation_steps
@@ -418,8 +416,7 @@ def train_retriever(
 def main() -> None:
     args = parse_args()
     train_retriever(
-        train_dataset_or_csv_path=args.train_dataset_csv_path,
-        test_dataset_or_csv_path=args.test_dataset_csv_path,
+        dataset_or_path=args.dataset_path,
         model_name_or_path=args.model_name_or_path,
         dataset_passage_col_name=args.dataset_passage_col_name,
         dataset_query_col_name=args.dataset_query_col_name,
@@ -451,7 +448,6 @@ if __name__ == "__main__":
     main()
 
 
-# python contrastive_train/peft_lora_constrastive_learning.py  --train_dataset_csv_path "xxxx.csv" \
-#     --test_dataset_csv_path "yyyy.csv" \
+# python contrastive_train/peft_lora_constrastive_learning.py  --dataset_path "xxxx.csv" \
 #     --model_name_or_path "BAAI/bge-small-en" --output_dir "./retriever_only_checkpoints" --use_peft  \
 #     --with_tracking --report_to all --per_device_train_batch_size 30
