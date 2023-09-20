@@ -62,7 +62,7 @@ You can leverage our scripts directly if you'd like, or you can use the `dalm` c
 Train `BAAI/bge-large-en` retriever with contrastive learning.
 ```shell
 python dalm/training/retriever_only/train_retriever_only.py \
---train_dataset_csv_path "./dalm/datasets/toy_data_train.csv" \
+--dataset_path "./dalm/datasets/toy_data_train.csv" \
 --model_name_or_path "BAAI/bge-large-en" \
 --output_dir "retriever_only_checkpoints" \
 --use_peft \

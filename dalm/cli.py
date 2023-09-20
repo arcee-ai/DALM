@@ -162,19 +162,13 @@ def train_retriever_only(
     model_name_or_path: Annotated[
         str, typer.Argument(help="Path to the model or identifier from huggingface.co/models.", show_default=False)
     ],
-    train_dataset_csv_path: Annotated[
+    dataset_path: Annotated[
         str,
         typer.Argument(
             help="Path to the train dataset to train with. Can be a huggingface dataset directory or a csv file.",
             show_default=False,
         ),
     ],
-    test_dataset_csv_path: Annotated[
-        Optional[str],
-        typer.Option(
-            help="Optional path to the test dataset for training. Can be a huggingface dataset directory or a csv file."
-        ),
-    ] = None,
     dataset_passage_col_name: Annotated[
         str, typer.Option(help="Name of the column containing the passage")
     ] = "Abstract",
@@ -243,8 +237,7 @@ def train_retriever_only(
 ) -> None:
     """End-to-end train an in-domain model, including the retriever and generator"""
     train_retriever(
-        train_dataset_or_csv_path=train_dataset_csv_path,
-        test_dataset_or_csv_path=test_dataset_csv_path,
+        dataset_or_path=dataset_path,
         model_name_or_path=model_name_or_path,
         dataset_passage_col_name=dataset_passage_col_name,
         dataset_query_col_name=dataset_query_col_name,
