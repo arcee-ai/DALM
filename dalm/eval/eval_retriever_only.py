@@ -213,21 +213,17 @@ def main() -> None:
 
     actual_length = len(processed_datasets)
 
-    processed_datasets = DataLoader(
+    processed_dataloader = DataLoader(
         processed_datasets, batch_size=args.test_batch_size, shuffle=True, collate_fn=mixed_collate_fn
     )
 
-    # here we are interacting through the dataset, not a dataloader
-    # so we need to convert them to a tensor
-    # to do : convert this to batches by examples from the dataset to make it effcient
-    # to:do : torch_dtype make a varaibles float16 or bfloat16
-    for test_example in processed_datasets:
+    for batch in processed_dataloader:
         with torch.no_grad():
             with torch.amp.autocast(dtype=SELECTED_TORCH_DTYPE, device_type=args.device):
                 # use the batch size for the first dim
                 # do not hard-code it
-                retriever_query_input_ids = test_example["retriever_query_input_ids"]
-                retriever_query__attention_mask = test_example["retriever_query_attention_mask"]
+                retriever_query_input_ids = batch["retriever_query_input_ids"]
+                retriever_query__attention_mask = batch["retriever_query_attention_mask"]
 
                 query_embeddings = get_query_embeddings(
                     retriever_query_input_ids,
@@ -242,7 +238,7 @@ def main() -> None:
             threshold=0.0,
         )
 
-        correct_passages = test_example[args.passage_column_name]
+        correct_passages = batch[args.passage_column_name]
 
         for i, s in enumerate(search_results):
             retrieved_passages = [item[0] for item in s]
