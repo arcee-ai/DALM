@@ -226,11 +226,24 @@ def train_retriever(
     tokenizer = model.tokenizer
 
     # dataset download and preprocessing
-    if isinstance(train_dataset_or_csv_path, Dataset):
-        dataset = DatasetDict({"train": train_dataset_or_csv_path, "test": test_dataset_or_csv_path})
-    dataset = datasets.load_dataset(
-        "csv", data_files={"train": train_dataset_or_csv_path, "validation": test_dataset_or_csv_path}
+    train_dataset = (
+        train_dataset_or_csv_path
+        if isinstance(train_dataset_or_csv_path, Dataset)
+        else datasets.load_from_disk(train_dataset_or_csv_path)
+        if os.path.isdir(train_dataset_or_csv_path)
+        else datasets.load_dataset("csv", data_files=train_dataset_or_csv_path)["train"]
     )
+    data = {"train": train_dataset}
+    if test_dataset_or_csv_path is not None:
+        val_dataset = (
+            test_dataset_or_csv_path
+            if isinstance(test_dataset_or_csv_path, Dataset)
+            else datasets.load_from_disk(test_dataset_or_csv_path)
+            if os.path.isdir(test_dataset_or_csv_path)
+            else datasets.load_dataset("csv", data_files=test_dataset_or_csv_path)["train"]
+        )
+        data["test"] = val_dataset
+    dataset = DatasetDict(data)
 
     processed_datasets = dataset.map(
         lambda example: preprocess_dataset(
@@ -297,9 +310,7 @@ def train_retriever(
     # We need to initialize the trackers we use, and also store our configuration.
     # The trackers initialize automatically on the main process.
     if with_tracking:
-        experiment_config = vars(args)
-        # TensorBoard cannot log Enums, need the raw value
-        experiment_config["lr_scheduler_type"] = experiment_config["lr_scheduler_type"].value
+        experiment_config = args.copy()
         accelerator.init_trackers("peft_contrastive_learning", experiment_config)
 
     total_batch_size = per_device_train_batch_size * accelerator.num_processes * gradient_accumulation_steps
