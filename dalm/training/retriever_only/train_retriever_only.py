@@ -247,7 +247,7 @@ def train_retriever(
     )
 
     # Log a few random samples from the training set:
-    for index in random.sample(range(len(processed_datasets["train"])), 3):
+    for index in random.sample(range(len(processed_datasets)), 3):
         logger.info(f"Sample {index} of the training set: {processed_datasets['train'][index]}.")
 
     model.print_trainable_parameters()  # type: ignore # No idea what mypy is complaining about.
@@ -255,7 +255,7 @@ def train_retriever(
 
     # get dataloaders
     train_dataloader = DataLoader(
-        processed_datasets["train"],
+        processed_datasets,
         shuffle=True,
         collate_fn=default_data_collator,
         batch_size=per_device_train_batch_size,

@@ -32,7 +32,7 @@ Hit Rate: 0.8578767123287672
 ----- retriever only
 
 
-dalm train-retriever-only "BAAI/bge-large-en" "train_data.csv" \
+dalm train-retriever-only "BAAI/bge-large-en" "qa-outputs/question_answer_pairs.csv" \
 --output-dir "retriever_only_checkpoints" \
 --use-peft \
 --dataset-passage-col-name text \
