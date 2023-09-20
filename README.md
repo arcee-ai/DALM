@@ -61,15 +61,6 @@ You can leverage our scripts directly if you'd like, or you can use the `dalm` c
 
 Train `BAAI/bge-large-en` retriever with contrastive learning.
 ```shell
-dalm train-retriever-only "BAAI/bge-large-en" "./dalm/datasets/toy_data_train.csv" \
---output-dir "./dalm/training/rag_e2e/retriever_only_checkpoints" \
---use-peft \
---with-tracking \
---report-to all \
---per-device-train-batch-size 150
-```
-or
-```shell
 python dalm/training/retriever_only/train_retriever_only.py \
 --train_dataset_csv_path "./dalm/datasets/toy_data_train.csv" \
 --model_name_or_path "BAAI/bge-large-en" \
@@ -79,23 +70,21 @@ python dalm/training/retriever_only/train_retriever_only.py \
 --report_to all \
 --per_device_train_batch_size 150
 ```
+or
+```shell
+dalm train-retriever-only "BAAI/bge-large-en" "./dalm/datasets/toy_data_train.csv" \
+--output-dir "./dalm/training/rag_e2e/retriever_only_checkpoints" \
+--use-peft \
+--with-tracking \
+--report-to all \
+--per-device-train-batch-size 150
+```
 
 For all available arguments and options, see `dalm train-retriever-only --help`
 
 ### Train Retriever and Generator Jointly (RAG-e2e)
 Train `Llama-2-7b` generator jointly with the retriever model `BAAI/bge-large-en`.
 
-```shell
-dalm train-rag-e2e \
-"./dalm/datasets/toy_data_train.csv" \
-"BAAI/bge-large-en" \
-"meta-llama/Llama-2-7b-hf" \
---output-dir "./dalm/training/rag_e2e/rag_e2e_checkpoints" \
---with-tracking \
---report-to all \
---per-device-train-batch-size 24
-```
-or
 ```shell
 python dalm/training/rag_e2e/train_rage2e.py \
   --dataset_path "./dalm/datasets/toy_data_train.csv" \
@@ -105,6 +94,17 @@ python dalm/training/rag_e2e/train_rage2e.py \
   --with_tracking \
   --report_to all \
   --per_device_train_batch_size 24
+```
+or
+```shell
+dalm train-rag-e2e \
+"./dalm/datasets/toy_data_train.csv" \
+"BAAI/bge-large-en" \
+"meta-llama/Llama-2-7b-hf" \
+--output-dir "./dalm/training/rag_e2e/rag_e2e_checkpoints" \
+--with-tracking \
+--report-to all \
+--per-device-train-batch-size 24
 ```
 
 For all available arguments and options, see `dalm train-rag-e2e --help`
