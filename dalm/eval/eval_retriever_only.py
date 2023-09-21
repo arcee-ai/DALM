@@ -54,7 +54,7 @@ def parse_args() -> Namespace:
         ),
     )
     parser.add_argument(
-        "--retriever_model_name_or_path",
+        "--retriever_name_or_path",
         type=str,
         help="Path to pretrained retriever model or model identifier from huggingface.co/models.",
         required=True,
@@ -104,7 +104,7 @@ def main() -> None:
     SELECTED_TORCH_DTYPE: Final[torch.dtype] = torch.float16 if args.torch_dtype == "float16" else torch.bfloat16
 
     # rag retriver and the generator (don't load new peft layers no need)
-    retriever_model = AutoModelForSentenceEmbedding(args.retriever_model_name_or_path, get_peft=False, use_bnb=False)
+    retriever_model = AutoModelForSentenceEmbedding(args.retriever_name_or_path, get_peft=False, use_bnb=False)
 
     # load the test dataset
     test_dataset = (
@@ -121,8 +121,8 @@ def main() -> None:
         lambda example: preprocess_function(
             example,
             retriever_tokenizer,
-            query_col_name=args.query_column_name,
-            passage_col_name=args.passage_column_name,
+            query_column_name=args.query_column_name,
+            passage_column_name=args.passage_column_name,
         ),
         batched=True,
         # remove_columns=test_dataset.column_names,

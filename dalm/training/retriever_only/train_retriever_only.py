@@ -44,10 +44,10 @@ def parse_args() -> Namespace:
     parser = argparse.ArgumentParser(description="training a PEFT model for Sematic Search task")
     parser.add_argument("--dataset_path", type=str, default=None, help="dataset path in the local dir")
     parser.add_argument(
-        "--dataset_query_col_name", type=str, default="Question", help="Name of the query column in the dataset"
+        "--query_column_name", type=str, default="Question", help="Name of the query column in the dataset"
     )
     parser.add_argument(
-        "--dataset_passage_col_name", type=str, default="Abstract", help="Name of the passage column in the dataset"
+        "--passage_column_name", type=str, default="Abstract", help="Name of the passage column in the dataset"
     )
     parser.add_argument(
         "--query_max_len",
@@ -67,7 +67,7 @@ def parse_args() -> Namespace:
         ),
     )
     parser.add_argument(
-        "--model_name_or_path",
+        "--retriever_name_or_path",
         type=str,
         help="Path to pretrained model or model identifier from huggingface.co/models.",
         required=True,
@@ -163,10 +163,10 @@ def parse_args() -> Namespace:
 
 
 def train_retriever(
-    model_name_or_path: str,
+    retriever_name_or_path: str,
     dataset_or_path: str | Dataset,
-    dataset_passage_col_name: str = "Abstract",
-    dataset_query_col_name: str = "Question",
+    passage_column_name: str = "Abstract",
+    query_column_name: str = "Question",
     query_max_len: int = 50,
     passage_max_len: int = 128,
     per_device_train_batch_size: int = 32,
@@ -220,7 +220,7 @@ def train_retriever(
             os.makedirs(output_dir, exist_ok=True)
     accelerator.wait_for_everyone()
 
-    model = AutoModelForSentenceEmbedding(model_name_or_path, use_bnb=True, get_peft=use_peft)
+    model = AutoModelForSentenceEmbedding(retriever_name_or_path, use_bnb=True, get_peft=use_peft)
     tokenizer = model.tokenizer
 
     # dataset download and preprocessing
@@ -236,8 +236,8 @@ def train_retriever(
         lambda example: preprocess_dataset(
             example,
             tokenizer,
-            query_col_name=dataset_query_col_name,
-            passage_col_name=dataset_passage_col_name,
+            query_column_name=query_column_name,
+            passage_column_name=passage_column_name,
             query_max_len=query_max_len,
             passage_max_len=passage_max_len,
         ),
@@ -417,9 +417,9 @@ def main() -> None:
     args = parse_args()
     train_retriever(
         dataset_or_path=args.dataset_path,
-        model_name_or_path=args.model_name_or_path,
-        dataset_passage_col_name=args.dataset_passage_col_name,
-        dataset_query_col_name=args.dataset_query_col_name,
+        retriever_name_or_path=args.retriever_name_or_path,
+        passage_column_name=args.passage_column_name,
+        query_column_name=args.query_column_name,
         query_max_len=args.query_max_len,
         passage_max_len=args.passage_max_len,
         per_device_train_batch_size=args.per_device_train_batch_size,
@@ -449,5 +449,5 @@ if __name__ == "__main__":
 
 
 # python contrastive_train/peft_lora_constrastive_learning.py  --dataset_path "xxxx.csv" \
-#     --model_name_or_path "BAAI/bge-small-en" --output_dir "./retriever_only_checkpoints" --use_peft  \
+#     --retriever_name_or_path "BAAI/bge-small-en" --output_dir "./retriever_only_checkpoints" --use_peft  \
 #     --with_tracking --report_to all --per_device_train_batch_size 30

@@ -60,13 +60,13 @@ def parse_args() -> Namespace:
         help=("Dataset path. Can be a huggingface dataset directory or a csv file."),
     )
     parser.add_argument(
-        "--dataset_passage_col_name", type=str, default="Abstract", help="Name of the column containing the passage"
+        "--passage_column_name", type=str, default="Abstract", help="Name of the column containing the passage"
     )
     parser.add_argument(
-        "--dataset_query_col_name", type=str, default="Question", help="Name of the column containing the query"
+        "--query_column_name", type=str, default="Question", help="Name of the column containing the query"
     )
     parser.add_argument(
-        "--dataset_answer_col_name", type=str, default="Answer", help="Name of the column containing the answer"
+        "--answer_column_name", type=str, default="Answer", help="Name of the column containing the answer"
     )
     parser.add_argument(
         "--query_max_len",
@@ -217,9 +217,9 @@ def train_e2e(
     dataset_or_path: str | Dataset,
     retriever_name_or_path: str,
     generator_name_or_path: str,
-    dataset_passage_col_name: str = "Abstract",
-    dataset_query_col_name: str = "Question",
-    dataset_answer_col_name: str = "Answer",
+    passage_column_name: str = "Abstract",
+    query_column_name: str = "Question",
+    answer_column_name: str = "Answer",
     query_max_len: int = 50,
     passage_max_len: int = 128,
     generator_max_len: int = 256,
@@ -295,9 +295,9 @@ def train_e2e(
             example,
             retriever_tokenizer=rag_model.retriever_tokenizer,
             generator_tokenizer=rag_model.generator_tokenizer,
-            dataset_query_col_name=dataset_query_col_name,
-            dataset_passage_col_name=dataset_passage_col_name,
-            dataset_answer_col_name=dataset_answer_col_name,
+            query_column_name=query_column_name,
+            passage_column_name=passage_column_name,
+            answer_column_name=answer_column_name,
             query_max_len=query_max_len,
             passage_max_len=passage_max_len,
             generator_max_len=generator_max_len,
@@ -523,9 +523,9 @@ def main() -> None:
         dataset_or_path=args.dataset_path,
         retriever_name_or_path=args.retriever_name_or_path,
         generator_name_or_path=args.generator_name_or_path,
-        dataset_passage_col_name=args.dataset_passage_col_name,
-        dataset_query_col_name=args.dataset_query_col_name,
-        dataset_answer_col_name=args.dataset_answer_col_name,
+        passage_column_name=args.passage_column_name,
+        query_column_name=args.query_column_name,
+        answer_column_name=args.answer_column_name,
         query_max_len=args.query_max_len,
         passage_max_len=args.passage_max_len,
         generator_max_len=args.generator_max_len,
