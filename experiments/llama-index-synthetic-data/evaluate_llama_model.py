@@ -8,7 +8,8 @@ def run_eval(val_data: str) -> None:
 	embed_model_name = "local:BAAI/bge-small-en"
 	base_embed_model = resolve_embed_model("local:BAAI/bge-small-en")
 	embed_model = LinearAdapterEmbeddingModel(base_embed_model, "model_output_test")
-	bge_val_results = evaluate(val_dataset, embed_model_name)
+	# Top k 10 to match our internal experiments
+	bge_val_results = evaluate(val_dataset, embed_model_name, top_k=10)
 	print("Base Model Results:")
 	display_results(["bge"], [bge_val_results])
 	ft_val_results = evaluate(val_dataset, embed_model)
