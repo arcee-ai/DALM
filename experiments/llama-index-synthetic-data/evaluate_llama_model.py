@@ -7,8 +7,8 @@ from eval_utils import evaluate, display_results
 def run_eval(val_data: str) -> None:
 	val_dataset = EmbeddingQAFinetuneDataset.from_json(val_data)
 	print("Loading model")
-	embed_model_name = "local:BAAI/bge-small-en"
-	base_embed_model = resolve_embed_model("local:BAAI/bge-small-en")
+	embed_model_name = "local:BAAI/bge-large-en"
+	base_embed_model = resolve_embed_model(embed_model_name)
 	print("model loaded")
 	print("loading adapter")
 	embed_model = LinearAdapterEmbeddingModel(base_embed_model, "model_output_test", device="cuda")

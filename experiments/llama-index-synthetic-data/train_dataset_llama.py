@@ -3,7 +3,7 @@ from llama_index.embeddings import resolve_embed_model
 
 
 def run_finetune(train_data: str) -> None:
-	base_embed_model = resolve_embed_model("local:BAAI/bge-small-en")
+	base_embed_model = resolve_embed_model("local:BAAI/bge-large-en")
 	train_dataset = EmbeddingQAFinetuneDataset.from_json(train_data)
 
 	finetune_engine = EmbeddingAdapterFinetuneEngine(
