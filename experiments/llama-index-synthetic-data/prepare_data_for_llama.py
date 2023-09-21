@@ -23,7 +23,7 @@ def map_df_to_llama_format(
 		queries = {}
 		relevant_docs = {}
 		for node_id, (_, row) in tqdm(zip(node_ids, df.iterrows()), total=len(df)):
-			questions = [row["Query"]]
+			questions = [row["Question"]]
 			questions = [question for question in questions if len(question) > 0]
 
 			for question in questions:
