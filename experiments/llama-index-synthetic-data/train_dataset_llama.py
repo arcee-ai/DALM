@@ -1,7 +1,5 @@
 from llama_index.finetuning import EmbeddingAdapterFinetuneEngine, EmbeddingQAFinetuneDataset
 from llama_index.embeddings import resolve_embed_model
-import torch
-
 
 
 def run_finetune(train_data: str) -> None:

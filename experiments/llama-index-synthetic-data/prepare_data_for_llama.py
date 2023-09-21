@@ -2,11 +2,12 @@ from llama_index.finetuning.embeddings.common import EmbeddingQAFinetuneDataset
 import pandas as pd
 from uuid import uuid4
 from tqdm import tqdm
+from datasets import load_dataset
 
+
+DATA_NAME = "arcee-ai/synthetic-data-gen"
 
 def map_df_to_llama_format(
-	train_data: str,
-	val_data: str,
 ) -> None:
 	"""Generate examples given a set of nodes.
 
@@ -14,8 +15,9 @@ def map_df_to_llama_format(
 	I'm just trying to map to the format created in
 	https://github.com/jerryjliu/llama_index/blob/main/llama_index/finetuning/embeddings/common.py#L60
 	"""
-	train_df = pd.read_csv(train_data)
-	val_df = pd.read_csv(val_data)
+	ds = load_dataset(DATA_NAME)
+	train_df = ds["train"].to_pandas()
+	val_df = ds["test"].to_pandas()
 	for fname, df in zip(["train.json", "val.json"], [train_df, val_df]):
 		node_ids = [str(uuid4()) for _ in range(len(df))]
 		node_dict = dict(zip(node_ids, df.Abstract.tolist()))
@@ -39,7 +41,4 @@ def map_df_to_llama_format(
 
 
 if __name__ == "__main__":
-	map_df_to_llama_format(
-		"/root/DALM/dataset/out/question_answer_pairs_train.csv",
-		"/root/DALM/dataset/out/question_answer_pairs_test.csv"
-	)
+	map_df_to_llama_format()
