@@ -9,7 +9,7 @@ from tqdm import tqdm
 def evaluate(
     dataset,
     embed_model,
-    top_k=5,
+    top_k=10,
     verbose=False,
 ):
     corpus = dataset.corpus
