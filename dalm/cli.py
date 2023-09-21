@@ -51,11 +51,9 @@ def train_rag_e2e(
             help="Path to pretrained (causal) generator or identifier from huggingface.co/models.", show_default=False
         ),
     ],
-    dataset_passage_col_name: Annotated[
-        str, typer.Option(help="Name of the column containing the passage")
-    ] = "Abstract",
-    dataset_query_col_name: Annotated[str, typer.Option(help="Name of the column containing the query")] = "Question",
-    dataset_answer_col_name: Annotated[str, typer.Option(help="Name of the column containing the Answer")] = "Answer",
+    passage_column_name: Annotated[str, typer.Option(help="Name of the column containing the passage")] = "Abstract",
+    query_column_name: Annotated[str, typer.Option(help="Name of the column containing the query")] = "Question",
+    answer_column_name: Annotated[str, typer.Option(help="Name of the column containing the Answer")] = "Answer",
     query_max_len: Annotated[
         int, typer.Option(help="The max query sequence length during tokenization. Longer sequences are truncated")
     ] = 50,
@@ -129,9 +127,9 @@ def train_rag_e2e(
         dataset_or_path=dataset_path,
         retriever_name_or_path=retriever_name_or_path,
         generator_name_or_path=generator_name_or_path,
-        dataset_passage_col_name=dataset_passage_col_name,
-        dataset_query_col_name=dataset_query_col_name,
-        dataset_answer_col_name=dataset_answer_col_name,
+        passage_column_name=passage_column_name,
+        query_column_name=query_column_name,
+        answer_column_name=answer_column_name,
         query_max_len=query_max_len,
         passage_max_len=passage_max_len,
         generator_max_len=generator_max_len,
@@ -169,10 +167,8 @@ def train_retriever_only(
             show_default=False,
         ),
     ],
-    dataset_passage_col_name: Annotated[
-        str, typer.Option(help="Name of the column containing the passage")
-    ] = "Abstract",
-    dataset_query_col_name: Annotated[str, typer.Option(help="Name of the column containing the query")] = "Question",
+    passage_column_name: Annotated[str, typer.Option(help="Name of the column containing the passage")] = "Abstract",
+    query_column_name: Annotated[str, typer.Option(help="Name of the column containing the query")] = "Question",
     query_max_len: Annotated[
         int, typer.Option(help="The max query sequence length during tokenization. Longer sequences are truncated")
     ] = 50,
@@ -239,8 +235,8 @@ def train_retriever_only(
     train_retriever(
         dataset_or_path=dataset_path,
         retriever_name_or_path=retriever_name_or_path,
-        dataset_passage_col_name=dataset_passage_col_name,
-        dataset_query_col_name=dataset_query_col_name,
+        passage_column_name=passage_column_name,
+        query_column_name=query_column_name,
         query_max_len=query_max_len,
         passage_max_len=passage_max_len,
         per_device_train_batch_size=per_device_train_batch_size,

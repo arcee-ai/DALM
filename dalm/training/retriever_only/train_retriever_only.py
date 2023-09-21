@@ -44,10 +44,10 @@ def parse_args() -> Namespace:
     parser = argparse.ArgumentParser(description="training a PEFT model for Sematic Search task")
     parser.add_argument("--dataset_path", type=str, default=None, help="dataset path in the local dir")
     parser.add_argument(
-        "--dataset_query_col_name", type=str, default="Question", help="Name of the query column in the dataset"
+        "--query_column_name", type=str, default="Question", help="Name of the query column in the dataset"
     )
     parser.add_argument(
-        "--dataset_passage_col_name", type=str, default="Abstract", help="Name of the passage column in the dataset"
+        "--passage_column_name", type=str, default="Abstract", help="Name of the passage column in the dataset"
     )
     parser.add_argument(
         "--query_max_len",
@@ -165,8 +165,8 @@ def parse_args() -> Namespace:
 def train_retriever(
     retriever_name_or_path: str,
     dataset_or_path: str | Dataset,
-    dataset_passage_col_name: str = "Abstract",
-    dataset_query_col_name: str = "Question",
+    passage_column_name: str = "Abstract",
+    query_column_name: str = "Question",
     query_max_len: int = 50,
     passage_max_len: int = 128,
     per_device_train_batch_size: int = 32,
@@ -236,8 +236,8 @@ def train_retriever(
         lambda example: preprocess_dataset(
             example,
             tokenizer,
-            query_col_name=dataset_query_col_name,
-            passage_col_name=dataset_passage_col_name,
+            query_column_name=query_column_name,
+            passage_column_name=passage_column_name,
             query_max_len=query_max_len,
             passage_max_len=passage_max_len,
         ),
@@ -418,8 +418,8 @@ def main() -> None:
     train_retriever(
         dataset_or_path=args.dataset_path,
         retriever_name_or_path=args.retriever_name_or_path,
-        dataset_passage_col_name=args.dataset_passage_col_name,
-        dataset_query_col_name=args.dataset_query_col_name,
+        passage_column_name=args.passage_column_name,
+        query_column_name=args.query_column_name,
         query_max_len=args.query_max_len,
         passage_max_len=args.passage_max_len,
         per_device_train_batch_size=args.per_device_train_batch_size,

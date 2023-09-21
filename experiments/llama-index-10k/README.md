@@ -48,7 +48,7 @@ dalm train-rag-e2e \
 "qa-outputs/question_answer_pairs.csv" \
 "BAAI/bge-small-en" \
 "meta-llama/Llama-2-7b-hf" \
---dataset-passage-col-name text \
+--passage-column-name text \
 --output-dir "rag_e2e_checkpoints_bgsmall" \
 --no-with-tracking \
 --per-device-train-batch-size 12
@@ -74,7 +74,7 @@ Train the retriever only
 dalm train-retriever-only "BAAI/bge-small-en" "qa-outputs/question_answer_pairs.csv" \
 --output-dir "retriever_only_checkpoints_bgsmall" \
 --use-peft \
---dataset-passage-col-name text \
+--passage-column-name text \
 --per-device-train-batch-size 150
 ```
 

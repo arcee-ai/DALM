@@ -8,16 +8,16 @@ def preprocess_dataset(
     examples: LazyBatch,
     retriever_tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
     generator_tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
-    dataset_query_col_name: str,
-    dataset_passage_col_name: str,
-    dataset_answer_col_name: str,
+    query_column_name: str,
+    passage_column_name: str,
+    answer_column_name: str,
     query_max_len: int,
     passage_max_len: int,
     generator_max_len: int,
 ) -> Dict[str, Any]:
-    querie_list = examples[dataset_query_col_name]
-    passage_list = examples[dataset_passage_col_name]
-    answers = examples[dataset_answer_col_name]
+    querie_list = examples[query_column_name]
+    passage_list = examples[passage_column_name]
+    answers = examples[answer_column_name]
 
     queries = [f"#query# {query}" for query in querie_list]
     passages = [f"#passage# {passage}" for passage in passage_list]
