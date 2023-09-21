@@ -2,9 +2,16 @@
 
 First, we need to convert the data into the format for llama-index
 
-```python
-import pandas as pd
+```shell
+python prepare_data_for_llama.py
+```
 
-df = pd.read_csv("/root/DALM/dataset/out/question_answer_pairs_train.csv")
-df["title_id"] = df.title.map(hash)
+Then train on the dataset
+```shell
+python train_dataset_llama.py
+```
+
+Finally eval
+```shell
+python evaluate_llama_model.py
 ```
