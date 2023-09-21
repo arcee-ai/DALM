@@ -48,7 +48,7 @@ dalm train-rag-e2e \
 "qa-outputs/question_answer_pairs.csv" \
 "BAAI/bge-small-en" \
 "meta-llama/Llama-2-7b-hf" \
---dataset-passage-col-name text \
+--passage-column-name text \
 --output-dir "rag_e2e_checkpoints_bgsmall" \
 --no-with-tracking \
 --per-device-train-batch-size 12
@@ -56,7 +56,7 @@ dalm train-rag-e2e \
 
 And eval
 ```
-python ../../dalm/eval/eval_retriever_only.py  --dataset_path qa-outputs/question_answer_pairs_test.csv --retriever_model_name_or_path "BAAI/bge-small-en" --passage_column_name text --query_column_name Question --retriever_peft_model_path rag_e2e_checkpoints_bgsmall/retriever --embed_dim 384
+python ../../dalm/eval/eval_retriever_only.py  --dataset_path qa-outputs/question_answer_pairs_test.csv --retriever_name_or_path "BAAI/bge-small-en" --passage_column_name text --query_column_name Question --retriever_peft_model_path rag_e2e_checkpoints_bgsmall/retriever --embed_dim 384
 
 *************
 Retriever results:
@@ -74,13 +74,13 @@ Train the retriever only
 dalm train-retriever-only "BAAI/bge-small-en" "qa-outputs/question_answer_pairs.csv" \
 --output-dir "retriever_only_checkpoints_bgsmall" \
 --use-peft \
---dataset-passage-col-name text \
+--passage-column-name text \
 --per-device-train-batch-size 150
 ```
 
 and eval
 ```
-python ../../dalm/eval/eval_retriever_only.py  --dataset_path qa-outputs/question_answer_pairs_test.csv --retriever_model_name_or_path "BAAI/bge-small-en" --passage_column_name text --query_column_name Question --retriever_peft_model_path retriever_only_checkpoints_bgsmall/ --embed_dim 384
+python ../../dalm/eval/eval_retriever_only.py  --dataset_path qa-outputs/question_answer_pairs_test.csv --retriever_name_or_path "BAAI/bge-small-en" --passage_column_name text --query_column_name Question --retriever_peft_model_path retriever_only_checkpoints_bgsmall/ --embed_dim 384
 
 *************
 Retriever results:

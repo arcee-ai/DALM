@@ -78,11 +78,11 @@ def calculate_precision_recall(retrieved_items: List, correct_items: List) -> Tu
 def preprocess_function(
     examples: LazyBatch,
     retriever_tokenizer: PreTrainedTokenizer,
-    query_col_name: str = "query",
-    passage_col_name: str = "passage",
+    query_column_name: str = "query",
+    passage_column_name: str = "passage",
 ) -> Dict[str, torch.Tensor]:
-    queries = examples[query_col_name]
-    passages = examples[passage_col_name]
+    queries = examples[query_column_name]
+    passages = examples[passage_column_name]
 
     # Tokenization for the retriever
     retriever_query_tokens = retriever_tokenizer(queries, padding="max_length", max_length=128, truncation=True)
