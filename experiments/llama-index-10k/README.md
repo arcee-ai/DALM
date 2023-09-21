@@ -56,7 +56,7 @@ dalm train-rag-e2e \
 
 And eval
 ```
-python ../../dalm/eval/eval_retriever_only.py  --dataset_path qa-outputs/question_answer_pairs_test.csv --retriever_model_name_or_path "BAAI/bge-small-en" --passage_column_name text --query_column_name Question --retriever_peft_model_path rag_e2e_checkpoints_bgsmall/retriever --embed_dim 384
+python ../../dalm/eval/eval_retriever_only.py  --dataset_path qa-outputs/question_answer_pairs_test.csv --retriever_name_or_path "BAAI/bge-small-en" --passage_column_name text --query_column_name Question --retriever_peft_model_path rag_e2e_checkpoints_bgsmall/retriever --embed_dim 384
 
 *************
 Retriever results:
@@ -80,7 +80,7 @@ dalm train-retriever-only "BAAI/bge-small-en" "qa-outputs/question_answer_pairs.
 
 and eval
 ```
-python ../../dalm/eval/eval_retriever_only.py  --dataset_path qa-outputs/question_answer_pairs_test.csv --retriever_model_name_or_path "BAAI/bge-small-en" --passage_column_name text --query_column_name Question --retriever_peft_model_path retriever_only_checkpoints_bgsmall/ --embed_dim 384
+python ../../dalm/eval/eval_retriever_only.py  --dataset_path qa-outputs/question_answer_pairs_test.csv --retriever_name_or_path "BAAI/bge-small-en" --passage_column_name text --query_column_name Question --retriever_peft_model_path retriever_only_checkpoints_bgsmall/ --embed_dim 384
 
 *************
 Retriever results:

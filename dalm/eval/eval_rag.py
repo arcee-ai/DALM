@@ -55,13 +55,13 @@ def parse_args() -> Namespace:
         ),
     )
     parser.add_argument(
-        "--retriever_model_name_or_path",
+        "--retriever_name_or_path",
         type=str,
         help="Path to pretrained retriever model or model identifier from huggingface.co/models.",
         required=True,
     )
     parser.add_argument(
-        "--generator_model_name_or_path",
+        "--generator_name_or_path",
         type=str,
         help="Path to pretrained generator model or model identifier from huggingface.co/models.",
         required=True,
@@ -141,7 +141,7 @@ def main() -> None:
 
     # rag retriver and the generator (don't load new peft layers no need)
     rag_model = AutoModelForRagE2E(
-        args.retriever_model_name_or_path, args.generator_model_name_or_path, get_peft=False, use_bnb=False
+        args.retriever_name_or_path, args.generator_name_or_path, get_peft=False, use_bnb=False
     )
 
     # load the test dataset

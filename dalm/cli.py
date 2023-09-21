@@ -159,7 +159,7 @@ def train_rag_e2e(
 
 @cli.command()
 def train_retriever_only(
-    model_name_or_path: Annotated[
+    retriever_name_or_path: Annotated[
         str, typer.Argument(help="Path to the model or identifier from huggingface.co/models.", show_default=False)
     ],
     dataset_path: Annotated[
@@ -238,7 +238,7 @@ def train_retriever_only(
     """End-to-end train an in-domain model, including the retriever and generator"""
     train_retriever(
         dataset_or_path=dataset_path,
-        model_name_or_path=model_name_or_path,
+        retriever_name_or_path=retriever_name_or_path,
         dataset_passage_col_name=dataset_passage_col_name,
         dataset_query_col_name=dataset_query_col_name,
         query_max_len=query_max_len,
