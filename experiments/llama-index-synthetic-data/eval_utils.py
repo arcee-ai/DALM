@@ -24,6 +24,9 @@ def evaluate(
     eval_results = []
     ct = 0
     for query_id, query in tqdm(queries.items()):
+        # We only evaluate the first 2000 queries. We have to do this because llama-index was way too slow. all 200k
+        # test queries was scheduled to take 400 hours on the A100. So we bring it to 2k queries, which should take
+        # 4 hours
         if ct >= 2000:
             break
         retrieved_nodes = retriever.retrieve(query)
