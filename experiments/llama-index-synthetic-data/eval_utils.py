@@ -22,7 +22,10 @@ def evaluate(
     retriever = index.as_retriever(similarity_top_k=top_k)
 
     eval_results = []
+    ct = 0
     for query_id, query in tqdm(queries.items()):
+        if ct >= 2000:
+            break
         retrieved_nodes = retriever.retrieve(query)
         retrieved_ids = [node.node.node_id for node in retrieved_nodes]
         expected_id = relevant_docs[query_id][0]
@@ -44,6 +47,7 @@ def evaluate(
             "query": query_id,
         }
         eval_results.append(eval_result)
+        ct += 1
     return eval_results
 
 
