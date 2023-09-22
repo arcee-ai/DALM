@@ -1,5 +1,6 @@
 from llama_index.embeddings import LinearAdapterEmbeddingModel, resolve_embed_model
 from llama_index.finetuning import EmbeddingQAFinetuneDataset
+import pickle
 
 from eval_utils import evaluate, display_results
 
@@ -17,11 +18,17 @@ def run_eval(val_data: str) -> None:
 	print("evaluating finetuned model")
 	ft_val_results = evaluate(val_dataset, embed_model, top_k=10)
 	print("Fine-Tuned Model Results")
+	print(ft_val_results)
+	with open("ft_results.pkl", "wb") as f:
+		pickle.dump(ft_val_results, f)
 	display_results(["ft"], [ft_val_results])
 
 	print("evaluating base model")
 	bge_val_results = evaluate(val_dataset, embed_model_name, top_k=10)
 	print("Base Model Results:")
+	print(bge_val_results)
+	with open("base_model_results.pkl", "wb") as f2:
+		pickle.dump(bge_val_results, f2)
 	display_results(["bge"], [bge_val_results])
 	print("All Results")
 	display_results(
