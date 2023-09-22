@@ -27,19 +27,39 @@ def load_model_hook(models: List[PeftModel], input_dir: str) -> None:
         model = models.pop()
         # pop models so that they are not loaded again
         if isinstance(model, AutoModelForRagE2E):
-            if hasattr(model.generator_model, "active_adapter") and hasattr(model.generator_model, "load_adapter"):
-                generator_path = os.path.join(input_dir, "generator")
-                model.generator_model.load_adapter(
-                    generator_path, model.generator_model.active_adapter, is_trainable=True
-                )
-            if hasattr(model.retriever_model, "active_adapter") and hasattr(model.retriever_model, "load_adapter"):
-                retriever_path = os.path.join(input_dir, "retriever")
-                model.retriever_model.load_adapter(
-                    retriever_path, model.retriever_model.active_adapter, is_trainable=True
-                )
+            generator_path = os.path.join(input_dir, "generator")
+            adapter_model_path = os.path.join(generator_path, "adapter_model.bin")
+
+            if (
+                hasattr(model.generator_model, "active_adapter")
+                and hasattr(model.generator_model, "load_adapter")
+                and os.path.exists(adapter_model_path)
+            ):
+                model.generator_model.load_adapter(generator_path, model.generator_model.active_adapter)
+            else:
+                model.generator_model = AutoModel.from_pretrained(generator_path)
+
+            retriever_path = os.path.join(input_dir, "retriever")
+            adapter_model_path = os.path.join(generator_path, "adapter_model.bin")
+
+            if (
+                hasattr(model.retriever_model, "active_adapter")
+                and hasattr(model.retriever_model, "load_adapter")
+                and os.path.exists(adapter_model_path)
+            ):
+                model.retriever_model.load_adapter(retriever_path, model.retriever_model.active_adapter)
+            else:
+                model.retriever_model = AutoModel.from_pretrained(retriever_path)
         elif isinstance(model, AutoModelForSentenceEmbedding):
-            if hasattr(model.model, "active_adapter") and hasattr(model, "load_adapter"):
-                model.model.load_adapter(input_dir, model.model.active_adapter, is_trainable=True)
+            adapter_model_path = os.path.join(input_dir, "adapter_model.bin")
+            if (
+                hasattr(model.model, "active_adapter")
+                and hasattr(model, "load_adapter")
+                and os.path.exists(adapter_model_path)
+            ):
+                model.model.load_adapter(input_dir, model.model.active_adapter)
+            else:
+                model.model = AutoModel.from_pretrained(input_dir)
         else:
             model.load_adapter(input_dir, model.active_adapter, is_trainable=True)
 
