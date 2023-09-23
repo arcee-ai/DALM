@@ -1,28 +1,26 @@
 import argparse
-import os
 from argparse import Namespace
-from typing import Any, Dict, Final, List
+from typing import Final, List, Literal
 
-import datasets
-import numpy as np
 import torch
 from accelerate.logging import get_logger
+from datasets import Dataset
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 from transformers import (
     PreTrainedModel,
     PreTrainedTokenizer,
-    default_data_collator,
 )
 
 from dalm.eval.utils import (
-    calculate_precision_recall,
     construct_search_index,
-    get_nearest_neighbours,
+    evaluate_retriever_on_batch,
+    get_passage_embeddings,
     mixed_collate_fn,
-    preprocess_function,
+    preprocess_dataset,
+    print_eval_results,
 )
 from dalm.models.rag_e2e_base_model import AutoModelForRagE2E
+from dalm.utils import load_dataset
 
 logger = get_logger(__name__)
 
@@ -69,13 +67,13 @@ def parse_args() -> Namespace:
     parser.add_argument(
         "--retriever_peft_model_path",
         type=str,
-        help="Path to the finetunned retriever peft layers",
+        help="Path to the finetuned retriever peft layers",
         required=True,
     )
     parser.add_argument(
         "--generator_peft_model_path",
         type=str,
-        help="Path to the finetunned generator peft layers",
+        help="Path to the finetuned generator peft layers",
         required=True,
     )
     parser.add_argument(
@@ -135,118 +133,56 @@ def run_generator_on_prompts(
     return tokenizer.batch_decode(outputs.cpu(), skip_special_tokens=True)
 
 
-def main() -> None:
-    args = parse_args()
-    SELECTED_TORCH_DTYPE: Final[torch.dtype] = torch.float16 if args.torch_dtype == "float16" else torch.bfloat16
+def evaluate_rag(
+    dataset_or_path: str | Dataset,
+    retriever_name_or_path: str,
+    generator_name_or_path: str,
+    retriever_peft_model_path: str,
+    generator_peft_model_path: str,
+    passage_column_name: str,
+    query_column_name: str,
+    answer_column_name: str,
+    embed_dim: int,
+    max_length: int,
+    test_batch_size: int = 8,
+    query_batch_size: int = 16,
+    device: str = "cuda",
+    torch_dtype: Literal["float16", "bfloat16"] = "float16",
+    top_k: int = 10,
+    evaluate_generator: bool = True,
+) -> None:
+    selected_torch_dtype: Final[torch.dtype] = torch.float16 if torch_dtype == "float16" else torch.bfloat16
 
-    # rag retriver and the generator (don't load new peft layers no need)
-    rag_model = AutoModelForRagE2E(
-        args.retriever_name_or_path, args.generator_name_or_path, get_peft=False, use_bnb=False
-    )
+    # rag retriever and the generator (don't load new peft layers no need)
+    rag_model = AutoModelForRagE2E(retriever_name_or_path, generator_name_or_path, get_peft=False, use_bnb=False)
 
     # load the test dataset
-    test_dataset = (
-        datasets.load_from_disk(args.dataset_path)
-        if os.path.isdir(args.dataset_path)
-        else datasets.load_dataset("csv", data_files={"test": f"{args.dataset_path}"})["test"]
-    )
-
-    # test_dataset = datasets.load_from_disk("/home/datasets/question_answer_pairs")
+    test_dataset = load_dataset(dataset_or_path)
 
     generator_tokenizer = rag_model.generator_tokenizer
     generator_tokenizer.pad_token = generator_tokenizer.eos_token
 
     retriever_tokenizer = rag_model.retriever_tokenizer
 
-    processed_datasets = test_dataset.map(
-        lambda example: preprocess_function(
-            example,
-            retriever_tokenizer,
-            query_column_name=args.query_column_name,
-            passage_column_name=args.passage_column_name,
-        ),
-        batched=True,
-        # remove_columns=test_dataset.column_names,
-        desc="Running tokenizer on dataset",
-        num_proc=4,
+    processed_datasets = preprocess_dataset(
+        test_dataset, retriever_tokenizer, query_column_name, passage_column_name, max_length
     )
-
-    unique_passages = set(processed_datasets[args.passage_column_name])
-
-    def is_passage_unique(example: Dict[str, Any]) -> bool:
-        is_in_unique_list = example[args.passage_column_name] in unique_passages
-        unique_passages.discard(example[args.passage_column_name])
-        return is_in_unique_list
-
-    unique_passage_dataset = processed_datasets.filter(is_passage_unique)
-
-    passage_to_id_dict = {i: p[args.passage_column_name] for i, p in enumerate(unique_passage_dataset)}
-
-    unique_passage_dataloader = DataLoader(
-        unique_passage_dataset,
-        shuffle=False,
-        collate_fn=default_data_collator,
-        batch_size=args.test_batch_size,
-        pin_memory=True,
-    )
-
     # peft config and wrapping
-    rag_model.attach_pre_trained_peft_layers(
-        args.retriever_peft_model_path, args.generator_peft_model_path, args.device
+    rag_model.attach_pre_trained_peft_layers(retriever_peft_model_path, generator_peft_model_path, device)
+    unique_passage_dataset, passage_embeddings_array = get_passage_embeddings(
+        processed_datasets,
+        passage_column_name,
+        rag_model.retrieval_forward,
+        device,
+        embed_dim,
+        selected_torch_dtype,
+        test_batch_size,
     )
 
-    def get_query_embeddings(
-        retriever_query_input_ids: torch.Tensor,
-        retriever_query_attention_masks: torch.Tensor,
-    ) -> np.ndarray:
-        return (
-            rag_model.forward(
-                "retrieval",
-                retriever_query_input_ids.to(args.device),
-                retriever_query_attention_masks.to(args.device),
-            )
-            .detach()
-            .float()
-            .cpu()
-            .numpy()
-        )
-
-    def get_passage_embeddings(
-        retriever_passage_input_ids: torch.Tensor,
-        retriever_passage_attention_masks: torch.Tensor,
-    ) -> np.ndarray:
-        return (
-            rag_model.forward(
-                "retrieval",
-                retriever_passage_input_ids.to(args.device),
-                retriever_passage_attention_masks.to(args.device),
-            )
-            .detach()
-            .float()
-            .cpu()
-            .numpy()
-        )
-
-    num_passages = len(unique_passage_dataset)
-    print(f"Starting to generate passage embeddings (Number of passages: {num_passages})")
-
-    passage_embeddings_array = np.zeros((num_passages, args.embed_dim))
-    for step, batch in enumerate(tqdm(unique_passage_dataloader)):
-        with torch.no_grad(), torch.amp.autocast(dtype=SELECTED_TORCH_DTYPE, device_type=args.device):
-            passage_embs = get_passage_embeddings(
-                batch["retriever_passage_input_ids"],
-                batch["retriever_passage_attention_mask"],
-            )
-
-        start_index = step * args.test_batch_size
-        end_index = (
-            start_index + args.test_batch_size if (start_index + args.test_batch_size) < num_passages else num_passages
-        )
-        passage_embeddings_array[start_index:end_index] = passage_embs
-        del passage_embs, batch
+    id_to_passage = {i: p[passage_column_name] for i, p in enumerate(unique_passage_dataset)}
 
     print("Construct passage index")
-    passage_search_index = construct_search_index(args.embed_dim, num_passages, passage_embeddings_array)
+    passage_search_index = construct_search_index(embed_dim, len(passage_embeddings_array), passage_embeddings_array)
 
     # Initialize counters
     batch_precision = []
@@ -265,100 +201,86 @@ def main() -> None:
     tokenizer.pad_token = tokenizer.eos_token
 
     processed_datasets_dataloader = DataLoader(
-        processed_datasets, batch_size=args.test_batch_size, shuffle=True, collate_fn=mixed_collate_fn
+        processed_datasets, batch_size=test_batch_size, shuffle=True, collate_fn=mixed_collate_fn
     )
 
     # to:do : torch_dtype make a variables float16 or bfloat16
-    for test_example in processed_datasets_dataloader:
-        with torch.no_grad():
-            with torch.amp.autocast(dtype=SELECTED_TORCH_DTYPE, device_type=args.device):
-                # use the batch size for the first dim
-                # do not hard-code it
-                retriever_query_input_ids = test_example["retriever_query_input_ids"]
-                retriever_query__attention_mask = test_example["retriever_query_attention_mask"]
-
-                query_embeddings = get_query_embeddings(
-                    retriever_query_input_ids,
-                    retriever_query__attention_mask,
-                )
-
-        search_results = get_nearest_neighbours(
-            args.top_k,
+    for batch in processed_datasets_dataloader:
+        queries = batch[query_column_name]
+        _batch_precision, _batch_recall, _total_hit, top_passages = evaluate_retriever_on_batch(
+            batch,
+            passage_column_name,
+            rag_model.retrieval_forward,
             passage_search_index,
-            query_embeddings,
-            passage_to_id_dict,
-            threshold=0.0,
+            selected_torch_dtype,
+            device,
+            top_k,
+            id_to_passage,
         )
+        batch_precision.extend(_batch_precision)
+        batch_recall.extend(_batch_recall)
+        total_hit += _total_hit
+        if not evaluate_generator:
+            continue
 
-        correct_passages = test_example[args.passage_column_name]
-        queries = test_example[args.query_column_name]
-
-        for i, s in enumerate(search_results):
-            retrieved_passages = [item[0] for item in s]
-
-            correct_passage = [correct_passages[i]]
-
-            precision, recall = calculate_precision_recall(retrieved_passages, correct_passage)
-
-            batch_precision.append(precision)
-            batch_recall.append(recall)
-
-            hit = any(passage in retrieved_passages for passage in correct_passage)
-            total_hit += hit
-
-            if not args.evaluate_generator:
-                continue
-
-            # Evaluate the generator
-            search_result_passage = retrieved_passages[0]
-
-            # this query comes without the answer
-            query = f"#query# {queries[i]} #passage# {search_result_passage} #answer# "
+        # Evaluate the generator
+        for _query, search_result_passage in zip(queries, top_passages, strict=True):
+            # This query comes without the answer
+            query = f"#query# {_query} #passage# {search_result_passage} #answer# "
             queries_for_gen_eval.append(query)
             # Generate answers in batch
-            if len(queries_for_gen_eval) == args.query_batch_size:
-                batch_answers = run_generator_on_prompts(
-                    model, tokenizer, queries_for_gen_eval, max_length=args.max_length
-                )
+            if len(queries_for_gen_eval) >= query_batch_size:
+                batch_answers = run_generator_on_prompts(model, tokenizer, queries_for_gen_eval, max_length=max_length)
                 generated_answers_for_eval.extend(batch_answers)
                 queries_for_gen_eval.clear()
 
-    if args.evaluate_generator:
-        # TODO: imperative style code, refactor in future but works for now
-        if len(queries_for_gen_eval) > 0:
-            batch_answers = run_generator_on_prompts(model, tokenizer, queries_for_gen_eval, max_length=args.max_length)
-            generated_answers_for_eval.extend(batch_answers)
-            queries_for_gen_eval.clear()
+    if not evaluate_generator:
+        print_eval_results(len(processed_datasets), batch_precision, batch_recall, total_hit)
+        return
 
-        answers = processed_datasets[args.answer_column_name]
+    # TODO: imperative style code, refactor in future but works for now
+    # If there are any leftover batches to query
+    if len(queries_for_gen_eval) > 0:
+        batch_answers = run_generator_on_prompts(model, tokenizer, queries_for_gen_eval, max_length=max_length)
+        generated_answers_for_eval.extend(batch_answers)
+        queries_for_gen_eval.clear()
 
-        for generated_answer, answer in zip(generated_answers_for_eval, answers, strict=True):
-            generated_answer_strings = generated_answer.split("#answer#")
+    answers = processed_datasets[answer_column_name]
 
-            if len(generated_answer_strings) < 2:
-                continue
+    for generated_answer, answer in zip(generated_answers_for_eval, answers, strict=True):
+        generated_answer_strings = generated_answer.split("#answer#")
+        if len(generated_answer_strings) < 2:
+            continue
 
-            generated_answer_string = generated_answer_strings[1].strip()
+        generated_answer_string = generated_answer_strings[1].strip()
+        if generated_answer_string == answer:
+            total_em_hit += 1
 
-            if generated_answer_string == answer:
-                total_em_hit = total_em_hit + 1
+    print_eval_results(len(processed_datasets), batch_precision, batch_recall, total_hit)
+    print("Generator evaluation:")
+    print("Exact match:", total_em_hit / len(processed_datasets))
 
-    total_examples = len(processed_datasets)
-    recall = sum(batch_recall) / total_examples
-    precision = sum(batch_precision) / total_examples
-    hit_rate = total_hit / float(total_examples)
 
-    print("Retriever results:")
-
-    print("Recall:", recall)
-    print("Precision:", precision)
-    print("Hit Rate:", hit_rate)
-
-    print("*************")
-
-    if args.evaluate_generator:
-        print("Generator evaluation:")
-        print("Exact match:", total_em_hit / len(processed_datasets))
+def main() -> None:
+    args = parse_args()
+    evaluate_rag(
+        dataset_or_path=args.dataset_path,
+        retriever_name_or_path=args.retriever_name_or_path,
+        generator_name_or_path=args.generator_name_or_path,
+        retriever_peft_model_path=args.retriever_peft_model_path,
+        generator_peft_model_path=args.generator_peft_model_path,
+        passage_column_name=args.passage_column_name,
+        query_column_name=args.query_column_name,
+        answer_column_name=args.answer_column_name,
+        embed_dim=args.embed_dim,
+        max_length=args.max_length,
+        test_batch_size=args.test_batch_size,
+        query_batch_size=args.query_batch_size,
+        device=args.device,
+        torch_dtype=args.torch_dtype,
+        top_k=args.top_k,
+        evaluate_generator=args.evaluate_generator,
+    )
 
 
 if __name__ == "__main__":

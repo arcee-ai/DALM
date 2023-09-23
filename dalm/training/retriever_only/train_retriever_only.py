@@ -36,6 +36,7 @@ from transformers import SchedulerType, default_data_collator, get_scheduler
 from dalm.models.retriever_only_base_model import AutoModelForSentenceEmbedding
 from dalm.training.utils.retriever_only_dataloader_utils import preprocess_dataset
 from dalm.training.utils.train_utils import get_cosine_sim, get_nt_xent_loss, load_model_hook, save_model_hook
+from dalm.utils import load_dataset
 
 logger = get_logger(__name__)
 
@@ -224,13 +225,7 @@ def train_retriever(
     tokenizer = model.tokenizer
 
     # dataset download and preprocessing
-    dataset = (
-        dataset_or_path
-        if isinstance(dataset_or_path, Dataset)
-        else datasets.load_from_disk(dataset_or_path)
-        if os.path.isdir(dataset_or_path)
-        else datasets.load_dataset("csv", data_files=dataset_or_path)["train"]
-    )
+    dataset = load_dataset(dataset_or_path)
 
     processed_datasets = dataset.map(
         lambda example: preprocess_dataset(

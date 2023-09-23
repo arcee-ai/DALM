@@ -57,14 +57,17 @@ class AutoModelForRagE2E(torch.nn.Module):
                 ),
             )
 
+    def retrieval_forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+        model_output = self.retriever_model(input_ids=input_ids, attention_mask=attention_mask)
+        embeddings = self.mean_pooling(model_output, attention_mask)
+        if self.normalize:
+            embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+
+        return embeddings
+
     def forward(self, task: str, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         if task == "retrieval":
-            model_output = self.retriever_model(input_ids=input_ids, attention_mask=attention_mask)
-            embeddings = self.mean_pooling(model_output, attention_mask)
-            if self.normalize:
-                embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
-
-            return embeddings
+            return self.retrieval_forward(input_ids, attention_mask)
         else:
             gen_outputs = self.generator_model(input_ids=input_ids, attention_mask=attention_mask)
 

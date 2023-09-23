@@ -47,6 +47,7 @@ from dalm.training.utils.train_utils import (
     load_model_hook,
     save_model_hook,
 )
+from dalm.utils import load_dataset
 
 logger = get_logger(__name__)
 
@@ -279,13 +280,7 @@ def train_e2e(
     accelerator.wait_for_everyone()
 
     # dataset download and preprocessing
-    dataset = (
-        dataset_or_path
-        if isinstance(dataset_or_path, Dataset)
-        else datasets.load_from_disk(dataset_or_path)
-        if os.path.isdir(dataset_or_path)
-        else datasets.load_dataset("csv", data_files=dataset_or_path)["train"]
-    )
+    dataset = load_dataset(dataset_or_path)
     retriever_tokenizer = rag_model.retriever_tokenizer
     generator_tokenizer = rag_model.generator_tokenizer
     generator_tokenizer.pad_token = generator_tokenizer.eos_token

@@ -32,9 +32,9 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
         self.normalize = normalize
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-    def forward(self, **kwargs: torch.Tensor) -> torch.Tensor:
-        model_output = self.model(**kwargs)
-        embeddings = self.mean_pooling(model_output, kwargs["attention_mask"])
+    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+        model_output = self.model(input_ids, attention_mask)
+        embeddings = self.mean_pooling(model_output, attention_mask)
         if self.normalize:
             embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
 

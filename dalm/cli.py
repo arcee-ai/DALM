@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 import typer
 from transformers import SchedulerType
@@ -8,6 +8,8 @@ from typing_extensions import Annotated
 
 from dalm import __version__
 from dalm.datasets.qa_gen.question_answer_generation import generate_qa_from_disk
+from dalm.eval.eval_rag import evaluate_rag
+from dalm.eval.eval_retriever_only import evaluate_retriever
 from dalm.training.rag_e2e.train_rage2e import train_e2e
 from dalm.training.retriever_only.train_retriever_only import train_retriever
 
@@ -35,7 +37,7 @@ def train_rag_e2e(
     dataset_path: Annotated[
         str,
         typer.Argument(
-            help="Path to the dataset to train with. Can be a huggingface dataset directory or a csv file.",
+            help="Path to the dataset to train with. Can be an hf dataset dir, csv file, or path to hub file.",
             show_default=False,
         ),
     ],
@@ -163,7 +165,7 @@ def train_retriever_only(
     dataset_path: Annotated[
         str,
         typer.Argument(
-            help="Path to the train dataset to train with. Can be a huggingface dataset directory or a csv file.",
+            help="Path to the train dataset to train with. Can be an hf dataset dir, csv file, or path to hub file.",
             show_default=False,
         ),
     ],
@@ -290,6 +292,102 @@ def qa_gen(
     """Generate question-answer pairs for a given input dataset"""
     generate_qa_from_disk(
         dataset_path, passage_column_name, title_column_name, sample_size, batch_size, output_dir, as_csv
+    )
+
+
+@cli.command()
+def eval_rag(
+    dataset_path: Annotated[
+        str,
+        typer.Argument(
+            help="Path to the dataset to eval with. Can be an hf dataset dir, csv file, or path to hub file.",
+            show_default=False,
+        ),
+    ],
+    retriever_name_or_path: Annotated[
+        str, typer.Option(help="Path to pretrained retriever or identifier from huggingface.co/models.")
+    ],
+    generator_name_or_path: Annotated[
+        str, typer.Option(help="Path to pretrained (causal) generator or identifier from huggingface.co/models.")
+    ],
+    retriever_peft_model_path: Annotated[str, typer.Option(help="Path to the fine-tuned retriever peft layers")],
+    generator_peft_model_path: Annotated[str, typer.Option(help="Path to the fine-tuned generator peft layers")],
+    passage_column_name: Annotated[str, typer.Option(help="Name of the column containing the passage")] = "Abstract",
+    query_column_name: Annotated[str, typer.Option(help="Name of the column containing the query")] = "Question",
+    answer_column_name: Annotated[str, typer.Option(help="Name of the column containing the Answer")] = "Answer",
+    embed_dim: Annotated[int, typer.Option(help="Dimension of the model embedding")] = 1024,
+    max_length: Annotated[
+        int, typer.Option(help="The max passage sequence length during tokenization. Longer sequences are truncated")
+    ] = 128,
+    test_batch_size: Annotated[int, typer.Option(help="Batch size (per device) for the test dataloader.")] = 8,
+    query_batch_size: Annotated[int, typer.Option(help="Batch size (per device) for generator input")] = 16,
+    device: Annotated[str, typer.Option(help="Device. cpu or cuda.")] = "cuda",
+    torch_dtype: Annotated[
+        Literal["float16", "bfloat16"], typer.Option(help="torch.dtype to use for tensors. float16 or bfloat16.")
+    ] = "float16",
+    top_k: Annotated[int, typer.Option(help="Top K retrieval")] = 10,
+    evaluate_generator: Annotated[
+        bool, typer.Option(help="Enable generator evaluation. If false, equivalent to eval-retriever")
+    ] = True,
+) -> None:
+    evaluate_rag(
+        dataset_or_path=dataset_path,
+        retriever_name_or_path=retriever_name_or_path,
+        generator_name_or_path=generator_name_or_path,
+        retriever_peft_model_path=retriever_peft_model_path,
+        generator_peft_model_path=generator_peft_model_path,
+        passage_column_name=passage_column_name,
+        query_column_name=query_column_name,
+        answer_column_name=answer_column_name,
+        embed_dim=embed_dim,
+        max_length=max_length,
+        test_batch_size=test_batch_size,
+        query_batch_size=query_batch_size,
+        device=device,
+        torch_dtype=torch_dtype,
+        top_k=top_k,
+        evaluate_generator=evaluate_generator,
+    )
+
+
+@cli.command()
+def eval_retriever(
+    dataset_path: Annotated[
+        str,
+        typer.Argument(
+            help="Path to the dataset to eval with. Can be an hf dataset dir, csv file, or path to hub file.",
+            show_default=False,
+        ),
+    ],
+    retriever_name_or_path: Annotated[
+        str, typer.Option(help="Path to pretrained retriever or identifier from huggingface.co/models.")
+    ],
+    retriever_peft_model_path: Annotated[str, typer.Option(help="Path to the fine-tuned retriever peft layers")],
+    passage_column_name: Annotated[str, typer.Option(help="Name of the column containing the passage")] = "Abstract",
+    query_column_name: Annotated[str, typer.Option(help="Name of the column containing the query")] = "Question",
+    embed_dim: Annotated[int, typer.Option(help="Dimension of the model embedding")] = 1024,
+    max_length: Annotated[
+        int, typer.Option(help="The max passage sequence length during tokenization. Longer sequences are truncated")
+    ] = 128,
+    test_batch_size: Annotated[int, typer.Option(help="Batch size (per device) for the test dataloader.")] = 8,
+    device: Annotated[str, typer.Option(help="Device. cpu or cuda.")] = "cuda",
+    torch_dtype: Annotated[
+        Literal["float16", "bfloat16"], typer.Option(help="torch.dtype to use for tensors. float16 or bfloat16.")
+    ] = "float16",
+    top_k: Annotated[int, typer.Option(help="Top K retrieval")] = 10,
+) -> None:
+    evaluate_retriever(
+        dataset_or_path=dataset_path,
+        retriever_name_or_path=retriever_name_or_path,
+        retriever_peft_model_path=retriever_peft_model_path,
+        passage_column_name=passage_column_name,
+        query_column_name=query_column_name,
+        embed_dim=embed_dim,
+        max_length=max_length,
+        test_batch_size=test_batch_size,
+        device=device,
+        torch_dtype=torch_dtype,
+        top_k=top_k,
     )
 
 
