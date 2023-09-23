@@ -129,7 +129,7 @@ def train_rag_e2e(
     ] = True,
     use_peft: Annotated[bool, typer.Option(help="Whether to use Peft during fine-tuning.")] = True,
 ) -> None:
-    """End-to-end train an in-domain model, including the retreiver and generator"""
+    """End-to-end train an in-domain model, including the retriever and generator"""
     train_e2e(
         dataset_or_path=dataset_path,
         retriever_name_or_path=retriever_name_or_path,
@@ -238,7 +238,7 @@ def train_retriever_only(
     ] = True,
     use_peft: Annotated[bool, typer.Option(help="Whether to use Peft during fine-tuning.")] = True,
 ) -> None:
-    """End-to-end train an in-domain model, including the retriever and generator"""
+    """Train only the retriever using contrastive training"""
     train_retriever(
         dataset_or_path=dataset_path,
         retriever_name_or_path=retriever_name_or_path,
@@ -335,6 +335,7 @@ def eval_rag(
         bool, typer.Option(help="Enable generator evaluation. If false, equivalent to eval-retriever")
     ] = True,
 ) -> None:
+    """Evaluate your end-to-end rag generator and retriever"""
     evaluate_rag(
         dataset_or_path=dataset_path,
         retriever_name_or_path=retriever_name_or_path,
@@ -382,6 +383,7 @@ def eval_retriever(
     ] = TorchDtype.float16,
     top_k: Annotated[int, typer.Option(help="Top K retrieval")] = 10,
 ) -> None:
+    """Evaluate your retriever only"""
     evaluate_retriever(
         dataset_or_path=dataset_path,
         retriever_name_or_path=retriever_name_or_path,
