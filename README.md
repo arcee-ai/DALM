@@ -47,6 +47,8 @@ Make sure things are installed correctly by running `dalm version`.  On an non-i
 You can run `dalm qa-gen <path-to-dataset>` to preprocess your dataset for training. See `dalm qa-gen --help` for more options
 <br>If you do not have a dataset, you can start with ours
 ```shell
+# Note - our dataset already has queries and answers, so you don't actually need to run this.
+# replace `toy_dataset_train.csv` with your dataset of titles and passages
 dalm qa-gen dalm/datasets/toy_data_train.csv
 ```
 - The setup for training and evaluation can be effortlessly executed provided you possess a [CSV](https://github.com/arcee-ai/DALM/tree/main/dalm/datasets/toy_data_train.csv) file containing two/three columns: `Passage`, `Query` (and `Answer` if running e2e). You can utilize the script [question_answer_generation.py](https://github.com/arcee-ai/DALM/blob/main/dalm/datasets/qa_gen/question_answer_generation.py) to generate this CSV. 
@@ -123,14 +125,51 @@ To run retriever only eval
 (make sure you have the checkpoints in the project root)
 
 ```bash
- python dalm/eval/eval_retriever_only.py  --dataset_path qa_pairs_test.csv --retriever_name_or_path "BAAI/bge-large-en" --passage_column_name Abstract --query_column_name Question --retriever_peft_model_path retriever_only_checkpoints
+ python dalm/eval/eval_retriever_only.py  \
+ --dataset_path qa_pairs_test.csv \
+ --retriever_name_or_path "BAAI/bge-large-en" \
+ --passage_column_name Abstract \
+ --query_column_name Question \
+ --retriever_peft_model_path retriever_only_checkpoints
 ```
+or 
+```bash
+dalm eval-retriever qa_pairs_test.csv \
+ --retriever-name-or-path "BAAI/bge-large-en" \
+ --passage-column-name Abstract \
+ --query-column-name Question \
+ --retriever-peft-model-path retriever_only_checkpoints
+```
+See `dalm eval-retriever --help` for all available arguments
 
 For the e2e eval
 
 ```bash
-python dalm/eval/eval_rag.py  --dataset_path qa_pairs_test_2.csv --retriever_name_or_path "BAAI/bge-large-en" --generator_model_name_or_path "meta-llama/Llama-2-7b-hf" --passage_column_name Abstract --query_column_name Question --answer_column_name Answer --evaluate_generator --query_batch_size 5 --retriever_peft_model_path rag_e2e_checkpoints/retriever --generator_peft_model_path rag_e2e_checkpoints/generator
+python dalm/eval/eval_rag.py  \
+ --dataset_path qa_pairs_test_2.csv \
+ --retriever_name_or_path "BAAI/bge-large-en" \
+ --generator_name_or_path "meta-llama/Llama-2-7b-hf" \
+ --passage_column_name Abstract \
+ --query_column_name Question \
+ --answer_column_name Answer \
+ --evaluate_generator \
+ --query_batch_size 5 \
+ --retriever_peft_model_path rag_e2e_checkpoints/retriever \
+ --generator_peft_model_path rag_e2e_checkpoints/generator
 ```
+or
+```bash
+dalm eval-rag qa_pairs_test.csv \
+ --retriever-name-or-path "BAAI/bge-large-en" \
+ --generator-name-or-path "meta-llama/Llama-2-7b-hf" \
+ --retriever-peft-model-path rag_e2e_checkpoints/retriever \
+ --generator-peft-model-path rag_e2e_checkpoints/generator \
+ --passage-column-name Abstract \
+ --query-column-name Question \
+ --answer-column-name Answer \
+ --query-batch-size 5
+```
+See `dalm eval-rag --help` for all available arguments
 
 
 ## Contributing

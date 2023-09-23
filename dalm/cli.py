@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 
 import typer
 from transformers import SchedulerType
@@ -24,6 +24,11 @@ class DALMSchedulerType(Enum):
     POLYNOMIAL = SchedulerType.POLYNOMIAL
     CONSTANT = SchedulerType.CONSTANT
     CONSTANT_WITH_WARMUP = SchedulerType.CONSTANT_WITH_WARMUP
+
+
+class TorchDtype(str, Enum):
+    float16 = "float16"
+    bfloat16 = "bfloat16"
 
 
 @cli.command()
@@ -323,8 +328,8 @@ def eval_rag(
     query_batch_size: Annotated[int, typer.Option(help="Batch size (per device) for generator input")] = 16,
     device: Annotated[str, typer.Option(help="Device. cpu or cuda.")] = "cuda",
     torch_dtype: Annotated[
-        Literal["float16", "bfloat16"], typer.Option(help="torch.dtype to use for tensors. float16 or bfloat16.")
-    ] = "float16",
+        TorchDtype, typer.Option(help="torch.dtype to use for tensors. float16 or bfloat16.")
+    ] = TorchDtype.float16,
     top_k: Annotated[int, typer.Option(help="Top K retrieval")] = 10,
     evaluate_generator: Annotated[
         bool, typer.Option(help="Enable generator evaluation. If false, equivalent to eval-retriever")
@@ -344,7 +349,8 @@ def eval_rag(
         test_batch_size=test_batch_size,
         query_batch_size=query_batch_size,
         device=device,
-        torch_dtype=torch_dtype,
+        torch_dtype=torch_dtype.value,
+        # torch_dtype=cast(Literal["float16", "bfloat16"], torch_dtype.value),
         top_k=top_k,
         evaluate_generator=evaluate_generator,
     )
@@ -372,8 +378,8 @@ def eval_retriever(
     test_batch_size: Annotated[int, typer.Option(help="Batch size (per device) for the test dataloader.")] = 8,
     device: Annotated[str, typer.Option(help="Device. cpu or cuda.")] = "cuda",
     torch_dtype: Annotated[
-        Literal["float16", "bfloat16"], typer.Option(help="torch.dtype to use for tensors. float16 or bfloat16.")
-    ] = "float16",
+        TorchDtype, typer.Option(help="torch.dtype to use for tensors. float16 or bfloat16.")
+    ] = TorchDtype.float16,
     top_k: Annotated[int, typer.Option(help="Top K retrieval")] = 10,
 ) -> None:
     evaluate_retriever(
@@ -386,7 +392,7 @@ def eval_retriever(
         max_length=max_length,
         test_batch_size=test_batch_size,
         device=device,
-        torch_dtype=torch_dtype,
+        torch_dtype=torch_dtype.value,
         top_k=top_k,
     )
 
