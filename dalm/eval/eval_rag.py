@@ -133,6 +133,29 @@ def run_generator_on_prompts(
     return tokenizer.batch_decode(outputs.cpu(), skip_special_tokens=True)
 
 
+def eval_generator_on_batch(
+    model: PreTrainedModel,
+    tokenizer: PreTrainedTokenizer,
+    queries: List[str],
+    passages: List[str],
+    query_batch_size: int,
+    queries_for_gen_eval: list[str],
+    max_length: int,
+) -> tuple[list[str], list[str]]:
+    generated_answers_for_eval = []
+    for _query, search_result_passage in zip(queries, passages, strict=True):
+        # This query comes without the answer
+        query = f"#query# {_query} #passage# {search_result_passage} #answer# "
+        queries_for_gen_eval.append(query)
+        # Generate answers in batch
+        if len(queries_for_gen_eval) >= query_batch_size:
+            batch_answers = run_generator_on_prompts(model, tokenizer, queries_for_gen_eval, max_length=max_length)
+            generated_answers_for_eval.extend(batch_answers)
+            queries_for_gen_eval.clear()
+
+    return queries_for_gen_eval, generated_answers_for_eval
+
+
 def evaluate_rag(
     dataset_or_path: str | Dataset,
     retriever_name_or_path: str,
@@ -151,21 +174,14 @@ def evaluate_rag(
     top_k: int = 10,
     evaluate_generator: bool = True,
 ) -> None:
+    """Runs rag evaluation. See `dalm eval-rag --help for details on params"""
+    test_dataset = load_dataset(dataset_or_path)
     selected_torch_dtype: Final[torch.dtype] = torch.float16 if torch_dtype == "float16" else torch.bfloat16
-
     # rag retriever and the generator (don't load new peft layers no need)
     rag_model = AutoModelForRagE2E(retriever_name_or_path, generator_name_or_path, get_peft=False, use_bnb=False)
 
-    # load the test dataset
-    test_dataset = load_dataset(dataset_or_path)
-
-    generator_tokenizer = rag_model.generator_tokenizer
-    generator_tokenizer.pad_token = generator_tokenizer.eos_token
-
-    retriever_tokenizer = rag_model.retriever_tokenizer
-
     processed_datasets = preprocess_dataset(
-        test_dataset, retriever_tokenizer, query_column_name, passage_column_name, max_length
+        test_dataset, rag_model.retriever_tokenizer, query_column_name, passage_column_name, max_length
     )
     # peft config and wrapping
     rag_model.attach_pre_trained_peft_layers(retriever_peft_model_path, generator_peft_model_path, device)
@@ -192,9 +208,8 @@ def evaluate_rag(
     total_em_hit = 0
 
     print("Evaluation start")
-
     # For evaluating the generator
-    queries_for_gen_eval = []
+    queries_for_gen_eval: list[str] = []
     generated_answers_for_eval = []
     model = rag_model.generator_model
     tokenizer = rag_model.generator_tokenizer
@@ -224,15 +239,10 @@ def evaluate_rag(
             continue
 
         # Evaluate the generator
-        for _query, search_result_passage in zip(queries, top_passages, strict=True):
-            # This query comes without the answer
-            query = f"#query# {_query} #passage# {search_result_passage} #answer# "
-            queries_for_gen_eval.append(query)
-            # Generate answers in batch
-            if len(queries_for_gen_eval) >= query_batch_size:
-                batch_answers = run_generator_on_prompts(model, tokenizer, queries_for_gen_eval, max_length=max_length)
-                generated_answers_for_eval.extend(batch_answers)
-                queries_for_gen_eval.clear()
+        queries_for_gen_eval, batch_answers = eval_generator_on_batch(
+            model, tokenizer, queries, top_passages, query_batch_size, queries_for_gen_eval, max_length
+        )
+        generated_answers_for_eval.extend(batch_answers)
 
     if not evaluate_generator:
         print_eval_results(len(processed_datasets), batch_precision, batch_recall, total_hit)
