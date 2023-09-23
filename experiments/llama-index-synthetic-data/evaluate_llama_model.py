@@ -10,12 +10,10 @@ def run_eval(val_data: str) -> None:
 	print("Loading model")
 	embed_model_name = "local:BAAI/bge-large-en"
 	base_embed_model = resolve_embed_model(embed_model_name)
-	print("model loaded")
-	print("loading adapter")
+	print("Loading adapter")
 	embed_model = LinearAdapterEmbeddingModel(base_embed_model, "model_output_test", device="cuda")
-	print("adapter loaded")
 	# Top k 10 to match our internal experiments
-	print("evaluating finetuned model")
+	print("Evaluating fine-tuned model")
 	ft_val_results = evaluate(val_dataset, embed_model, top_k=10)
 	print("Fine-Tuned Model Results")
 	print(ft_val_results)
@@ -23,7 +21,7 @@ def run_eval(val_data: str) -> None:
 		pickle.dump(ft_val_results, f)
 	display_results(["ft"], [ft_val_results])
 
-	print("evaluating base model")
+	print("Evaluating base model")
 	bge_val_results = evaluate(val_dataset, embed_model_name, top_k=10)
 	print("Base Model Results:")
 	print(bge_val_results)
