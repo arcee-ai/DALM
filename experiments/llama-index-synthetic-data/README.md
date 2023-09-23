@@ -40,18 +40,20 @@ python evaluate_llama_model.py
 llama-index results:
 ```markdown
   retrievers  hit_rate       mrr
-0         ft    0.4915  0.353698
+0        bge    0.4945  0.368824  # Base model through llama-index eval
+1         ft    0.4915  0.353698
 ```
 
 Now, compared to the results of our training process. First 3 are the same as in our README, they are our results. The final row is
 the result of llama-index fine-tuning, and their own hit-rate eval
 
-| Type of Retriever | Recall | Hit rate |
-| --- | ----- | ----|
-| Plain Retriever | 0.45984 | 0.45984 |
+| Type of Retriever                  | Recall | Hit rate |
+|------------------------------------| ----- | ----|
+| Plain Retriever                    | 0.45984 | 0.45984 |
 | Retriever with contrastive learning | 0.46037 | 0.46038 |
-| Retriever End2End | 0.73634 | 0.73634 |
-| Llama-index fine-tune retriever | N/A | 0.4915 |
+| Retriever End2End                  | 0.73634 | 0.73634 |
+| Llama-index fine-tune retriever    | N/A | 0.4915 |
+| Llama-index base-retriever         | N/A | 0.4945 |
 
 It seems as though, while marginally better than our retriever-only training, it is 
 significantly worse than our end-to-end training process!
