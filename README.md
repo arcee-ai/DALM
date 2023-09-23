@@ -40,7 +40,7 @@ pip install --upgrade -e .
 ```
 This will install the DALM repo and all necessary dependencies.
 
-Make sure things are installed correctly by running `dalm version`
+Make sure things are installed correctly by running `dalm version`.  On an non-intel Mac you may need to downgrade `transformers` library: `pip install transformers==4.30`.
 
 ## Data setup
 ### tl;dr
@@ -63,7 +63,7 @@ Train `BAAI/bge-large-en` retriever with contrastive learning.
 ```shell
 python dalm/training/retriever_only/train_retriever_only.py \
 --dataset_path "./dalm/datasets/toy_data_train.csv" \
---model_name_or_path "BAAI/bge-large-en" \
+--retriever_name_or_path "BAAI/bge-large-en" \
 --output_dir "retriever_only_checkpoints" \
 --use_peft \
 --with_tracking \
