@@ -51,7 +51,7 @@ the result of llama-index fine-tuning, and their own hit-rate eval
 | Plain Retriever | 0.45984 | 0.45984 |
 | Retriever with contrastive learning | 0.46037 | 0.46038 |
 | Retriever End2End | 0.73634 | 0.73634 |
-| Llama-index fine-tune retriever | N/A | 0.4915
+| Llama-index fine-tune retriever | N/A | 0.4915 |
 
 It seems as though, while marginally better than our retriever-only training, it is 
 significantly worse than our end-to-end training process!
