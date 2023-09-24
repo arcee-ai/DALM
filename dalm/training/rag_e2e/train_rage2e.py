@@ -38,7 +38,7 @@ from transformers import (
     get_scheduler,
 )
 
-from dalm.models.rag_e2e_base_model import AutoModelForRagE2E
+from dalm.models.rag_e2e_base_model import AutoModelForRagE2E, Mode
 from dalm.training.utils.rag_e2e_dataloader_utils import preprocess_dataset
 from dalm.training.utils.train_utils import (
     compute_marginalized_loss_from_logits,
@@ -206,8 +206,16 @@ def parse_args() -> Namespace:
     )
     parser.add_argument(
         "--use_peft",
-        action="store_true",
+        choices=list(Mode),
+        type=Mode,
+        required=False,
         help="Whether to enable experiment trackers for logging.",
+    )
+    parser.add_argument(
+        "--use_bnb",
+        choices=list(Mode),
+        type=Mode,
+        help="Whether to use 4bit quantization.",
     )
     args = parser.parse_args()
 
@@ -243,6 +251,7 @@ def train_e2e(
     report_to: str = "all",
     sanity_test: bool = True,
     use_peft: bool = True,
+    use_bnb: bool = False,
 ) -> None:
     """Train an in-domain model e2e with a retriever and generator. See `dalm train-rag-e2e --help` for more details"""
     # Get the passed in vars before beginning training, in case we report training
@@ -251,7 +260,9 @@ def train_e2e(
     args["lr_scheduler_type"] = args["lr_scheduler_type"].value
     args = {k: v for k, v in args.items() if v is None or isinstance(v, (float, int, str, NoneType))}
     # rag retriver and the generator
-    rag_model = AutoModelForRagE2E(retriever_name_or_path, generator_name_or_path)
+    rag_model = AutoModelForRagE2E(
+        retriever_name_or_path, generator_name_or_path, get_peft=use_peft, use_bnb=use_bnb
+    )
 
     accelerator = Accelerator(log_with=report_to, project_dir=output_dir) if with_tracking else Accelerator()
     # Make one log on every process with the configuration for debugging.
@@ -334,10 +345,6 @@ def train_e2e(
         num_training_steps=max_train_steps,
     )
 
-    (rag_model, optimizer, train_dataloader, lr_scheduler) = accelerator.prepare(
-        rag_model, optimizer, train_dataloader, lr_scheduler
-    )
-
     # We need to recalculate our total training steps as the size of the training dataloader may have changed
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / gradient_accumulation_steps)
     if overrode_max_train_steps:
@@ -358,10 +365,9 @@ def train_e2e(
 
     total_batch_size = per_device_train_batch_size * accelerator.num_processes * gradient_accumulation_steps
 
-    if use_peft:
-        # saving and loading checkpoints for resuming training
-        accelerator.register_save_state_pre_hook(save_model_hook)
-        accelerator.register_load_state_pre_hook(load_model_hook)
+    # saving and loading checkpoints for resuming training
+    accelerator.register_save_state_pre_hook(save_model_hook)
+    accelerator.register_load_state_pre_hook(load_model_hook)
 
     logger.info("***** Running training *****")
     logger.info(f"  Num examples = {len(processed_datasets)}")
@@ -402,6 +408,10 @@ def train_e2e(
 
     # update the progress_bar if load from checkpoint
     progress_bar.update(completed_steps)
+
+    (rag_model, optimizer, train_dataloader, lr_scheduler) = accelerator.prepare(
+        rag_model, optimizer, train_dataloader, lr_scheduler
+    )
 
     for epoch in range(starting_epoch, num_train_epochs):
         rag_model.train()
@@ -546,6 +556,7 @@ def main() -> None:
         report_to=args.report_to,
         sanity_test=args.sanity_test,
         use_peft=args.use_peft,
+        use_bnb=args.use_bnb,
     )
 
 

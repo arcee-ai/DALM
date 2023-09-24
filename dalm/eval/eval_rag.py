@@ -68,13 +68,13 @@ def parse_args() -> Namespace:
         "--retriever_peft_model_path",
         type=str,
         help="Path to the finetuned retriever peft layers",
-        required=True,
+        required=False,
     )
     parser.add_argument(
         "--generator_peft_model_path",
         type=str,
         help="Path to the finetuned generator peft layers",
-        required=True,
+        required=False,
     )
     parser.add_argument(
         "--test_batch_size",
