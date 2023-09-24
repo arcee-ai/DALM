@@ -1,10 +1,13 @@
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, Callable, Dict, List, Tuple, cast
 
 import hnswlib
 import numpy as np
 import torch
+from datasets import Dataset
 from datasets.formatting.formatting import LazyBatch
-from transformers import PreTrainedTokenizer
+from torch.utils.data import DataLoader
+from tqdm.auto import tqdm
+from transformers import PreTrainedTokenizer, default_data_collator
 
 
 def construct_search_index(dim: int, num_elements: int, data: np.ndarray) -> hnswlib.Index:
@@ -80,13 +83,16 @@ def preprocess_function(
     retriever_tokenizer: PreTrainedTokenizer,
     query_column_name: str = "query",
     passage_column_name: str = "passage",
+    max_length: int = 128,
 ) -> Dict[str, torch.Tensor]:
     queries = examples[query_column_name]
     passages = examples[passage_column_name]
 
     # Tokenization for the retriever
-    retriever_query_tokens = retriever_tokenizer(queries, padding="max_length", max_length=128, truncation=True)
-    retriever_passage_tokens = retriever_tokenizer(passages, padding="max_length", max_length=128, truncation=True)
+    retriever_query_tokens = retriever_tokenizer(queries, padding="max_length", max_length=max_length, truncation=True)
+    retriever_passage_tokens = retriever_tokenizer(
+        passages, padding="max_length", max_length=max_length, truncation=True
+    )
 
     pre_batch = {}
 
@@ -97,6 +103,39 @@ def preprocess_function(
         pre_batch[f"retriever_passage_{k}"] = v
 
     return pre_batch
+
+
+def preprocess_dataset(
+    dataset: Dataset, tokenizer: PreTrainedTokenizer, query_column_name: str, passage_column_name: str, max_length: int
+) -> Dataset:
+    """Runs the tokenizer on the dataset, returning the tokenizes columns"""
+    processed_dataset = dataset.map(
+        lambda example: preprocess_function(
+            example,
+            tokenizer,
+            query_column_name=query_column_name,
+            passage_column_name=passage_column_name,
+            max_length=max_length,
+        ),
+        batched=True,
+        # remove_columns=test_dataset.column_names,
+        desc="Running tokenizer on dataset",
+        num_proc=4,
+    )
+    return processed_dataset
+
+
+def filter_unique_passages(dataset: Dataset, passage_column_name: str) -> Dataset:
+    """Filters the dataset by the unique passages"""
+    unique_passages = set(dataset[passage_column_name])
+
+    def _is_passage_unique(example: Dict[str, Any]) -> bool:
+        is_in_unique_list = example[passage_column_name] in unique_passages
+        unique_passages.discard(example[passage_column_name])
+        return is_in_unique_list
+
+    unique_passage_dataset = dataset.filter(_is_passage_unique)
+    return unique_passage_dataset
 
 
 def mixed_collate_fn(batch: List[Dict[str, torch.Tensor | str]]) -> Dict[str, torch.Tensor | List[str]]:
@@ -115,3 +154,131 @@ def mixed_collate_fn(batch: List[Dict[str, torch.Tensor | str]]) -> Dict[str, to
             new_batch[key] = torch.stack([torch.tensor(sample[key]) for sample in batch])
 
     return new_batch
+
+
+def get_retriever_embeddings(
+    forward_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+    device: str,
+    retriever_input_ids: torch.Tensor,
+    retriever_attention_masks: torch.Tensor,
+) -> np.ndarray:
+    """ "Runs the provided forward function on the inputs and attention masks"""
+    return (
+        forward_fn(
+            retriever_input_ids.to(device),
+            retriever_attention_masks.to(device),
+        )
+        .detach()
+        .float()
+        .cpu()
+        .numpy()
+    )
+
+
+def get_passage_embeddings(
+    passage_dataset: Dataset,
+    passage_column_name: str,
+    forward_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+    device: str,
+    embed_dim: int,
+    torch_dtype: torch.dtype,
+    batch_size: int,
+) -> tuple[Dataset, np.ndarray]:
+    unique_passage_dataset = filter_unique_passages(passage_dataset, passage_column_name)
+
+    unique_passage_dataloader = DataLoader(
+        unique_passage_dataset,
+        shuffle=False,
+        collate_fn=default_data_collator,
+        batch_size=batch_size,
+        pin_memory=True,
+    )
+
+    num_passages = len(unique_passage_dataset)
+    print(f"Starting to generate passage embeddings (Number of passages: {num_passages})")
+    passage_embeddings_array = np.zeros((num_passages, embed_dim))
+    for step, batch in enumerate(tqdm(unique_passage_dataloader)):
+        with torch.no_grad():
+            with torch.amp.autocast(dtype=torch_dtype, device_type=device):
+                passage_embs = get_retriever_embeddings(
+                    forward_fn,
+                    device,
+                    batch["retriever_passage_input_ids"],
+                    batch["retriever_passage_attention_mask"],
+                )
+
+        start_index = step * batch_size
+        end_index = start_index + batch_size if (start_index + batch_size) < num_passages else num_passages
+        passage_embeddings_array[start_index:end_index] = passage_embs
+        del passage_embs, batch
+    return unique_passage_dataset, passage_embeddings_array
+
+
+def evaluate_retriever_on_batch(
+    batch: Dataset,
+    passage_column_name: str,
+    forward_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+    search_index: hnswlib.Index,
+    torch_dtype: torch.dtype,
+    device: str,
+    top_k: int,
+    id_to_passage: dict[int, str],
+) -> tuple[list[float], list[float], int, list[str]]:
+    """Evaluates the retriever on the given batch of data
+
+    Returns the list[precision], list[recall], total hit, and list[top_passage_per_query] for this batch
+    """
+    batch_precision = []
+    batch_recall = []
+    total_hit = 0
+    top_passages = []
+    with torch.no_grad(), torch.amp.autocast(dtype=torch_dtype, device_type=device):
+        # use the batch size for the first dim
+        # do not hard-code it
+        retriever_query_input_ids = batch["retriever_query_input_ids"]
+        retriever_query_attention_mask = batch["retriever_query_attention_mask"]
+
+        query_embeddings = get_retriever_embeddings(
+            forward_fn,
+            device,
+            retriever_query_input_ids,
+            retriever_query_attention_mask,
+        )
+
+    search_results = get_nearest_neighbours(
+        top_k,
+        search_index,
+        query_embeddings,
+        id_to_passage,
+        threshold=0.0,
+    )
+    correct_passages = batch[passage_column_name]
+
+    for i, result in enumerate(search_results):
+        retrieved_passages = [passage for passage, score in result]
+        # Closest match passage for this query's search results
+        top_passages.append(retrieved_passages[0])
+        correct_passage = [correct_passages[i]]
+        precision, recall = calculate_precision_recall(retrieved_passages, correct_passage)
+        batch_precision.append(precision)
+        batch_recall.append(recall)
+        hit = any(passage in retrieved_passages for passage in correct_passage)
+        total_hit += hit
+    return batch_precision, batch_recall, total_hit, top_passages
+
+
+def print_eval_results(
+    total_examples: int,
+    precisions: list[float],
+    recalls: list[float],
+    total_hit: int,
+) -> None:
+    recall = sum(precisions) / total_examples
+    precision = sum(recalls) / total_examples
+    hit_rate = total_hit / float(total_examples)
+
+    print("Retriever results:")
+    print("Recall:", recall)
+    print("Precision:", precision)
+    print("Hit Rate:", hit_rate)
+    print("*************")
