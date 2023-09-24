@@ -70,13 +70,13 @@ def parse_args() -> Namespace:
         "--retriever_peft_model_path",
         type=str,
         help="Path to the finetunned retriever peft layers",
-        required=True,
+        required=False,
     )
     parser.add_argument(
         "--generator_peft_model_path",
         type=str,
         help="Path to the finetunned generator peft layers",
-        required=True,
+        required=False,
     )
     parser.add_argument(
         "--test_batch_size",
@@ -141,7 +141,7 @@ def main() -> None:
 
     # rag retriver and the generator (don't load new peft layers no need)
     rag_model = AutoModelForRagE2E(
-        args.retriever_model_name_or_path, args.generator_model_name_or_path, get_peft=False, use_bnb=False
+        args.retriever_model_name_or_path, args.generator_model_name_or_path, get_peft=None, use_bnb=None
     )
 
     # load the test dataset

@@ -41,7 +41,7 @@ from transformers import (
     get_scheduler,
 )
 
-from dalm.models.rag_e2e_base_model import AutoModelForRagE2E
+from dalm.models.rag_e2e_base_model import AutoModelForRagE2E, Mode
 from dalm.training.utils.rag_e2e_dataloader_utils import preprocess_dataset
 from dalm.training.utils.train_utils import (
     compute_marginalized_loss_from_logits,
@@ -206,8 +206,16 @@ def parse_args() -> Namespace:
     )
     parser.add_argument(
         "--use_peft",
-        action="store_true",
+        choices=list(Mode),
+        type=Mode,
+        required=False,
         help="Whether to enable experiment trackers for logging.",
+    )
+    parser.add_argument(
+        "--use_bnb",
+        choices=list(Mode),
+        type=Mode,
+        help="Whether to use 4bit quantization.",
     )
     args = parser.parse_args()
 
@@ -218,7 +226,9 @@ def main() -> None:
     args = parse_args()
 
     # rag retriver and the generator
-    rag_model = AutoModelForRagE2E(args.retriever_name_or_path, args.generator_name_or_path)
+    rag_model = AutoModelForRagE2E(
+        args.retriever_name_or_path, args.generator_name_or_path, get_peft=args.use_peft, use_bnb=args.use_bnb
+    )
 
     accelerator = (
         Accelerator(log_with=args.report_to, project_dir=args.output_dir) if args.with_tracking else Accelerator()
@@ -304,10 +314,6 @@ def main() -> None:
         num_training_steps=args.max_train_steps,
     )
 
-    (rag_model, optimizer, train_dataloader, lr_scheduler) = accelerator.prepare(
-        rag_model, optimizer, train_dataloader, lr_scheduler
-    )
-
     # We need to recalculate our total training steps as the size of the training dataloader may have changed
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
     if overrode_max_train_steps:
@@ -330,10 +336,9 @@ def main() -> None:
 
     total_batch_size = args.per_device_train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
 
-    if args.use_peft:
-        # saving and loading checkpoints for resuming training
-        accelerator.register_save_state_pre_hook(save_model_hook)
-        accelerator.register_load_state_pre_hook(load_model_hook)
+    # saving and loading checkpoints for resuming training
+    accelerator.register_save_state_pre_hook(save_model_hook)
+    accelerator.register_load_state_pre_hook(load_model_hook)
 
     logger.info("***** Running training *****")
     logger.info(f"  Num examples = {len(processed_datasets)}")
@@ -370,10 +375,14 @@ def main() -> None:
             resume_step = int(training_difference.replace("step_", "")) * args.gradient_accumulation_steps
             starting_epoch = resume_step // len(train_dataloader)
             resume_step -= starting_epoch * len(train_dataloader)
-            completed_steps = resume_step // args.gradient_accumulation_step
+            completed_steps = resume_step // args.gradient_accumulation_steps
 
     # update the progress_bar if load from checkpoint
     progress_bar.update(completed_steps)
+
+    (rag_model, optimizer, train_dataloader, lr_scheduler) = accelerator.prepare(
+        rag_model, optimizer, train_dataloader, lr_scheduler
+    )
 
     for epoch in range(starting_epoch, args.num_train_epochs):
         rag_model.train()
