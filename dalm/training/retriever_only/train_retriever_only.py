@@ -156,7 +156,12 @@ def parse_args() -> Namespace:
     parser.add_argument(
         "--use_peft",
         action="store_true",
-        help="Whether to enable experiment trackers for logging.",
+        help="Whether to enable parameter efficient fine tuning",
+    )
+    parser.add_argument(
+        "--use_bnb",
+        action="store_true",
+        help="Whether to use model quantization.",
     )
     args = parser.parse_args()
 
@@ -245,7 +250,9 @@ def train_retriever(
     for index in random.sample(range(len(processed_datasets)), 3):
         logger.info(f"Sample {index} of the training set: {processed_datasets[index]}.")
 
-    model.print_trainable_parameters()  # type: ignore # No idea what mypy is complaining about.
+    if args.use_peft:
+        model.print_trainable_parameters()  # type: ignore # No idea what mypy is complaining about.
+
     accelerator.print(model)
 
     # get dataloaders
@@ -272,11 +279,6 @@ def train_retriever(
         num_training_steps=max_train_steps,
     )
 
-    # Prepare everything with our `accelerator`.
-    model, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-        model, optimizer, train_dataloader, lr_scheduler
-    )
-
     # We need to recalculate our total training steps as the size of the training dataloader may have changed
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / gradient_accumulation_steps)
     if overrode_max_train_steps:
@@ -297,10 +299,9 @@ def train_retriever(
 
     total_batch_size = per_device_train_batch_size * accelerator.num_processes * gradient_accumulation_steps
 
-    if use_peft:
-        # saving and loading checkpoints for resuming training
-        accelerator.register_save_state_pre_hook(save_model_hook)
-        accelerator.register_load_state_pre_hook(load_model_hook)
+    # saving and loading checkpoints for resuming training
+    accelerator.register_save_state_pre_hook(save_model_hook)
+    accelerator.register_load_state_pre_hook(load_model_hook)
 
     logger.info("***** Running training *****")
     logger.info(f"  Num examples = {len(processed_datasets)}")
@@ -337,7 +338,12 @@ def train_retriever(
             resume_step = int(training_difference.replace("step_", "")) * gradient_accumulation_steps
             starting_epoch = resume_step // len(train_dataloader)
             resume_step -= starting_epoch * len(train_dataloader)
-            completed_steps = resume_step // gradient_accumulation_steps
+            completed_steps = resume_step // args.gradient_accumulation_steps
+
+    # Prepare everything with our `accelerator`.
+    model, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+        model, optimizer, train_dataloader, lr_scheduler
+    )
 
     # update the progress_bar if load from checkpoint
     progress_bar.update(completed_steps)
