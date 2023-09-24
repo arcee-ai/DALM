@@ -26,10 +26,7 @@ dependencies = [
     "peft",
     "diffusers",
     "bitsandbytes",
-    "torchvision",
-    "pydantic",
     "typer",
-    "scipy"
 ]
 
 [project.scripts]
@@ -108,7 +105,6 @@ addopts = [
 ban-relative-imports = "all"
 
 [tool.mypy]
-plugins = "pydantic.mypy"
 disallow_untyped_defs = true
 
 [[tool.mypy.overrides]]
