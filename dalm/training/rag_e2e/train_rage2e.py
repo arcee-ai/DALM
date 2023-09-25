@@ -258,6 +258,9 @@ def main() -> None:
     generator_tokenizer = rag_model.generator_tokenizer
     generator_tokenizer.pad_token = generator_tokenizer.eos_token
 
+    # TODO: check if this is depdendent on the tokenizer installed
+    generator_tokenizer.add_eos_token = True
+
     processed_datasets = dataset.map(
         lambda example: preprocess_dataset(
             example,
