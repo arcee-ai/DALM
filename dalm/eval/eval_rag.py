@@ -48,7 +48,7 @@ def parse_args() -> Namespace:
     parser.add_argument(
         "--max_length",
         type=int,
-        default=128,
+        default=256,
         help=(
             "The maximum total input sequence length after tokenization. Sequences longer than this will be truncated,"
             " sequences shorter will be padded if `--pad_to_max_length` is passed."
@@ -119,7 +119,7 @@ def parse_args() -> Namespace:
 
 
 def run_generator_on_prompts(
-    model: PreTrainedModel, tokenizer: PreTrainedTokenizer, prompts: List[str], max_length: int = 200
+    model: PreTrainedModel, tokenizer: PreTrainedTokenizer, prompts: List[str], max_length: int = 256
 ) -> List[str]:
     """Runs the generator model over the prompts (query + passage)"""
     # TODO: Is the max_length correct here? not sure
