@@ -26,8 +26,8 @@ def preprocess_dataset(
     passage_list = examples[dataset_passage_col_name]
     answers = examples[dataset_answer_col_name]
 
-    queries = [f"{query}" for query in querie_list]
-    passages = [f"{passage}" for passage in passage_list]
+    queries = [f"#query# {query}" for query in querie_list]
+    passages = [f"#passage# {passage}" for passage in passage_list]
 
     # Tokenization for the retriever
     retriever_query_tokens = retriever_tokenizer(
