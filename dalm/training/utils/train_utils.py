@@ -1,13 +1,32 @@
-from typing import List
+import os
+from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
 from transformers import AutoModel
 
+from dalm.models.rag_e2e_base_model import AutoModelForRagE2E
+from dalm.models.retriever_only_base_model import AutoModelForSentenceEmbedding
+
+
+def extract_sub_state_dict(full_state_dict: Dict[str, torch.Tensor], prefix: str) -> Dict[str, torch.Tensor]:
+    return {k[len(prefix) :]: v for k, v in full_state_dict.items() if k.startswith(prefix)}
+
 
 def save_model_hook(models: List[AutoModel], weights: List, output_dir: str) -> None:
     for i, model in enumerate(models):
-        model.save_pretrained(output_dir, state_dict=weights[i])
+        if isinstance(model, AutoModelForSentenceEmbedding):
+            formatted_weights = extract_sub_state_dict(weights[i], "model.")
+            model.model.save_pretrained(output_dir, state_dict=formatted_weights)
+        if isinstance(model, AutoModelForRagE2E):
+            combined_weights = weights[i]
+            generator_weights = extract_sub_state_dict(combined_weights, "generator_model.")
+            retriever_weights = extract_sub_state_dict(combined_weights, "retriever_model.")
+
+            model.generator_model.save_pretrained(os.path.join(output_dir, "generator"), state_dict=generator_weights)
+            model.retriever_model.save_pretrained(os.path.join(output_dir, "retriever"), state_dict=retriever_weights)
+        else:
+            model.save_pretrained(output_dir, state_dict=weights[i])
         # make sure to pop weight so that corresponding model is not saved again
         weights.pop()
 
@@ -16,7 +35,41 @@ def load_model_hook(models: List[AutoModel], input_dir: str) -> None:
     while len(models) > 0:
         model = models.pop()
         # pop models so that they are not loaded again
-        if hasattr(model, "active_adapter") and hasattr(model, "load_adapter"):
+        if isinstance(model, AutoModelForRagE2E):
+            generator_path = os.path.join(input_dir, "generator")
+            adapter_model_path = os.path.join(generator_path, "adapter_model.bin")
+
+            if (
+                hasattr(model.generator_model, "active_adapter")
+                and hasattr(model.generator_model, "load_adapter")
+                and os.path.exists(adapter_model_path)
+            ):
+                model.generator_model.load_adapter(generator_path, model.generator_model.active_adapter)
+            else:
+                model.generator_model = AutoModel.from_pretrained(generator_path)
+
+            retriever_path = os.path.join(input_dir, "retriever")
+            adapter_model_path = os.path.join(retriever_path, "adapter_model.bin")
+
+            if (
+                hasattr(model.retriever_model, "active_adapter")
+                and hasattr(model.retriever_model, "load_adapter")
+                and os.path.exists(adapter_model_path)
+            ):
+                model.retriever_model.load_adapter(retriever_path, model.retriever_model.active_adapter)
+            else:
+                model.retriever_model = AutoModel.from_pretrained(retriever_path)
+        elif isinstance(model, AutoModelForSentenceEmbedding):
+            adapter_model_path = os.path.join(input_dir, "adapter_model.bin")
+            if (
+                hasattr(model.model, "active_adapter")
+                and hasattr(model, "load_adapter")
+                and os.path.exists(adapter_model_path)
+            ):
+                model.model.load_adapter(input_dir, model.model.active_adapter)
+            else:
+                model.model = AutoModel.from_pretrained(input_dir)
+        else:
             model.load_adapter(input_dir, model.active_adapter, is_trainable=True)
 
 

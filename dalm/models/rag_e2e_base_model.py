@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import List, Optional, Union
 
 import torch
@@ -10,21 +11,29 @@ from transformers import (
 )
 
 
+class Mode(Enum):
+    GENERATOR = "generator"
+    RETRIEVER = "retriever"
+    BOTH = "both"
+
+
 class AutoModelForRagE2E(torch.nn.Module):
     def __init__(
         self,
         retriever_name: str,
         generator_name: str,
         normalize: bool = True,
-        get_peft: bool = True,
-        use_bnb: bool = True,
+        get_peft: Optional[Mode] = None,
+        use_bnb: Optional[Mode] = None,
     ) -> None:
         super(AutoModelForRagE2E, self).__init__()
 
         # Retriver initialization
         self.retriever_model = AutoModel.from_pretrained(
             retriever_name,
-            quantization_config=AutoModelForRagE2E.__get_bnb_config() if use_bnb else None,
+            quantization_config=AutoModelForRagE2E.__get_bnb_config()
+            if use_bnb in [Mode.RETRIEVER, Mode.BOTH]
+            else None,
         )
         self.retriever_tokenizer = AutoTokenizer.from_pretrained(retriever_name)
         self.normalize = normalize
@@ -32,7 +41,9 @@ class AutoModelForRagE2E(torch.nn.Module):
         # Generator initialization
         self.generator_model = AutoModelForCausalLM.from_pretrained(
             generator_name,
-            quantization_config=AutoModelForRagE2E.__get_bnb_config() if use_bnb else None,
+            quantization_config=AutoModelForRagE2E.__get_bnb_config()
+            if use_bnb in [Mode.GENERATOR, Mode.BOTH]
+            else None,
             trust_remote_code=True,
         )
 
@@ -40,22 +51,24 @@ class AutoModelForRagE2E(torch.nn.Module):
             generator_name,
         )
 
-        if get_peft:
-            self.retriever_model = get_peft_model(
-                self.retriever_model,
-                peft_config=AutoModelForRagE2E.__get_lora_config(
-                    TaskType.FEATURE_EXTRACTION,
-                    target_modules=["key", "query", "value"],
-                ),
-            )
+        if get_peft is not None:
+            if get_peft in [Mode.RETRIEVER, Mode.BOTH]:
+                self.retriever_model = get_peft_model(
+                    self.retriever_model,
+                    peft_config=AutoModelForRagE2E.__get_lora_config(
+                        TaskType.FEATURE_EXTRACTION,
+                        target_modules=["key", "query", "value"],
+                    ),
+                )
 
-            self.generator_model = get_peft_model(
-                self.generator_model,
-                peft_config=AutoModelForRagE2E.__get_lora_config(
-                    TaskType.CAUSAL_LM,
-                    target_modules=["q_proj", "v_proj"],
-                ),
-            )
+            if get_peft in [Mode.GENERATOR, Mode.BOTH]:
+                self.generator_model = get_peft_model(
+                    self.generator_model,
+                    peft_config=AutoModelForRagE2E.__get_lora_config(
+                        TaskType.CAUSAL_LM,
+                        target_modules=["q_proj", "v_proj"],
+                    ),
+                )
 
     def forward(self, task: str, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         if task == "retrieval":
@@ -75,20 +88,28 @@ class AutoModelForRagE2E(torch.nn.Module):
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
         return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
-    def attach_pre_trained_peft_layers(self, peft_retriever_path: str, peft_generator_path: str, device: str) -> None:
-        self.retriever_model = (
-            PeftModel.from_pretrained(self.retriever_model, peft_retriever_path, load_in_4bit=True, device_map="auto")
-            .to(device)
-            .eval()
-            .merge_and_unload()
-        )
+    def attach_pre_trained_peft_layers(
+        self, peft_retriever_path: Optional[str], peft_generator_path: Optional[str], device: str
+    ) -> None:
+        if peft_retriever_path is not None:
+            self.retriever_model = (
+                PeftModel.from_pretrained(
+                    self.retriever_model, peft_retriever_path, load_in_4bit=True, device_map="auto"
+                )
+                .to(device)
+                .eval()
+                .merge_and_unload()
+            )
 
-        self.generator_model = (
-            PeftModel.from_pretrained(self.generator_model, peft_generator_path, load_in_4bit=True, device_map="auto")
-            .to(device)
-            .eval()
-            .merge_and_unload()
-        )
+        if peft_generator_path is not None:
+            self.generator_model = (
+                PeftModel.from_pretrained(
+                    self.generator_model, peft_generator_path, load_in_4bit=True, device_map="auto"
+                )
+                .to(device)
+                .eval()
+                .merge_and_unload()
+            )
 
     @staticmethod
     def __get_bnb_config() -> BitsAndBytesConfig:

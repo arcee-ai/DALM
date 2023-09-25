@@ -63,7 +63,7 @@ def parse_args() -> Namespace:
         "--retriever_peft_model_path",
         type=str,
         help="Path to the finetunned retriever peft layers",
-        required=True,
+        required=False,
     )
     parser.add_argument(
         "--test_batch_size",
@@ -149,8 +149,9 @@ def main() -> None:
         pin_memory=True,
     )
 
-    # peft config and wrapping
-    retriever_model.attach_pre_trained_peft_layers(args.retriever_peft_model_path, args.device)
+    if args.retriever_peft_model_path is not None:
+        # peft config and wrapping
+        retriever_model.attach_pre_trained_peft_layers(args.retriever_peft_model_path, args.device)
 
     def get_query_embeddings(
         retriever_query_input_ids: torch.Tensor,
