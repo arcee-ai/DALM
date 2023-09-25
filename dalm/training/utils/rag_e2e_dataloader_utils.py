@@ -1,8 +1,15 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from datasets.formatting.formatting import LazyBatch
 from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
 
+DEFAULT_SYS_PROMPT = "You are a meticulous, honest and helpful assistant"
+
+def llama2_prompt(query: str, context:str, answer:Optional[str]=None) -> str:
+        prompt = f"<s>[INST] <<SYS>>\n{DEFAULT_SYS_PROMPT}\n<</SYS>>\n\n Answer this: {query} Using context: {context} [/INST]"
+        if answer:
+             prompt += f" {answer} </s>"
+        return prompt
 
 def preprocess_dataset(
     examples: LazyBatch,
@@ -19,8 +26,8 @@ def preprocess_dataset(
     passage_list = examples[dataset_passage_col_name]
     answers = examples[dataset_answer_col_name]
 
-    queries = [f"#query# {query}" for query in querie_list]
-    passages = [f"#passage# {passage}" for passage in passage_list]
+    queries = [f"{query}" for query in querie_list]
+    passages = [f"{passage}" for passage in passage_list]
 
     # Tokenization for the retriever
     retriever_query_tokens = retriever_tokenizer(
@@ -33,7 +40,7 @@ def preprocess_dataset(
     # Tokenize for causal model
     # Here, we need to combine the query, passage, and the answer as the input, and the answer as the output
     casual_input_text = [
-        f"#query# {query} #passage# {passage} #answer# {answer}"
+        llama2_prompt(query, passage, answer)
         for passage, query, answer in zip(passages, queries, answers, strict=True)
     ]
     causal_input_tokens = generator_tokenizer(
@@ -41,7 +48,7 @@ def preprocess_dataset(
     )
 
     query_passage_text = [
-        f"#query# {query} #passage# {passage} #answer#" for passage, query in zip(passages, queries, strict=True)
+        llama2_prompt(query,passage) for passage, query in zip(passages, queries, strict=True)
     ]
 
     query_passage_lengths = []
