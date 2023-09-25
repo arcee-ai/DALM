@@ -80,7 +80,7 @@ def parse_args() -> Namespace:
     parser.add_argument(
         "--passage_max_len",
         type=int,
-        default=128,
+        default=160,
         help=(
             "The maximum total passage sequence length after tokenization. "
             "Sequences longer than this will be truncated,"
