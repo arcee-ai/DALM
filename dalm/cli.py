@@ -10,6 +10,7 @@ from dalm import __version__
 from dalm.datasets.qa_gen.question_answer_generation import generate_qa_from_disk
 from dalm.eval.eval_rag import evaluate_rag
 from dalm.eval.eval_retriever_only import evaluate_retriever
+from dalm.models.rag_e2e_base_model import Mode
 from dalm.training.rag_e2e.train_rage2e import train_e2e
 from dalm.training.retriever_only.train_retriever_only import train_retriever
 
@@ -127,7 +128,8 @@ def train_rag_e2e(
     sanity_test: Annotated[
         bool, typer.Option(help="[NOT CURRENTLY USED]. Whether to sanity test the model after training")
     ] = True,
-    use_peft: Annotated[bool, typer.Option(help="Whether to use Peft during fine-tuning.")] = True,
+    use_peft: Annotated[Optional[Mode], typer.Option(help="Whether to use Peft during fine-tuning.")] = None,
+    use_bnb: Annotated[Optional[Mode], typer.Option(help="Whether to use BNB during fine-tuning.")] = None,
 ) -> None:
     """End-to-end train an in-domain model, including the retriever and generator"""
     train_e2e(
@@ -159,6 +161,7 @@ def train_rag_e2e(
         report_to=report_to,
         sanity_test=sanity_test,
         use_peft=use_peft,
+        use_bnb=use_bnb,
     )
 
 
@@ -237,6 +240,7 @@ def train_retriever_only(
         bool, typer.Option(help="[NOT CURRENTLY USED]. Whether to sanity test the model after training")
     ] = True,
     use_peft: Annotated[bool, typer.Option(help="Whether to use Peft during fine-tuning.")] = True,
+    use_bnb: Annotated[bool, typer.Option(help="Whether to use BNB during fine-tuning.")] = True,
 ) -> None:
     """Train only the retriever using contrastive training"""
     train_retriever(
@@ -265,6 +269,7 @@ def train_retriever_only(
         report_to=report_to,
         sanity_test=sanity_test,
         use_peft=use_peft,
+        use_bnb=use_bnb,
     )
 
 
@@ -334,6 +339,8 @@ def eval_rag(
     evaluate_generator: Annotated[
         bool, typer.Option(help="Enable generator evaluation. If false, equivalent to eval-retriever")
     ] = True,
+    use_peft: Annotated[Optional[Mode], typer.Option(help="Whether to use Peft for model evaluation.")] = Mode.BOTH,
+    use_bnb: Annotated[Optional[Mode], typer.Option(help="Whether to use BNB for model evaluation")] = Mode.BOTH,
 ) -> None:
     """Evaluate your end-to-end rag generator and retriever"""
     evaluate_rag(
@@ -354,6 +361,8 @@ def eval_rag(
         # torch_dtype=cast(Literal["float16", "bfloat16"], torch_dtype.value),
         top_k=top_k,
         evaluate_generator=evaluate_generator,
+        use_peft=use_peft,
+        use_bnb=use_bnb,
     )
 
 
@@ -382,6 +391,8 @@ def eval_retriever(
         TorchDtype, typer.Option(help="torch.dtype to use for tensors. float16 or bfloat16.")
     ] = TorchDtype.float16,
     top_k: Annotated[int, typer.Option(help="Top K retrieval")] = 10,
+    use_peft: Annotated[bool, typer.Option(help="Whether to use Peft for model evaluation.")] = True,
+    use_bnb: Annotated[bool, typer.Option(help="Whether to use BNB for model evaluation")] = True,
 ) -> None:
     """Evaluate your retriever only"""
     evaluate_retriever(
@@ -396,6 +407,8 @@ def eval_retriever(
         device=device,
         torch_dtype=torch_dtype.value,
         top_k=top_k,
+        use_peft=use_peft,
+        use_bnb=use_bnb,
     )
 
 
