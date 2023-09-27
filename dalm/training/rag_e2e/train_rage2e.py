@@ -480,11 +480,10 @@ def train_e2e(
                     accelerator.log({"train/loss": total_loss / (step + 1)}, step=completed_steps)
 
             if isinstance(checkpointing_steps, int):
-                if completed_steps % checkpointing_steps == 0:
+                if completed_steps % checkpointing_steps == 0 and output_dir is not None:
                     step_output_dir = f"step_{completed_steps}"
-                    if output_dir is not None:
-                        output_dir = os.path.join(output_dir, step_output_dir)
-                    accelerator.save_state(output_dir)
+                    checkpoint_output_dir = os.path.join(output_dir, step_output_dir)
+                    accelerator.save_state(checkpoint_output_dir)
 
             if completed_steps >= max_train_steps:
                 break
