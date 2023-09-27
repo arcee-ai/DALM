@@ -194,6 +194,7 @@ def train_retriever(
     report_to: str = "all",
     sanity_test: bool = True,
     use_peft: bool = True,
+    use_bnb: bool = True,
 ) -> None:
     # Get the passed in vars before beginning training, in case we report training
     args = dict(locals())
@@ -250,7 +251,7 @@ def train_retriever(
     for index in random.sample(range(len(processed_datasets)), 3):
         logger.info(f"Sample {index} of the training set: {processed_datasets[index]}.")
 
-    if args.use_peft:
+    if use_peft:
         model.print_trainable_parameters()  # type: ignore # No idea what mypy is complaining about.
 
     accelerator.print(model)
@@ -338,7 +339,7 @@ def train_retriever(
             resume_step = int(training_difference.replace("step_", "")) * gradient_accumulation_steps
             starting_epoch = resume_step // len(train_dataloader)
             resume_step -= starting_epoch * len(train_dataloader)
-            completed_steps = resume_step // args.gradient_accumulation_steps
+            completed_steps = resume_step // gradient_accumulation_steps
 
     # Prepare everything with our `accelerator`.
     model, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
