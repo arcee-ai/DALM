@@ -227,7 +227,7 @@ def train_retriever(
             os.makedirs(output_dir, exist_ok=True)
     accelerator.wait_for_everyone()
 
-    model = AutoModelForSentenceEmbedding(retriever_name_or_path, use_bnb=True, get_peft=use_peft)
+    model = AutoModelForSentenceEmbedding(retriever_name_or_path, use_bnb=use_bnb, get_peft=use_peft)
     tokenizer = model.tokenizer
 
     # dataset download and preprocessing
@@ -359,8 +359,8 @@ def train_retriever(
             active_dataloader = train_dataloader
         for step, batch in enumerate(active_dataloader):
             with accelerator.accumulate(model):
-                query_embs = model(**{k.replace("query_", ""): v for k, v in batch.items() if "query" in k})
-                passage_embs = model(**{k.replace("passage_", ""): v for k, v in batch.items() if "passage" in k})
+                query_embs = model(batch["query_input_ids"], batch["query_attention_mask"])
+                passage_embs = model(batch["passage_input_ids"], batch["passage_attention_mask"])
                 logits = get_cosine_sim(query_embs, passage_embs, logit_scale)
 
                 loss_query = get_nt_xent_loss(logits)
@@ -384,11 +384,10 @@ def train_retriever(
                     accelerator.log({"train/loss": total_loss / (step + 1)}, step=completed_steps)
 
             if isinstance(checkpointing_steps, int):
-                if completed_steps % checkpointing_steps == 0:
+                if completed_steps % checkpointing_steps == 0 and output_dir is not None:
                     step_output_dir = f"step_{completed_steps}"
-                    if output_dir is not None:
-                        output_dir = os.path.join(output_dir, step_output_dir)
-                    accelerator.save_state(output_dir)
+                    checkpoint_output_dir = os.path.join(output_dir, step_output_dir)
+                    accelerator.save_state(checkpoint_output_dir)
 
             if completed_steps >= max_train_steps:
                 break
@@ -443,6 +442,7 @@ def main() -> None:
         report_to=args.report_to,
         sanity_test=args.sanity_test,
         use_peft=args.use_peft,
+        use_bnb=args.use_bnb,
     )
 
 
