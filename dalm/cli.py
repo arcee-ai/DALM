@@ -339,8 +339,6 @@ def eval_rag(
     evaluate_generator: Annotated[
         bool, typer.Option(help="Enable generator evaluation. If false, equivalent to eval-retriever")
     ] = True,
-    use_peft: Annotated[Optional[Mode], typer.Option(help="Whether to use Peft for model evaluation.")] = Mode.BOTH,
-    use_bnb: Annotated[Optional[Mode], typer.Option(help="Whether to use BNB for model evaluation")] = Mode.BOTH,
 ) -> None:
     """Evaluate your end-to-end rag generator and retriever"""
     evaluate_rag(
@@ -361,8 +359,6 @@ def eval_rag(
         # torch_dtype=cast(Literal["float16", "bfloat16"], torch_dtype.value),
         top_k=top_k,
         evaluate_generator=evaluate_generator,
-        use_peft=use_peft,
-        use_bnb=use_bnb,
     )
 
 
@@ -391,8 +387,6 @@ def eval_retriever(
         TorchDtype, typer.Option(help="torch.dtype to use for tensors. float16 or bfloat16.")
     ] = TorchDtype.float16,
     top_k: Annotated[int, typer.Option(help="Top K retrieval")] = 10,
-    use_peft: Annotated[bool, typer.Option(help="Whether to use Peft for model evaluation.")] = True,
-    use_bnb: Annotated[bool, typer.Option(help="Whether to use BNB for model evaluation")] = True,
 ) -> None:
     """Evaluate your retriever only"""
     evaluate_retriever(
@@ -407,8 +401,6 @@ def eval_retriever(
         device=device,
         torch_dtype=torch_dtype.value,
         top_k=top_k,
-        use_peft=use_peft,
-        use_bnb=use_bnb,
     )
 
 

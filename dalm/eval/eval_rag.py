@@ -1,6 +1,6 @@
 import argparse
 from argparse import Namespace
-from typing import Final, List, Literal, Optional
+from typing import Final, List, Literal
 
 import torch
 from accelerate.logging import get_logger
@@ -19,7 +19,7 @@ from dalm.eval.utils import (
     preprocess_dataset,
     print_eval_results,
 )
-from dalm.models.rag_e2e_base_model import AutoModelForRagE2E, Mode
+from dalm.models.rag_e2e_base_model import AutoModelForRagE2E
 from dalm.utils import load_dataset
 
 logger = get_logger(__name__)
@@ -111,19 +111,6 @@ def parse_args() -> Namespace:
         action="store_true",
         help="Enable generator evaluation.",
     )
-    parser.add_argument(
-        "--use_peft",
-        choices=list(Mode),
-        type=Mode,
-        required=False,
-        help="Whether to enable experiment trackers for logging.",
-    )
-    parser.add_argument(
-        "--use_bnb",
-        choices=list(Mode),
-        type=Mode,
-        help="Whether to use 4bit quantization.",
-    )
     args = parser.parse_args()
 
     return args
@@ -186,14 +173,12 @@ def evaluate_rag(
     torch_dtype: Literal["float16", "bfloat16"] = "float16",
     top_k: int = 10,
     evaluate_generator: bool = True,
-    use_peft: Optional[Mode] = None,
-    use_bnb: Optional[Mode] = None,
 ) -> None:
     """Runs rag evaluation. See `dalm eval-rag --help for details on params"""
     test_dataset = load_dataset(dataset_or_path)
     selected_torch_dtype: Final[torch.dtype] = torch.float16 if torch_dtype == "float16" else torch.bfloat16
     # rag retriever and the generator (don't load new peft layers no need)
-    rag_model = AutoModelForRagE2E(retriever_name_or_path, generator_name_or_path, get_peft=use_peft, use_bnb=use_bnb)
+    rag_model = AutoModelForRagE2E(retriever_name_or_path, generator_name_or_path)
 
     processed_datasets = preprocess_dataset(
         test_dataset, rag_model.retriever_tokenizer, query_column_name, passage_column_name, max_length
@@ -305,8 +290,6 @@ def main() -> None:
         torch_dtype=args.torch_dtype,
         top_k=args.top_k,
         evaluate_generator=args.evaluate_generator,
-        use_peft=args.use_peft,
-        use_bnb=args.use_bnb,
     )
 
 
