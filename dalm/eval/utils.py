@@ -273,8 +273,8 @@ def print_eval_results(
     recalls: list[float],
     total_hit: int,
 ) -> None:
-    recall = sum(precisions) / total_examples
-    precision = sum(recalls) / total_examples
+    precision = sum(precisions) / total_examples
+    recall = sum(recalls) / total_examples
     hit_rate = total_hit / float(total_examples)
 
     print("Retriever results:")
