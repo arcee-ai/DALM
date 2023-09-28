@@ -209,7 +209,7 @@ def parse_args() -> Namespace:
         choices=list(Mode),
         type=Mode,
         required=False,
-        help="Whether to enable experiment trackers for logging.",
+        help="Whether to use PEFT.",
     )
     parser.add_argument(
         "--use_bnb",
