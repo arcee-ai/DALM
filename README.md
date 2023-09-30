@@ -29,6 +29,16 @@ For the first time in the literature, we modified the initial RAG-end2end model 
 # Usage
 To perform training and evaluation for both the retriever model and the new rag-e2e model, please adhere to the following steps.
 
+## System Requirements
+
+The system reqs depend on the retriever model, generator model, and batch size. But for reference (e2e rag), we used the following for our experiments (eval results below):
+* retriever: `BAAI/bge-large-en`
+* generator: `meta-llama/Llama-2-7b-hf`
+* batch size: 18
+* dataset size: 200k
+
+This took 7 hours on a single A100 GPU (80GB).
+
 ## Installation
 
 You can install this repo directly via `pip install indomain`
