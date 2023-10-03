@@ -37,8 +37,8 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         if self.is_autoregressive:
             # we take the last hidden state of the model
-            token_embeddings = self.model.sample(
-                input_ids, attention_mask, output_hidden_states=True, return_dict_in_generate=True
+            token_embeddings = self.model(
+                input_ids, attention_mask=attention_mask, output_hidden_states=True, return_dict=True
             ).hidden_states[-1]
         else:
             # First element of model_output contains all token embeddings
