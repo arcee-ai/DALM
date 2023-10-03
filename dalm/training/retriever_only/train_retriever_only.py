@@ -163,6 +163,11 @@ def parse_args() -> Namespace:
         action="store_true",
         help="Whether to use model quantization.",
     )
+    parser.add_argument(
+        "--is_autoregressive",
+        action="store_true",
+        help="Whether model is an auto-regressive model/clm ",
+    )
     args = parser.parse_args()
 
     return args
@@ -195,6 +200,7 @@ def train_retriever(
     sanity_test: bool = True,
     use_peft: bool = True,
     use_bnb: bool = True,
+    is_autoregressive: bool = False,
 ) -> None:
     # Get the passed in vars before beginning training, in case we report training
     args = dict(locals())
@@ -227,7 +233,9 @@ def train_retriever(
             os.makedirs(output_dir, exist_ok=True)
     accelerator.wait_for_everyone()
 
-    model = AutoModelForSentenceEmbedding(retriever_name_or_path, use_bnb=use_bnb, get_peft=use_peft)
+    model = AutoModelForSentenceEmbedding(
+        retriever_name_or_path, use_bnb=use_bnb, get_peft=use_peft, is_autoregressive=is_autoregressive
+    )
     tokenizer = model.tokenizer
 
     # dataset download and preprocessing
@@ -443,6 +451,7 @@ def main() -> None:
         sanity_test=args.sanity_test,
         use_peft=args.use_peft,
         use_bnb=args.use_bnb,
+        is_autoregressive=args.is_autoregressive,
     )
 
 

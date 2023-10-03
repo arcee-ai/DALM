@@ -105,11 +105,14 @@ def evaluate_retriever(
     device: str = "cuda",
     torch_dtype: Literal["float16", "bfloat16"] = "float16",
     top_k: int = 10,
+    is_autoregressive: bool = False,
 ) -> None:
     """Runs rag evaluation. See `dalm eval-retriever --help for details on params"""
     test_dataset = load_dataset(dataset_or_path)
     selected_torch_dtype: Final[torch.dtype] = torch.float16 if torch_dtype == "float16" else torch.bfloat16
-    retriever_model = AutoModelForSentenceEmbedding(retriever_name_or_path, get_peft=False, use_bnb=False)
+    retriever_model = AutoModelForSentenceEmbedding(
+        retriever_name_or_path, get_peft=False, use_bnb=False, is_autoregressive=is_autoregressive
+    )
     retriever_tokenizer = retriever_model.tokenizer
 
     processed_datasets = preprocess_dataset(
