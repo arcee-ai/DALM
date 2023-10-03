@@ -88,6 +88,11 @@ def parse_args() -> Namespace:
         default=10,
         help="Top K retrieval",
     )
+    parser.add_argument(
+        "--is_autoregressive",
+        action="store_true",
+        help="Whether the model is autoregressive or not",
+    )
     args = parser.parse_args()
 
     return args
@@ -119,7 +124,8 @@ def evaluate_retriever(
         test_dataset, retriever_tokenizer, query_column_name, passage_column_name, max_length
     )
     # peft config and wrapping
-    retriever_model.attach_pre_trained_peft_layers(retriever_peft_model_path, device)
+    if retriever_peft_model_path is not None:
+        retriever_model.attach_pre_trained_peft_layers(retriever_peft_model_path, device)
     unique_passage_dataset, passage_embeddings_array = get_passage_embeddings(
         processed_datasets,
         passage_column_name,
@@ -177,6 +183,7 @@ def main() -> None:
         device=args.device,
         torch_dtype=args.torch_dtype,
         top_k=args.top_k,
+        is_autoregressive=args.is_autoregressive,
     )
 
 

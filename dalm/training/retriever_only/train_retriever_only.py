@@ -238,6 +238,9 @@ def train_retriever(
     )
     tokenizer = model.tokenizer
 
+    if is_autoregressive:
+        tokenizer.pad_token = tokenizer.eos_token
+
     # dataset download and preprocessing
     dataset = load_dataset(dataset_or_path)
 
@@ -413,8 +416,9 @@ def train_retriever(
             if accelerator.is_main_process:
                 if isinstance(checkpointing_steps, str):
                     accelerator.save_state(os.path.join(output_dir, f"epoch_{epoch}"))
-                accelerator.unwrap_model(model).save_pretrained(
-                    output_dir, state_dict=accelerator.get_state_dict(accelerator.unwrap_model(model))
+
+                accelerator.unwrap_model(model.model).save_pretrained(
+                    output_dir, state_dict=accelerator.get_state_dict(accelerator.unwrap_model(model.model))
                 )
                 tokenizer.save_pretrained(output_dir)
             accelerator.wait_for_everyone()
