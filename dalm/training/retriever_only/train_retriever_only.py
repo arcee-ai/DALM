@@ -169,7 +169,7 @@ def parse_args() -> Namespace:
 
 
 def train_retriever(
-    retriever_name_or_path: str,
+    retriever_model: AutoModelForSentenceEmbedding,
     dataset_or_path: str | Dataset,
     passage_column_name: str = "Abstract",
     query_column_name: str = "Question",
@@ -227,7 +227,7 @@ def train_retriever(
             os.makedirs(output_dir, exist_ok=True)
     accelerator.wait_for_everyone()
 
-    model = AutoModelForSentenceEmbedding(retriever_name_or_path, use_bnb=use_bnb, get_peft=use_peft)
+    model = retriever_model # AutoModelForSentenceEmbedding(retriever_name_or_path, use_bnb=use_bnb, get_peft=use_peft)
     tokenizer = model.tokenizer
 
     # dataset download and preprocessing
@@ -416,9 +416,10 @@ def train_retriever(
 
 def main() -> None:
     args = parse_args()
+    model = AutoModelForSentenceEmbedding(args.retriever_name_or_path, use_bnb=args.use_bnb, get_peft=args.use_peft)
     train_retriever(
         dataset_or_path=args.dataset_path,
-        retriever_name_or_path=args.retriever_name_or_path,
+        retriever_model=model,
         passage_column_name=args.passage_column_name,
         query_column_name=args.query_column_name,
         query_max_len=args.query_max_len,
