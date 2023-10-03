@@ -18,7 +18,7 @@ def save_model_hook(models: List[AutoModel], weights: List, output_dir: str) -> 
         if isinstance(model, AutoModelForSentenceEmbedding):
             formatted_weights = extract_sub_state_dict(weights[i], "model.")
             model.model.save_pretrained(output_dir, state_dict=formatted_weights)
-        if isinstance(model, AutoModelForRagE2E):
+        elif isinstance(model, AutoModelForRagE2E):
             combined_weights = weights[i]
             generator_weights = extract_sub_state_dict(combined_weights, "generator_model.")
             retriever_weights = extract_sub_state_dict(combined_weights, "retriever_model.")
@@ -26,7 +26,7 @@ def save_model_hook(models: List[AutoModel], weights: List, output_dir: str) -> 
             model.generator_model.save_pretrained(os.path.join(output_dir, "generator"), state_dict=generator_weights)
             model.retriever_model.save_pretrained(os.path.join(output_dir, "retriever"), state_dict=retriever_weights)
         else:
-            model.save_pretrained(output_dir, state_dict=weights[i])
+            raise NotImplementedError
         # make sure to pop weight so that corresponding model is not saved again
         weights.pop()
 
