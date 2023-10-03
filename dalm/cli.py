@@ -241,6 +241,7 @@ def train_retriever_only(
     ] = True,
     use_peft: Annotated[bool, typer.Option(help="Whether to use Peft during fine-tuning.")] = True,
     use_bnb: Annotated[bool, typer.Option(help="Whether to use BNB during fine-tuning.")] = True,
+    is_autoregressive: Annotated[bool, typer.Option(help="Whether the model is autoregressive.")] = False,
 ) -> None:
     """Train only the retriever using contrastive training"""
     train_retriever(
@@ -387,6 +388,7 @@ def eval_retriever(
         TorchDtype, typer.Option(help="torch.dtype to use for tensors. float16 or bfloat16.")
     ] = TorchDtype.float16,
     top_k: Annotated[int, typer.Option(help="Top K retrieval")] = 10,
+    is_autoregressive: Annotated[bool, typer.Option(help="Whether the model is autoregressive.")] = False,
 ) -> None:
     """Evaluate your retriever only"""
     evaluate_retriever(
@@ -401,6 +403,7 @@ def eval_retriever(
         device=device,
         torch_dtype=torch_dtype.value,
         top_k=top_k,
+        is_autoregressive=is_autoregressive,
     )
 
 
