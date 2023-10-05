@@ -56,7 +56,7 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
             self.tokenizer.add_eos_token = True
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        self.extact_eos_only = extract_eos_only
+        self.extract_eos_only = extract_eos_only
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         if self.is_autoregressive:
@@ -65,7 +65,7 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
                 input_ids, attention_mask=attention_mask, output_hidden_states=True, return_dict=True
             ).hidden_states[-1]
 
-            if self.extact_eos_only:
+            if self.extract_eos_only:
                 attention_mask = eos_mask(attention_mask)
         else:
             # First element of model_output contains all token embeddings
@@ -124,5 +124,5 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
         )
 
     def __post_init__(self) -> None:
-        if not self.is_autoregressive and self.extact_eos_only:
+        if not self.is_autoregressive and self.extract_eos_only:
             warnings.warn("eos_extraction_method is ignored for non-autoregressive models", stacklevel=2)
