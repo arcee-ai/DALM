@@ -238,9 +238,6 @@ def train_retriever(
     )
     tokenizer = model.tokenizer
 
-    if is_autoregressive:
-        tokenizer.pad_token = tokenizer.eos_token
-
     # dataset download and preprocessing
     dataset = load_dataset(dataset_or_path)
 

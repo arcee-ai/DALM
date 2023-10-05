@@ -2,7 +2,7 @@ from typing import List, Optional, Union
 
 import torch
 from peft import LoraConfig, PeftModel, TaskType, get_peft_model
-from transformers import AutoModel, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModel, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 
 class AutoModelForSentenceEmbedding(torch.nn.Module):
@@ -16,7 +16,9 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
     ) -> None:
         super(AutoModelForSentenceEmbedding, self).__init__()
 
-        self.model = AutoModel.from_pretrained(
+        model_type = AutoModel if not is_autoregressive else AutoModelForCausalLM
+
+        self.model = model_type.from_pretrained(
             model_name,
             device_map={"": 0},
             quantization_config=AutoModelForSentenceEmbedding.__get_bnb_config() if use_bnb else None,
@@ -30,7 +32,10 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
 
         self.normalize = normalize
         self.is_autoregressive = is_autoregressive
+
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        if is_autoregressive:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         if self.is_autoregressive:
