@@ -25,9 +25,7 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
         if get_peft:
             self.model = get_peft_model(
                 self.model,
-                peft_config=AutoModelForSentenceEmbedding.__get_lora_config(
-                    target_modules=["key", "query", "value"],
-                ),
+                peft_config=AutoModelForSentenceEmbedding.__get_lora_config(is_autoregressive=is_autoregressive),
             )
 
         self.normalize = normalize
@@ -83,12 +81,14 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
         lora_dropout: float = 0.05,
         bias: str = "none",
         target_modules: Optional[Union[List[str], str]] = None,
+        is_autoregressive: bool = False,
     ) -> LoraConfig:
         return LoraConfig(
-            task_type=TaskType.FEATURE_EXTRACTION,
+            task_type=TaskType.FEATURE_EXTRACTION if not is_autoregressive else TaskType.CAUSAL_LM,
             r=r,
             lora_alpha=lora_alpha,
             lora_dropout=lora_dropout,
             bias=bias,
-            target_modules=target_modules,
+            target_modules=target_modules
+            or (["key", "query", "value"] if not is_autoregressive else ["q_proj", "v_proj"]),
         )
