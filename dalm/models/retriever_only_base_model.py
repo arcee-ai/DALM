@@ -1,8 +1,25 @@
+import warnings
 from typing import List, Optional, Union
 
 import torch
 from peft import LoraConfig, PeftModel, TaskType, get_peft_model
 from transformers import AutoModel, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
+
+def eos_mask(mask: torch.Tensor, padding: str = "left") -> torch.Tensor:
+    """
+    Returns a mask that only masks everything else but the last token of each sequence.
+    """
+    new_mask = torch.zeros_like(mask)
+
+    if padding == "right":
+        ones_counts = mask.sum(dim=1)
+        indices = (torch.arange(mask.size(0)), ones_counts - 1)
+        new_mask[indices] = 1
+    else:
+        new_mask[:, -1] = 1
+
+    return new_mask
 
 
 class AutoModelForSentenceEmbedding(torch.nn.Module):
@@ -13,6 +30,7 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
         use_bnb: bool = True,
         get_peft: bool = True,
         is_autoregressive: bool = False,
+        extract_eos_only: bool = False,
     ) -> None:
         super(AutoModelForSentenceEmbedding, self).__init__()
 
@@ -35,7 +53,10 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         if is_autoregressive:
+            self.tokenizer.add_eos_token = True
             self.tokenizer.pad_token = self.tokenizer.eos_token
+
+        self.extact_eos_only = extract_eos_only
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         if self.is_autoregressive:
@@ -43,9 +64,13 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
             token_embeddings = self.model(
                 input_ids, attention_mask=attention_mask, output_hidden_states=True, return_dict=True
             ).hidden_states[-1]
+
+            if self.extact_eos_only:
+                attention_mask = eos_mask(attention_mask)
         else:
             # First element of model_output contains all token embeddings
             token_embeddings = self.model(input_ids, attention_mask)[0]
+
         embeddings = self.mean_pooling(token_embeddings, attention_mask)
         if self.normalize:
             embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
@@ -97,3 +122,7 @@ class AutoModelForSentenceEmbedding(torch.nn.Module):
             target_modules=target_modules
             or (["key", "query", "value"] if not is_autoregressive else ["q_proj", "v_proj"]),
         )
+
+    def __post_init__(self) -> None:
+        if not self.is_autoregressive and self.extact_eos_only:
+            warnings.warn("eos_extraction_method is ignored for non-autoregressive models", stacklevel=2)

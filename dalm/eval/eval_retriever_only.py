@@ -93,6 +93,11 @@ def parse_args() -> Namespace:
         action="store_true",
         help="Whether the model is autoregressive or not",
     )
+    parser.add_argument(
+        "extract_eos_only",
+        action="store_true",
+        help="Whether to extract only the last token of the sequence",
+    )
     args = parser.parse_args()
 
     return args
@@ -111,12 +116,17 @@ def evaluate_retriever(
     torch_dtype: Literal["float16", "bfloat16"] = "float16",
     top_k: int = 10,
     is_autoregressive: bool = False,
+    extract_eos_only: bool = False,
 ) -> None:
     """Runs rag evaluation. See `dalm eval-retriever --help for details on params"""
     test_dataset = load_dataset(dataset_or_path)
     selected_torch_dtype: Final[torch.dtype] = torch.float16 if torch_dtype == "float16" else torch.bfloat16
     retriever_model = AutoModelForSentenceEmbedding(
-        retriever_name_or_path, get_peft=False, use_bnb=False, is_autoregressive=is_autoregressive
+        retriever_name_or_path,
+        get_peft=False,
+        use_bnb=False,
+        is_autoregressive=is_autoregressive,
+        extract_eos_only=extract_eos_only,
     )
     retriever_tokenizer = retriever_model.tokenizer
 
@@ -184,6 +194,7 @@ def main() -> None:
         torch_dtype=args.torch_dtype,
         top_k=args.top_k,
         is_autoregressive=args.is_autoregressive,
+        extract_eos_only=args.extract_eos_only,
     )
 
 
