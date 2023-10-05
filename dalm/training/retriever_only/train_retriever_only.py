@@ -168,6 +168,11 @@ def parse_args() -> Namespace:
         action="store_true",
         help="Whether model is an auto-regressive model/clm ",
     )
+    parser.add_argument(
+        "--extract_eos_only",
+        action="store_true",
+        help="Whether to extract only the last token of the sequence",
+    )
     args = parser.parse_args()
 
     return args
@@ -201,6 +206,7 @@ def train_retriever(
     use_peft: bool = True,
     use_bnb: bool = True,
     is_autoregressive: bool = False,
+    extract_eos_only: bool = False,
 ) -> None:
     # Get the passed in vars before beginning training, in case we report training
     args = dict(locals())
@@ -234,7 +240,11 @@ def train_retriever(
     accelerator.wait_for_everyone()
 
     model = AutoModelForSentenceEmbedding(
-        retriever_name_or_path, use_bnb=use_bnb, get_peft=use_peft, is_autoregressive=is_autoregressive
+        retriever_name_or_path,
+        use_bnb=use_bnb,
+        get_peft=use_peft,
+        is_autoregressive=is_autoregressive,
+        extract_eos_only=extract_eos_only,
     )
     tokenizer = model.tokenizer
 
@@ -453,6 +463,7 @@ def main() -> None:
         use_peft=args.use_peft,
         use_bnb=args.use_bnb,
         is_autoregressive=args.is_autoregressive,
+        extract_eos_only=args.extract_eos_only,
     )
 
 
