@@ -94,7 +94,7 @@ def parse_args() -> Namespace:
         help="Whether the model is autoregressive or not",
     )
     parser.add_argument(
-        "extract_eos_only",
+        "--extract_eos_only",
         action="store_true",
         help="Whether to extract only the last token of the sequence",
     )
