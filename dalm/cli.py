@@ -130,6 +130,7 @@ def train_rag_e2e(
     ] = True,
     use_peft: Annotated[Optional[Mode], typer.Option(help="Whether to use Peft during fine-tuning.")] = None,
     use_bnb: Annotated[Optional[Mode], typer.Option(help="Whether to use BNB during fine-tuning.")] = None,
+    retriever_is_autoregressive: Annotated[bool, typer.Option(help="Whether the retriever is autoregressive.")] = False,
 ) -> None:
     """End-to-end train an in-domain model, including the retriever and generator"""
     train_e2e(
@@ -162,6 +163,7 @@ def train_rag_e2e(
         sanity_test=sanity_test,
         use_peft=use_peft,
         use_bnb=use_bnb,
+        retriever_is_autoregressive=retriever_is_autoregressive,
     )
 
 
@@ -271,6 +273,7 @@ def train_retriever_only(
         sanity_test=sanity_test,
         use_peft=use_peft,
         use_bnb=use_bnb,
+        is_autoregressive=is_autoregressive,
     )
 
 
@@ -340,6 +343,7 @@ def eval_rag(
     evaluate_generator: Annotated[
         bool, typer.Option(help="Enable generator evaluation. If false, equivalent to eval-retriever")
     ] = True,
+    retriever_is_autoregressive: Annotated[bool, typer.Option(help="Whether the retriever is autoregressive.")] = False,
 ) -> None:
     """Evaluate your end-to-end rag generator and retriever"""
     evaluate_rag(
@@ -360,6 +364,7 @@ def eval_rag(
         # torch_dtype=cast(Literal["float16", "bfloat16"], torch_dtype.value),
         top_k=top_k,
         evaluate_generator=evaluate_generator,
+        retriever_is_autoregressive=retriever_is_autoregressive,
     )
 
 

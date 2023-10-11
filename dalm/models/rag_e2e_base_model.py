@@ -10,6 +10,8 @@ from transformers import (
     BitsAndBytesConfig,
 )
 
+from dalm.utils import eos_mask
+
 
 class Mode(Enum):
     GENERATOR = "generator"
@@ -25,6 +27,7 @@ class AutoModelForRagE2E(torch.nn.Module):
         normalize: bool = True,
         get_peft: Optional[Mode] = None,
         use_bnb: Optional[Mode] = None,
+        retriever_is_autoregressive: bool = False,
     ) -> None:
         super(AutoModelForRagE2E, self).__init__()
 
@@ -36,6 +39,10 @@ class AutoModelForRagE2E(torch.nn.Module):
             else None,
         )
         self.retriever_tokenizer = AutoTokenizer.from_pretrained(retriever_name)
+        if retriever_is_autoregressive:
+            self.retriever_tokenizer.add_eos_token = True
+            self.retriever_tokenizer.pad_token = self.retriever_tokenizer.eos_token
+
         self.normalize = normalize
 
         # Generator initialization
@@ -57,7 +64,9 @@ class AutoModelForRagE2E(torch.nn.Module):
                     self.retriever_model,
                     peft_config=AutoModelForRagE2E.__get_lora_config(
                         TaskType.FEATURE_EXTRACTION,
-                        target_modules=["key", "query", "value"],
+                        target_modules=["key", "query", "value"]
+                        if not retriever_is_autoregressive
+                        else ["q_proj", "v_proj"],
                     ),
                 )
 
@@ -69,10 +78,21 @@ class AutoModelForRagE2E(torch.nn.Module):
                         target_modules=["q_proj", "v_proj"],
                     ),
                 )
+        self.retriever_is_autoregressive = retriever_is_autoregressive
 
     def retrieval_forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
-        model_output = self.retriever_model(input_ids=input_ids, attention_mask=attention_mask)
-        embeddings = self.mean_pooling(model_output, attention_mask)
+        if self.retriever_is_autoregressive:
+            # we take the last hidden state of the model
+            token_embeddings = self.retriever_model(
+                input_ids, attention_mask=attention_mask, output_hidden_states=True, return_dict=True
+            ).hidden_states[-1]
+
+            attention_mask = eos_mask(attention_mask)
+        else:
+            # First element of model_output contains all token embeddings
+            token_embeddings = self.retriever_model(input_ids, attention_mask)[0]
+
+        embeddings = self.mean_pooling(token_embeddings, attention_mask)
         if self.normalize:
             embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
 
@@ -83,11 +103,10 @@ class AutoModelForRagE2E(torch.nn.Module):
             return self.retrieval_forward(input_ids, attention_mask)
         else:
             gen_outputs = self.generator_model(input_ids=input_ids, attention_mask=attention_mask)
-
             return gen_outputs.logits
 
     def mean_pooling(self, model_output: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
-        token_embeddings = model_output[0]  # First element of model_output contains all token embeddings
+        token_embeddings = model_output
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
         return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 

@@ -111,6 +111,12 @@ def parse_args() -> Namespace:
         action="store_true",
         help="Enable generator evaluation.",
     )
+    parser.add_argument(
+        "--is_retriever_autoregressive",
+        action="store_true",
+        help="Whether the retriever model is autoregressive or not",
+    )
+
     args = parser.parse_args()
 
     return args
@@ -173,12 +179,15 @@ def evaluate_rag(
     torch_dtype: Literal["float16", "bfloat16"] = "float16",
     top_k: int = 10,
     evaluate_generator: bool = True,
+    retriever_is_autoregressive: bool = False,
 ) -> None:
     """Runs rag evaluation. See `dalm eval-rag --help for details on params"""
     test_dataset = load_dataset(dataset_or_path)
     selected_torch_dtype: Final[torch.dtype] = torch.float16 if torch_dtype == "float16" else torch.bfloat16
     # rag retriever and the generator (don't load new peft layers no need)
-    rag_model = AutoModelForRagE2E(retriever_name_or_path, generator_name_or_path)
+    rag_model = AutoModelForRagE2E(
+        retriever_name_or_path, generator_name_or_path, retriever_is_autoregressive=retriever_is_autoregressive
+    )
 
     processed_datasets = preprocess_dataset(
         test_dataset, rag_model.retriever_tokenizer, query_column_name, passage_column_name, max_length
@@ -290,6 +299,7 @@ def main() -> None:
         torch_dtype=args.torch_dtype,
         top_k=args.top_k,
         evaluate_generator=args.evaluate_generator,
+        retriever_is_autoregressive=args.is_retriever_autoregressive,
     )
 
 

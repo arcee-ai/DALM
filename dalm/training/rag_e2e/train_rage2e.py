@@ -217,6 +217,11 @@ def parse_args() -> Namespace:
         type=Mode,
         help="Whether to use 4bit quantization.",
     )
+    parser.add_argument(
+        "--retriever_is_autoregressive",
+        action="store_true",
+        help="Whether the retriever is autoregressive.",
+    )
     args = parser.parse_args()
 
     return args
@@ -252,6 +257,7 @@ def train_e2e(
     sanity_test: bool = True,
     use_peft: Optional[Mode] = None,
     use_bnb: Optional[Mode] = None,
+    retriever_is_autoregressive: bool = False,
 ) -> None:
     """Train an in-domain model e2e with a retriever and generator. See `dalm train-rag-e2e --help` for more details"""
     # Get the passed in vars before beginning training, in case we report training
@@ -260,7 +266,13 @@ def train_e2e(
     args["lr_scheduler_type"] = args["lr_scheduler_type"].value
     args = {k: v for k, v in args.items() if v is None or isinstance(v, (float, int, str, NoneType))}
     # rag retriver and the generator
-    rag_model = AutoModelForRagE2E(retriever_name_or_path, generator_name_or_path, get_peft=use_peft, use_bnb=use_bnb)
+    rag_model = AutoModelForRagE2E(
+        retriever_name_or_path,
+        generator_name_or_path,
+        get_peft=use_peft,
+        use_bnb=use_bnb,
+        retriever_is_autoregressive=retriever_is_autoregressive,
+    )
 
     accelerator = Accelerator(log_with=report_to, project_dir=output_dir) if with_tracking else Accelerator()
     # Make one log on every process with the configuration for debugging.
@@ -554,6 +566,7 @@ def main() -> None:
         sanity_test=args.sanity_test,
         use_peft=args.use_peft,
         use_bnb=args.use_bnb,
+        retriever_is_autoregressive=args.retriever_is_autoregressive,
     )
 
 
