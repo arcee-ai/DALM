@@ -9,6 +9,7 @@ import torch
 from datasets import Dataset, DatasetDict
 from sklearn.model_selection import train_test_split
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
+from docs_to_passage.utils import TEXT_COL, TITLE_COL
 
 DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 TEST_SIZE = 0.2
@@ -111,14 +112,32 @@ def split_dataset(
 
 
 def generate_qa_from_dataset(
-    dataset: Dataset, passage_column_name: str, title_column_name: str, sample_size: int, batch_size: int
+    dataset: Dataset, passage_column_name: str = TEXT_COL, title_column_name: str = TITLE_COL, sample_size: int = None, batch_size: int = 100
 ) -> DatasetDict:
+    """
+    Generate QA pairs from the given dataset
+
+    Args:
+        dataset (Dataset): The input dataset containing passages and titles.
+        passage_column_name (str, optional): The name of the column in the dataset that contains the passage texts.
+        title_column_name (str, optional): The name of the column in the dataset that contains the title texts.
+        sample_size (int, optional): The number of samples to be considered for QA pair generation. If not provided, 
+                                     the whole dataset will be used.
+        batch_size (int, optional): The number of samples to be processed in a single batch. Default is 100.
+
+    Returns:
+        DatasetDict: The generated Question-Answer pairs.
+
+    """
     tokenizer = AutoTokenizer.from_pretrained(QA_MODEL)
     model = AutoModelForSeq2SeqLM.from_pretrained(QA_MODEL, device_map="auto", load_in_8bit=True)
     # shuffle data
     dataset.shuffle(seed=42)
     # select a subset
-    num_samples = min(sample_size, len(dataset))
+    if sample_size:
+        num_samples = min(sample_size, len(dataset))
+    else:
+        num_samples = len(dataset)
     small_dataset = dataset.select(range(num_samples))
     # train-test split
     small_dataset_splits = split_dataset(small_dataset, title_column_name)
