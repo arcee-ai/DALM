@@ -9,7 +9,12 @@ import torch
 from datasets import Dataset, DatasetDict
 from sklearn.model_selection import train_test_split
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
-from docs_to_passage.utils import TEXT_COL, TITLE_COL
+from dalm.datasets.docs_to_passage.utils import TEXT_COL, TITLE_COL, make_sure_dalm_is_installed
+
+make_sure_dalm_is_installed()
+
+from docs_to_passage.utils import TEXT_COL as TEXT_COL2
+print(f"TEXT_COL2: {TEXT_COL2}")
 
 DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 TEST_SIZE = 0.2
