@@ -5,9 +5,6 @@ DEFAULT_MIN_WORDS = 5
 TITLE_COL = "title"
 TEXT_COL = "text"
 
-def make_sure_dalm_is_installed():
-    print("dalm is installed")
-
 
 def split_text(text: str, n: int = DEFAULT_MAX_WORDS, character: str = " ") -> List[str]:
     """Split the text every ``n``-th occurrence of ``character``"""
