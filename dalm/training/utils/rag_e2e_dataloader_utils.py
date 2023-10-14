@@ -2,7 +2,9 @@ from typing import Any, Dict
 
 from datasets.formatting.formatting import LazyBatch
 from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
+from accelerate.logging import get_logger
 
+logger = get_logger(__name__)
 
 def preprocess_dataset(
     examples: LazyBatch,
@@ -15,6 +17,9 @@ def preprocess_dataset(
     passage_max_len: int,
     generator_max_len: int,
 ) -> Dict[str, Any]:
+    
+    logger.info("preprocess_dataset called with batch size: %s", len(examples))
+
     querie_list = examples[query_column_name]
     passage_list = examples[passage_column_name]
     answers = examples[answer_column_name]
@@ -23,6 +28,7 @@ def preprocess_dataset(
     passages = [f"#passage# {passage}" for passage in passage_list]
 
     # Tokenization for the retriever
+    logger.info("Tokenization for the retriever")
     retriever_query_tokens = retriever_tokenizer(
         queries, padding="max_length", max_length=query_max_len, truncation=True
     )
@@ -46,7 +52,9 @@ def preprocess_dataset(
 
     query_passage_lengths = []
 
+    logger.info("generator_tokenizer()")
     query_passage_tokens = generator_tokenizer(query_passage_text, padding=False)
+    logger.info("/generator_tokenizer()")
 
     for single_query_passage in query_passage_tokens["input_ids"]:
         query_passage_lengths.append(len(single_query_passage))

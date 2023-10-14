@@ -309,6 +309,7 @@ def train_e2e(
     # TODO: check if this is depdendent on the tokenizer installed
     generator_tokenizer.add_eos_token = True
 
+    logger.info("preprocess_dataset")
     processed_datasets = dataset.map(
         lambda example: preprocess_dataset(
             example,
@@ -326,11 +327,14 @@ def train_e2e(
         desc="Running tokenizer on dataset",
         num_proc=1,
     )
+    logger.info("/preprocess_dataset")
+
     # Log a few random samples from the training set:
     for index in random.sample(range(len(processed_datasets)), 2):
         logger.info(f"Sample {index} of the training set: {processed_datasets[index]}.")
 
     # get dataloaders
+    logger.info("get dataloaders")
     train_dataloader = DataLoader(
         processed_datasets,
         shuffle=True,
@@ -338,8 +342,12 @@ def train_e2e(
         batch_size=per_device_train_batch_size,
         pin_memory=True,
     )
+    logger.info("/get dataloaders")
 
+
+    logger.info("create optimizer")
     optimizer = torch.optim.Adam(rag_model.parameters(), lr=learning_rate)
+    logger.info("/create optimizer")
 
     # Scheduler and math around the number of training steps.
     overrode_max_train_steps = False
