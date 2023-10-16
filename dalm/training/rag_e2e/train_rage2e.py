@@ -48,6 +48,8 @@ from dalm.training.utils.train_utils import (
     save_model_hook,
 )
 from dalm.utils import load_dataset
+import bitsandbytes as bnb
+
 
 logger = get_logger(__name__)
 
@@ -346,7 +348,11 @@ def train_e2e(
 
 
     logger.info("create optimizer")
-    optimizer = torch.optim.Adam(rag_model.parameters(), lr=learning_rate)
+    
+    # Avoid OOM errors by using the 8-bit quantized Adam optimizer
+    # optimizer = torch.optim.Adam(rag_model.parameters(), lr=learning_rate)
+    optimizer = bnb.optim.Adam8bit(rag_model.parameters(), lr=learning_rate)
+
     logger.info("/create optimizer")
 
     # Scheduler and math around the number of training steps.
