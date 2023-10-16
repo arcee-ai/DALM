@@ -401,6 +401,7 @@ def train_e2e(
     starting_epoch = 0
     # Potentially load in the weights and states from a previous save
     if resume_from_checkpoint:
+        logger.info(f"Resuming from checkpoint")
         if resume_from_checkpoint is not None or resume_from_checkpoint != "":
             accelerator.print(f"Resumed from checkpoint: {resume_from_checkpoint}")
             accelerator.load_state(resume_from_checkpoint)
@@ -442,21 +443,29 @@ def train_e2e(
 
         for step, batch in enumerate(active_dataloader):
             with accelerator.accumulate(rag_model):
+                logger.info(f"Getting query embeddings")
                 query_embs = rag_model(
                     "retrieval", batch["retriever_query_input_ids"], batch["retriever_query_attention_mask"]
                 )
 
+                logger.info(f"Getting passage embeddings")
                 passage_embs = rag_model(
                     "retrieval",
                     batch["retriever_passage_input_ids"],
                     batch["retriever_passage_attention_mask"],
                 )
 
+                logger.info(f"Getting logits")
                 logits = get_cosine_sim(query_embs, passage_embs, logit_scale)
 
+                logger.info(f"Getting query loss")
                 loss_query = get_nt_xent_loss(logits)
+
+                logger.info(f"Getting passage loss")
                 loss_passage = get_nt_xent_loss(logits.t())
+
                 # Retriever loss
+                logger.info(f"Getting retriever contrastive loss")
                 retriver_contrastive_loss = (loss_query + loss_passage) / 2.0
 
                 # Get the loss for the causal model
@@ -464,10 +473,12 @@ def train_e2e(
 
                 ### add the loss casual here
 
+                logger.info(f"Getting generator logits")
                 generator_logits = rag_model(
                     "generation", batch["generator_input_input_ids"], batch["generator_input_attention_mask"]
                 )
 
+                logger.info(f"Marginalizing causal loss")
                 marginalize_casual_loss = compute_marginalized_loss_from_logits(
                     generator_logits,
                     batch["generator_input_input_ids"],
@@ -482,7 +493,10 @@ def train_e2e(
 
                 total_loss += accelerator.reduce(combined_loss.detach().float(), reduction="sum")
 
+                logger.info(f"Backpropagating loss")
                 accelerator.backward(combined_loss)
+
+                logger.info(f"Stepping optimizer / lr scheduler")
                 optimizer.step()
                 lr_scheduler.step()
                 rag_model.zero_grad()
