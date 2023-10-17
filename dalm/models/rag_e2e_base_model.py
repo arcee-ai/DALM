@@ -58,7 +58,9 @@ class AutoModelForRagE2E(torch.nn.Module):
             generator_name,
         )
 
+
         if get_peft is not None:
+            # TODO: if it doesn't match any cases, throw an error
             if get_peft in [Mode.RETRIEVER, Mode.BOTH]:
                 self.retriever_model = get_peft_model(
                     self.retriever_model,
