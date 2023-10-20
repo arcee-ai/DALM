@@ -379,7 +379,7 @@ def train_e2e(
     accelerator.register_save_state_pre_hook(save_model_hook)
     accelerator.register_load_state_pre_hook(load_model_hook)
 
-    logger.info("***** Running training *****")
+    logger.info("***** Running E2E training *****")
     logger.info(f"  Num examples = {len(processed_datasets)}")
     logger.info(f"  Num Epochs = {num_train_epochs}")
     logger.info(f"  Instantaneous batch size per device = {per_device_train_batch_size}")
@@ -394,7 +394,7 @@ def train_e2e(
     # Potentially load in the weights and states from a previous save
     if resume_from_checkpoint:
         if resume_from_checkpoint is not None or resume_from_checkpoint != "":
-            accelerator.print(f"Resumed from checkpoint: {resume_from_checkpoint}")
+            logger.info(f"Resumed from checkpoint: {resume_from_checkpoint}")
             accelerator.load_state(resume_from_checkpoint)
             path = os.path.basename(resume_from_checkpoint)
         else:
@@ -499,8 +499,7 @@ def train_e2e(
                 break
 
         result: Dict[str, Union[int, float, torch.Tensor]] = {}
-        # Use accelerator.print to print only on the main process.
-        accelerator.print(f"epoch {epoch}:", result)
+        logger.info(f"epoch {epoch}:", result)
         if with_tracking:
             step_loss = total_loss.item() if isinstance(total_loss, torch.Tensor) else total_loss
             result["train/epoch_loss"] = step_loss / len(train_dataloader)

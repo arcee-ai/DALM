@@ -10,6 +10,10 @@ from datasets import Dataset, DatasetDict
 from sklearn.model_selection import train_test_split
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 TEST_SIZE = 0.2
 QA_MODEL = "potsawee/t5-large-generation-squad-QuestionAnswer"
@@ -113,6 +117,7 @@ def split_dataset(
 def generate_qa_from_dataset(
     dataset: Dataset, passage_column_name: str, title_column_name: str, sample_size: int, batch_size: int
 ) -> DatasetDict:
+    logger.info(f"Generating question answer pairs with batch size: {batch_size}")
     tokenizer = AutoTokenizer.from_pretrained(QA_MODEL)
     model = AutoModelForSeq2SeqLM.from_pretrained(QA_MODEL, device_map="auto", load_in_8bit=True)
     # shuffle data
@@ -122,7 +127,7 @@ def generate_qa_from_dataset(
     small_dataset = dataset.select(range(num_samples))
     # train-test split
     small_dataset_splits = split_dataset(small_dataset, title_column_name)
-    print(
+    logger.info(
         f"Train dataset size: {len(small_dataset_splits['train'])}, "
         f"Test dataset size: {len(small_dataset_splits['test'])}"
     )
@@ -131,7 +136,7 @@ def generate_qa_from_dataset(
     )
     processed_data = small_dataset_splits.map(qa_gen_map, batched=True, batch_size=batch_size)
     filtered_data = processed_data.filter(filter_malformed_questions)
-    print(
+    logger.info(
         f"Malformed question answer pairs: "
         f"(train: {len(processed_data['train']) - len(filtered_data['train'])} "
         f"test: {len(processed_data['test']) - len(filtered_data['test'])})"
@@ -184,7 +189,7 @@ def generate_qa_from_disk(
             split_ds.to_csv(full_path)
         else:
             split_ds.save_to_disk(full_path)
-        print(f"Saving split {split_name} to {full_path}")
+        logger.info(f"Saving split {split_name} to {full_path}")
 
 
 def main() -> None:
