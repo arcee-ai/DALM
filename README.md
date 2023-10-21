@@ -105,7 +105,7 @@ python dalm/training/rag_e2e/train_rage2e.py \
   --output_dir "rag_e2e_checkpoints" \
   --with_tracking \
   --report_to all \
-  --per_device_train_batch_size 150
+  --per_device_train_batch_size 20
 ```
 or
 ```shell
@@ -116,14 +116,16 @@ dalm train-rag-e2e \
 --output-dir "rag_e2e_checkpoints" \
 --with-tracking \
 --report-to all \
---per-device-train-batch-size 150
+--per-device-train-batch-size 20
 ```
 
 For all available arguments and options, see `dalm train-rag-e2e --help`
 
 ## Evaluation
 
-Here's a summary of evaluation results on evaluating on a 200K line test csv of Patent abstracts
+Here's a summary of the evaluation results obtained from analyzing a 200,000-line test CSV containing patent abstracts. We assessed our system's performance using top-K Hit rate and Recall as evaluation metrics. To ensure a fair evaluation strategy, we ensured that the documents related to query-passage pairs in the evaluation dataset were not present in the training dataset. With access to the evaluation dataset, our initial step involved encoding the passage set into vectors and indexing them using the HNSW library. Subsequently, we calculated metrics based on the approximate nearest neighbor similarity search.
+
+- Sele
 
 | Type of Retriever | Recall | Hit rate |
 | --- | ----- | ----|
