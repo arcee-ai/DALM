@@ -499,7 +499,7 @@ def train_e2e(
                 break
 
         result: Dict[str, Union[int, float, torch.Tensor]] = {}
-        logger.info(f"epoch {epoch}:", result)
+        logger.info(f"epoch {epoch}: {result}")
         if with_tracking:
             step_loss = total_loss.item() if isinstance(total_loss, torch.Tensor) else total_loss
             result["train/epoch_loss"] = step_loss / len(train_dataloader)
