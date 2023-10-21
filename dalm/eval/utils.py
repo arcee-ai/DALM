@@ -282,7 +282,7 @@ def print_eval_results(
     hit_rate = total_hit / float(total_examples)
 
     logger.info("Retriever results:")
-    logger.info("Recall:", recall)
-    logger.info("Precision:", precision)
-    logger.info("Hit Rate:", hit_rate)
+    logger.info(f"Recall: {recall}")
+    logger.info(f"Precision: {precision}")
+    logger.info(f"Hit Rate: {hit_rate}")
     logger.info("*************")
