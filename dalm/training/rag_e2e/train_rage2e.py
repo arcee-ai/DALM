@@ -53,7 +53,7 @@ logger = get_logger(__name__)
 
 
 def parse_args() -> Namespace:
-    parser = argparse.ArgumentParser(description="training a PEFT model for Sematic Search task")
+    parser = argparse.ArgumentParser(description="training a PEFT model for Semantic Search task")
     parser.add_argument(
         "--dataset_path",
         type=str,
@@ -265,7 +265,7 @@ def train_e2e(
     # TensorBoard cannot log Enums, need the raw value
     args["lr_scheduler_type"] = args["lr_scheduler_type"].value
     args = {k: v for k, v in args.items() if v is None or isinstance(v, (float, int, str, NoneType))}
-    # rag retriver and the generator
+    # rag retriever and the generator
     rag_model = AutoModelForRagE2E(
         retriever_name_or_path,
         generator_name_or_path,
