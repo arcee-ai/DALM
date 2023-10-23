@@ -130,7 +130,7 @@ The Retriever in general is trained to be good at finding the most relevant pass
 Given a ground-truth test dataset that is a 200,000-line CSV containing patent abstracts and more importantly this evaluation dataset was not present in the training dataset, the below listed steps were followed:
 
 1. Use the trained retriever to encode all passages into an ad-hoc indexed vector store using the HNSW library.
-2. Take a query and use the trained retriever to encode it into an embedding vector (QE)
+2. Take each query and use the trained retriever to encode it into an embedding vector (QE)
 3. For each encoded passage (PE) in the vector store, find the nearest neighbor similarity search score between QE and PE (**Note**: with HNSW, exhaustiveness is avoided)
 4. Find the top-K (eg, top 5) best matches based on nearest neighbor similarity search scores
 5. Compare the matches against the ground truth top-K best matches to calculate `recall` and `hit rate`.
