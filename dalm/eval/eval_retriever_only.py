@@ -26,6 +26,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def parse_args() -> Namespace:
     parser = argparse.ArgumentParser(description="Testing a PEFT model for Sematic Search task")
     parser.add_argument(
