@@ -105,7 +105,7 @@ python dalm/training/rag_e2e/train_rage2e.py \
   --output_dir "rag_e2e_checkpoints" \
   --with_tracking \
   --report_to all \
-  --per_device_train_batch_size 150
+  --per_device_train_batch_size 20
 ```
 or
 ```shell
@@ -116,14 +116,26 @@ dalm train-rag-e2e \
 --output-dir "rag_e2e_checkpoints" \
 --with-tracking \
 --report-to all \
---per-device-train-batch-size 150
+--per-device-train-batch-size 20
 ```
 
 For all available arguments and options, see `dalm train-rag-e2e --help`
 
 ## Evaluation
 
-Here's a summary of evaluation results on evaluating on a 200K line test csv of Patent abstracts
+#### Summary of how evaluation is done
+
+The Retriever in general is trained to be good at finding the most relevant passages in a corpus given a query.
+
+Given a ground-truth test dataset that is a 200,000-line CSV containing patent abstracts and more importantly this evaluation dataset was not present in the training dataset, the below listed steps were followed:
+
+1. Use the trained retriever to encode all passages into an ad-hoc indexed vector store using the HNSW library.
+2. Take each query and use the trained retriever to encode it into an embedding vector (QE)
+3. For each encoded passage (PE) in the vector store, find the nearest neighbor similarity search score between QE and PE (**Note**: with HNSW, exhaustiveness is avoided)
+4. Find the top-K (eg, top 5) best matches based on nearest neighbor similarity search scores
+5. Compare the matches against the ground truth top-K best matches to calculate `recall` and `hit rate`.
+
+#### Results
 
 | Type of Retriever | Recall | Hit rate |
 | --- | ----- | ----|
