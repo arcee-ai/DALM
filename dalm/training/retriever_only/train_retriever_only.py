@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import argparse
-import logging
 import math
 import os
 import random
