@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Callable, Dict, List, Tuple, cast
 
 import hnswlib
@@ -8,8 +9,6 @@ from datasets.formatting.formatting import LazyBatch
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from transformers import PreTrainedTokenizer, default_data_collator
-
-import logging 
 
 logger = logging.getLogger(__name__)
 
