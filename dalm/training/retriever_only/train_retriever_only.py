@@ -209,11 +209,6 @@ def train_retriever(
     args = {k: v for k, v in args.items() if v is None or isinstance(v, (float, int, str, NoneType))}
     accelerator = Accelerator(log_with=report_to, project_dir=output_dir) if with_tracking else Accelerator()
     # Make one log on every process with the configuration for debugging.
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-        datefmt="%m/%d/%Y %H:%M:%S",
-        level=logging.INFO,
-    )
     logger.info(accelerator.state, main_process_only=False)
 
     if accelerator.is_local_main_process:

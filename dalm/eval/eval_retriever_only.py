@@ -8,7 +8,6 @@ from typing import Final, Literal
 
 import torch
 
-from accelerate.logging import get_logger
 from datasets import Dataset
 from torch.utils.data import DataLoader
 
@@ -23,8 +22,9 @@ from dalm.eval.utils import (
 from dalm.models.retriever_only_base_model import AutoModelForSentenceEmbedding
 from dalm.utils import load_dataset
 
-logger = get_logger(__name__)
+import logging
 
+logger = logging.getLogger(__name__)
 
 def parse_args() -> Namespace:
     parser = argparse.ArgumentParser(description="Testing a PEFT model for Sematic Search task")
@@ -141,7 +141,7 @@ def evaluate_retriever(
 
     id_to_passage = {i: p[passage_column_name] for i, p in enumerate(unique_passage_dataset)}
 
-    print("Construct passage index")
+    logger.info("Construct passage index")
     passage_search_index = construct_search_index(embed_dim, len(passage_embeddings_array), passage_embeddings_array)
 
     # Initialize counters
@@ -149,7 +149,7 @@ def evaluate_retriever(
     batch_recall = []
     total_hit = 0
 
-    print("Evaluation start")
+    logger.info("Evaluation start")
     processed_datasets_dataloader = DataLoader(
         processed_datasets, batch_size=test_batch_size, shuffle=True, collate_fn=mixed_collate_fn
     )
