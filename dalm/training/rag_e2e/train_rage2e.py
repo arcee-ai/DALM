@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import argparse
-import logging
 import math
 import os
 import random
@@ -53,7 +52,7 @@ logger = get_logger(__name__)
 
 
 def parse_args() -> Namespace:
-    parser = argparse.ArgumentParser(description="training a PEFT model for Sematic Search task")
+    parser = argparse.ArgumentParser(description="training a PEFT model for Semantic Search task")
     parser.add_argument(
         "--dataset_path",
         type=str,
@@ -265,7 +264,7 @@ def train_e2e(
     # TensorBoard cannot log Enums, need the raw value
     args["lr_scheduler_type"] = args["lr_scheduler_type"].value
     args = {k: v for k, v in args.items() if v is None or isinstance(v, (float, int, str, NoneType))}
-    # rag retriver and the generator
+    # rag retriever and the generator
     rag_model = AutoModelForRagE2E(
         retriever_name_or_path,
         generator_name_or_path,
@@ -276,11 +275,6 @@ def train_e2e(
 
     accelerator = Accelerator(log_with=report_to, project_dir=output_dir) if with_tracking else Accelerator()
     # Make one log on every process with the configuration for debugging.
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-        datefmt="%m/%d/%Y %H:%M:%S",
-        level=logging.INFO,
-    )
     logger.info(accelerator.state, main_process_only=False)
 
     if accelerator.is_local_main_process:
@@ -379,7 +373,7 @@ def train_e2e(
     accelerator.register_save_state_pre_hook(save_model_hook)
     accelerator.register_load_state_pre_hook(load_model_hook)
 
-    logger.info("***** Running training *****")
+    logger.info("***** Running E2E training *****")
     logger.info(f"  Num examples = {len(processed_datasets)}")
     logger.info(f"  Num Epochs = {num_train_epochs}")
     logger.info(f"  Instantaneous batch size per device = {per_device_train_batch_size}")
@@ -394,7 +388,7 @@ def train_e2e(
     # Potentially load in the weights and states from a previous save
     if resume_from_checkpoint:
         if resume_from_checkpoint is not None or resume_from_checkpoint != "":
-            accelerator.print(f"Resumed from checkpoint: {resume_from_checkpoint}")
+            logger.info(f"Resumed from checkpoint: {resume_from_checkpoint}")
             accelerator.load_state(resume_from_checkpoint)
             path = os.path.basename(resume_from_checkpoint)
         else:
@@ -499,8 +493,7 @@ def train_e2e(
                 break
 
         result: Dict[str, Union[int, float, torch.Tensor]] = {}
-        # Use accelerator.print to print only on the main process.
-        accelerator.print(f"epoch {epoch}:", result)
+        logger.info(f"epoch {epoch}: {result}")
         if with_tracking:
             step_loss = total_loss.item() if isinstance(total_loss, torch.Tensor) else total_loss
             result["train/epoch_loss"] = step_loss / len(train_dataloader)

@@ -10,6 +10,7 @@ from datasets import Dataset
 
 from dalm.datasets.docs_to_passage.utils import (
     DEFAULT_MAX_WORDS,
+    DEFAULT_MIN_WORDS,
     TEXT_COL,
     TITLE_COL,
     keep_sufficiently_long_passages,
@@ -38,9 +39,8 @@ def docs_to_passages(
     :param text_col: The column in df that corresponds to the title. Default 'text'
     :param max_docs: The maximum number of documents to process. If not passed, all documents are processed
     """
-    ######################################
-    logger.info("Step 1 - Create the dataset")
-    ######################################
+    logger.info("Create the dataset by converting docs to passages")
+
     cols = df.columns if isinstance(df, pd.DataFrame) else df.column_names
     assert title_col in cols and text_col in cols, (
         f"{title_col} and {text_col} must be present in df. If your columns don't "
@@ -54,13 +54,17 @@ def docs_to_passages(
     dataset = dataset.select_columns(column_names=[TITLE_COL, TEXT_COL])
 
     if max_docs is not None and len(dataset) > max_docs:
+        logger.info("Split into training/test set")
         dataset = dataset.train_test_split(train_size=max_docs)["train"]
 
     # Then split the documents into passages of 100 words
+    batch_size = 1000
+    logger.info(f"Split into passages of {max_words} words with batch size of {batch_size}")
     split_docs = partial(split_documents, max_words=max_words)
-    dataset = dataset.map(split_docs, batched=True)
+    dataset = dataset.map(split_docs, batched=True, batch_size=batch_size)
 
     # Filter the dataset using the defined function
+    logger.info(f"Filter the dataset to remove passages less than {DEFAULT_MIN_WORDS} words")
     filter_abstracts = partial(keep_sufficiently_long_passages)
     filtered_dataset = dataset.filter(filter_abstracts)
     return filtered_dataset

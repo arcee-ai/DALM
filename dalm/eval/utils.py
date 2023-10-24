@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Callable, Dict, List, Tuple, cast
 
 import hnswlib
@@ -8,6 +9,8 @@ from datasets.formatting.formatting import LazyBatch
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from transformers import PreTrainedTokenizer, default_data_collator
+
+logger = logging.getLogger(__name__)
 
 
 def construct_search_index(dim: int, num_elements: int, data: np.ndarray) -> hnswlib.Index:
@@ -195,7 +198,7 @@ def get_passage_embeddings(
     )
 
     num_passages = len(unique_passage_dataset)
-    print(f"Starting to generate passage embeddings (Number of passages: {num_passages})")
+    logger.info(f"Starting to generate passage embeddings (Number of passages: {num_passages})")
     passage_embeddings_array = np.zeros((num_passages, embed_dim))
     for step, batch in enumerate(tqdm(unique_passage_dataloader)):
         with torch.no_grad():
@@ -277,8 +280,8 @@ def print_eval_results(
     recall = sum(recalls) / total_examples
     hit_rate = total_hit / float(total_examples)
 
-    print("Retriever results:")
-    print("Recall:", recall)
-    print("Precision:", precision)
-    print("Hit Rate:", hit_rate)
-    print("*************")
+    logger.info("Retriever results:")
+    logger.info(f"Recall: {recall}")
+    logger.info(f"Precision: {precision}")
+    logger.info(f"Hit Rate: {hit_rate}")
+    logger.info("*************")
