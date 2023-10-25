@@ -107,7 +107,9 @@ python dalm/training/rag_e2e/train_rage2e.py \
   --report_to all \
   --per_device_train_batch_size 20
 ```
+
 or
+
 ```shell
 dalm train-rag-e2e \
 "./dalm/datasets/toy_data_train.csv" \
