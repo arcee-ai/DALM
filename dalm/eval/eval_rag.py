@@ -11,7 +11,9 @@ from transformers import (
     PreTrainedTokenizer,
 )
 
+from dalm.eval.eval_results import EvalResults
 from dalm.eval.utils import (
+    calc_eval_results,
     construct_search_index,
     evaluate_retriever_on_batch,
     get_passage_embeddings,
@@ -180,7 +182,7 @@ def evaluate_rag(
     top_k: int = 10,
     evaluate_generator: bool = True,
     retriever_is_autoregressive: bool = False,
-) -> None:
+) -> EvalResults:
     """Runs rag evaluation. See `dalm eval-rag --help for details on params"""
     test_dataset = load_dataset(dataset_or_path)
     selected_torch_dtype: Final[torch.dtype] = torch.float16 if torch_dtype == "float16" else torch.bfloat16
@@ -254,8 +256,9 @@ def evaluate_rag(
         generated_answers_for_eval.extend(batch_answers)
 
     if not evaluate_generator:
-        print_eval_results(len(processed_datasets), batch_precision, batch_recall, total_hit)
-        return
+        eval_results = calc_eval_results(len(processed_datasets), batch_precision, batch_recall, total_hit)
+        print_eval_results(eval_results)
+        return eval_results
 
     # TODO: imperative style code, refactor in future but works for now
     # If there are any leftover batches to query
@@ -275,9 +278,11 @@ def evaluate_rag(
         if generated_answer_string == answer:
             total_em_hit += 1
 
-    print_eval_results(len(processed_datasets), batch_precision, batch_recall, total_hit)
+    eval_results = calc_eval_results(len(processed_datasets), batch_precision, batch_recall, total_hit)
+    print_eval_results(eval_results)
     print("Generator evaluation:")
     print("Exact match:", total_em_hit / len(processed_datasets))
+    return eval_results
 
 
 def main() -> None:

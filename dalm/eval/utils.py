@@ -10,6 +10,8 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from transformers import PreTrainedTokenizer, default_data_collator
 
+from dalm.eval.eval_results import EvalResults
+
 logger = logging.getLogger(__name__)
 
 
@@ -270,18 +272,24 @@ def evaluate_retriever_on_batch(
     return batch_precision, batch_recall, total_hit, top_passages
 
 
-def print_eval_results(
+def calc_eval_results(
     total_examples: int,
     precisions: list[float],
     recalls: list[float],
     total_hit: int,
-) -> None:
+) -> EvalResults:
     precision = sum(precisions) / total_examples
     recall = sum(recalls) / total_examples
     hit_rate = total_hit / float(total_examples)
 
+    return EvalResults(total_examples=total_examples, recall=recall, precision=precision, hit_rate=hit_rate)
+
+
+def print_eval_results(
+    eval_results: EvalResults,
+) -> None:
     logger.info("Retriever results:")
-    logger.info(f"Recall: {recall}")
-    logger.info(f"Precision: {precision}")
-    logger.info(f"Hit Rate: {hit_rate}")
+    logger.info(f"Recall: {eval_results.recall}")
+    logger.info(f"Precision: {eval_results.precision}")
+    logger.info(f"Hit Rate: {eval_results.hit_rate}")
     logger.info("*************")

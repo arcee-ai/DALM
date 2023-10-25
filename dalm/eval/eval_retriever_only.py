@@ -10,6 +10,8 @@ import torch
 
 from datasets import Dataset
 from torch.utils.data import DataLoader
+from dalm.eval.eval_results import EvalResults
+
 
 from dalm.eval.utils import (
     construct_search_index,
@@ -18,6 +20,7 @@ from dalm.eval.utils import (
     get_passage_embeddings,
     evaluate_retriever_on_batch,
     print_eval_results,
+    calc_eval_results,
 )
 from dalm.models.retriever_only_base_model import AutoModelForSentenceEmbedding
 from dalm.utils import load_dataset
@@ -112,7 +115,7 @@ def evaluate_retriever(
     torch_dtype: Literal["float16", "bfloat16"] = "float16",
     top_k: int = 10,
     is_autoregressive: bool = False,
-) -> None:
+) -> EvalResults:
     """Runs rag evaluation. See `dalm eval-retriever --help for details on params"""
     test_dataset = load_dataset(dataset_or_path)
     selected_torch_dtype: Final[torch.dtype] = torch.float16 if torch_dtype == "float16" else torch.bfloat16
@@ -170,7 +173,9 @@ def evaluate_retriever(
         batch_recall.extend(_batch_recall)
         total_hit += _total_hit
 
-    print_eval_results(len(processed_datasets), batch_precision, batch_recall, total_hit)
+    eval_results = calc_eval_results(len(processed_datasets), batch_precision, batch_recall, total_hit)
+    print_eval_results(eval_results)
+    return eval_results
 
 
 def main() -> None:
