@@ -29,7 +29,14 @@ def generate_synthetic_data(model_pipeline, text, generation_params):
 def generate_synthetic_dataset(model_name, 
                                input_directory, 
                                state_file, 
-                               generation_params= {}, 
+                               generation_params= {
+                                   "max_new_tokens": 600,
+                                   "do_sample": True,
+                                   "temperature": 0.7,
+                                   "top_k": 5,
+                                    "top_p": 0.95,
+                               },
+
                                chunk=False, 
                                context_length=2048):
     
@@ -72,7 +79,6 @@ if __name__ == "__main__":
     parser.add_argument("--input_directory", type=str, required=True)
     parser.add_argument("--output_directory", type=str, required=True)
     parser.add_argument("--state_file", type=str, required=True)
-    parser.add_argument("--generation_params", type=dict, default={})
     parser.add_argument("--chunk", type=bool, default=False)
     parser.add_argument("--context_length", type=int, default=2048)
 
@@ -81,7 +87,6 @@ if __name__ == "__main__":
     for index, gen_text in enumerate(generate_synthetic_dataset(args.model_name, 
                                                                 args.input_directory, 
                                                                 args.state_file, 
-                                                                args.generation_params, 
                                                                 args.chunk, 
                                                                 args.context_length)):
         output_file = f'gen_{index}.txt'
