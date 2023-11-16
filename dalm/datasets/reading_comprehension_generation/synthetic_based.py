@@ -4,7 +4,7 @@ from transformers import pipeline, AutoTokenizer
 import torch
 import pickle
 from typing import Optional
-from dalm.datasets.reading_comprehension_generation.utils import list_dir, text_chunker
+from dalm.datasets.reading_comprehension_generation.utils import list_dir, text_chunker, question_and_answer_extractor
 
 
 def gen_prompt(text):
@@ -85,11 +85,18 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    """
+    Pipeline here includes chunking, generation and parsing of question and answer into a list of exchanges
+    that can be used directly for training
+    """
+
     for index, gen_text in enumerate(
         generate_synthetic_dataset(
             args.model_name, args.input_directory, args.state_file, args.chunk, args.context_length
         )
     ):
-        output_file = f"gen_{index}.txt"
-        with open(os.path.join(args.output_directory, output_file), "w") as o:
-            o.write(gen_text)
+        qanda = question_and_answer_extractor(gen_text)
+        if qanda:
+            output_file = f"gen_{index}.txt"
+            with open(os.path.join(args.output_directory, output_file), "w") as o:
+                o.write(qanda)
