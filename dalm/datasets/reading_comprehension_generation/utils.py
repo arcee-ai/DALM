@@ -69,7 +69,7 @@ def fix_first_prompt(text, chat_chain):
 
 # TODO: type hinting is very necessary here
 # TODO: add test
-def question_and_answer_extractor(whole_text):
+def question_and_answer_extractor(whole_text, context):
     whole_text = whole_text.split("\n")
     question = []
     answer = []
@@ -130,4 +130,4 @@ def question_and_answer_extractor(whole_text):
     if result == []:
         return None
 
-    return fix_first_prompt(text, result)
+    return fix_first_prompt(context, result)

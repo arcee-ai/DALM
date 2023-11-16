@@ -5,6 +5,7 @@ import torch
 import pickle
 from typing import Optional
 from dalm.datasets.reading_comprehension_generation.utils import list_dir, text_chunker, question_and_answer_extractor
+import pprint
 
 
 def gen_prompt(text):
@@ -65,10 +66,10 @@ def generate_synthetic_dataset(
                 k = context_length - CONSTANT
                 for chunk_ in text_chunker(text, tokenizer, k):
                     gen_text = generate_synthetic_data(model_pipeline, chunk_, generation_params)
-                    yield gen_text
+                    yield gen_text, chunk_
             else:
                 gen_text = generate_synthetic_data(model_pipeline, text, generation_params)
-                yield gen_text
+                yield gen_text, text
 
             state["processed_files"].append(file)
             pickle.dump(state, open(state_file, "wb"))
@@ -90,13 +91,13 @@ if __name__ == "__main__":
     that can be used directly for training
     """
 
-    for index, gen_text in enumerate(
+    for index, (gen_text, context) in enumerate(
         generate_synthetic_dataset(
             args.model_name, args.input_directory, args.state_file, args.chunk, args.context_length
         )
     ):
-        qanda = question_and_answer_extractor(gen_text)
+        qanda = question_and_answer_extractor(gen_text, context)
         if qanda:
             output_file = f"gen_{index}.txt"
             with open(os.path.join(args.output_directory, output_file), "w") as o:
-                o.write(qanda)
+                o.write(pprint.pformat(qanda))
