@@ -48,6 +48,9 @@ def generate_synthetic_dataset(
 
     if chunk:
         tokenizer = model_pipeline.tokenizer
+        tokens = tokenizer.apply_chat_template(gen_prompt(""), tokenize=False, add_generation_prompt=True)
+        CONSTANT = len(tokenizer(tokens)["input_ids"])
+        k = context_length - CONSTANT
 
     if os.path.exists(state_file):
         with open(state_file, "rb") as f:
@@ -61,9 +64,6 @@ def generate_synthetic_dataset(
             continue
         else:
             if chunk:
-                tokens = tokenizer.apply_chat_template(gen_prompt(text), tokenize=False, add_generation_prompt=True)
-                CONSTANT = len(tokenizer(tokens)["input_ids"])
-                k = context_length - CONSTANT
                 for chunk_ in text_chunker(text, tokenizer, k):
                     gen_text = generate_synthetic_data(model_pipeline, chunk_, generation_params)
                     yield gen_text, chunk_
