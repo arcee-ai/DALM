@@ -12,6 +12,7 @@ from utils.read import TYPES, type_map, get_max_workers
 from pysbd import Segmenter
 import copy
 from functools import partial
+from dalm.datasets.reading_comprehension_generation.utils import create_domain_tokenizer
 
 TYPES=['nli', 'common_reason', 'paraphrase', 'word2text', 'summarize', 'text_completion']
 
@@ -45,6 +46,12 @@ class BaseType(object):
         self.qa_deliminator = ' '
         self.max_subcategory_num = 2 # limit the number of examples per subcategory
         self.max_seq_len = 2048
+
+    def collect_mined(self, tup, class_name):
+        raise NotImplementedError
+    
+    def get_all_templates(self, entry, random_seed):
+        raise NotImplementedError
 
     def get_template(self, entry, random_seed):
         '''
@@ -87,7 +94,11 @@ class BaseType(object):
         specific_tokens = [token for token in list(specific_tokens) if (token.startswith('▁') and len(token)>10)]
         self.specific_token_set = set(specific_tokens)
 
+    # TODO: perhaps place this in the init?
     def compile_regex(self):
+        """
+        nothing more than compiling regexes
+        """
         self.regex_dic={}
         for class_name, pattern in self.mine_regex.items():
             self.regex_dic[class_name] = re.compile(pattern, re.IGNORECASE)
@@ -108,7 +119,7 @@ class BaseType(object):
 
 @type_map.add("nli")
 class nli(BaseType):
-    def __init__(self, ori_spm_path = None, domain_spm_path = None):
+    def __init__(self):
         super().__init__()
         # init regex
         self.mine_regex = {
@@ -816,7 +827,6 @@ def search(entry, overall_cls, segmenter, inited_type_map, domain_name, TYPES):
     context_wo_title = entry['text']
     
     #truncate the context to meet the max_seq_len
-    #context_wo_title = overall_cls.truncate_sentence(context_wo_title, max_len=overall_cls.max_seq_len-200)
     context_wo_title_list = overall_cls.truncate_sentence(context_wo_title, max_len=overall_cls.max_seq_len-200)
 
     read_compre_list = []
@@ -863,17 +873,15 @@ class RC:
     
         #truncate the context to meet the max_seq_len
         #context_wo_title = overall_cls.truncate_sentence(context_wo_title, max_len=overall_cls.max_seq_len-200)
-        context_wo_title_list = self.overall_cls.truncate_sentence(context_wo_title, max_len=overall_cls.max_seq_len-200)
+        context_wo_title_list = self.overall_cls.truncate_sentence(context_wo_title, max_len=self.overall_cls.max_seq_len-200)
 
         read_compre_list = []
         for context_wo_title in context_wo_title_list:
-        # mine task examples from the raw text
             sents = self.segmenter.segment(context_wo_title)
             overall_entry={'text_id': entry['text_id']}
             for type in TYPES:
                 type_cls = self.inited_type_map[type]
                 overall_entry[type], mined_num = type_cls.mine(text=context_wo_title, domain=domain_name, title=title, sents=copy.deepcopy(sents)) 
-                                # mined_num is the number of mined examples per task type
      
         # create the reading comprehension text
         read_compre, count_dict = self.overall_cls.format_recomprehension(copy.deepcopy(overall_entry))
@@ -881,8 +889,6 @@ class RC:
                     # you may use `mined_num` and `count_dict` for data analysis
         read_compre_list.append(read_compre)
     
- 
-        #return {'read_compre': read_compre, 'file_name': entry['file_name']}
         return {'read_compre': read_compre_list, 'file_name': entry['file_name']}
 
 
@@ -901,9 +907,23 @@ if __name__ == "__main__":
     parser.add_argument('--domain_spm_path',
                         type=str, help='path of the domain sentencepiece model', 
                         default='./data/domain.spm')
-                 
+    parser.add_argument('--domain_tokenizer_training_text',
+                        type=str, help='path of the domain sentencepiece model', 
+                        default='./data/domain_tokenizer_training_text.txt')
+
     args = parser.parse_args()
 
+    if not (args.domain_spm_path or args.domain_tokenizer_training_text):
+        raise ValueError('domain_spm_path or domain_tokenizer_training_text should be provided')
+    
+    if not args.domain_spm_path:
+        # train domain tokenizer
+        domain_spm = create_domain_tokenizer(args.domain_tokenizer_training_text)
+    else:
+        domain_spm = spm.SentencePieceProcessor(model_file=args.domain_spm_path)
+
+    ori_spm = spm.SentencePieceProcessor(model_file=args.ori_spm_path)
+                 
     # get max worker for multi-process
     max_workers=get_max_workers()
     print(f'max_workers: {max_workers}')
@@ -927,9 +947,6 @@ if __name__ == "__main__":
 
         raw_texts.append({'text':text, 'text_id': text_id, 'file_name': file_name})
 
-    ori_spm = spm.SentencePieceProcessor(model_file=args.ori_spm_path)
-    domain_spm = spm.SentencePieceProcessor(model_file=args.domain_spm_path)
-    
     rc = RC(ori_spm, domain_spm)
      
     print('transferring raw texts into reading comprehension...')
