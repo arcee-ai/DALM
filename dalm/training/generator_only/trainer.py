@@ -95,6 +95,7 @@ def parse_args():
     parser.add_argument("--num_workers", type=int, default=4, help="the number of workers")
 
     parser.add_argument("--eval_steps", type=int, default=200, help="the evaluation frequency")
+    parser.add_argument("--num_train_epochs", type=int, default=3, help="the number of training epochs")
     parser.add_argument("--logging_steps", type=int, default=10, help="the logging frequency")
     parser.add_argument("--per_device_train_batch_size", type=int, default=1, help="the per device train batch size")
     parser.add_argument("--per_device_eval_batch_size", type=int, default=1, help="the per device eval batch size")
@@ -124,6 +125,7 @@ def parse_args():
 def train_generator(
     model_name,
     dataset_name,
+    num_train_epochs,
     split,
     size_valid_set,
     streaming,
@@ -183,7 +185,7 @@ def train_generator(
         per_device_eval_batch_size=per_device_eval_batch_size,
         learning_rate=learning_rate,
         logging_steps=logging_steps,
-        num_train_epochs=3,
+        num_train_epochs=num_train_epochs,
         report_to=log_with,
         save_strategy="epoch",
         evaluation_strategy="steps",
@@ -244,6 +246,7 @@ def main():
         shuffle_buffer=args.shuffle_buffer,
         seq_length=args.seq_length,
         num_workers=args.num_workers,
+        num_train_epochs=args.num_train_epochs,
         eval_steps=args.eval_steps,
         logging_steps=args.logging_steps,
         per_device_train_batch_size=args.per_device_train_batch_size,
