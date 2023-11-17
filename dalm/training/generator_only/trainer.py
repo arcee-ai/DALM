@@ -1,57 +1,17 @@
 import os
-from dataclasses import dataclass, field
 from typing import Optional
 
 import torch
 from accelerate import Accelerator
 from datasets import load_dataset
-from peft import AutoPeftModelForCausalLM, LoraConfig
+from peft import LoraConfig
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, HfArgumentParser, TrainingArguments
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments
 
 from trl import SFTTrainer
 from trl.trainer import ConstantLengthDataset
 
 import argparse
-
-
-# @dataclass
-# class ScriptArguments:
-#    model_name: Optional[str] = field(default="HuggingFaceH4/zephyr-7b-alpha", metadata={"help": "the model name"})
-#    log_with: Optional[str] = field(default="wandb", metadata={"help": "use 'wandb' to log with wandb"})
-#    dataset_name: Optional[str] = field(
-#        default="arcee-ai/azure-reading-comprehension-dataset", metadata={"help": "the dataset name"}
-#    )
-#    split: Optional[str] = field(default="train", metadata={"help": "the split to use"})
-#    size_valid_set: Optional[int] = field(default=4000, metadata={"help": "the size of the validation set"})
-#    streaming: Optional[bool] = field(default=False, metadata={"help": "whether to stream the dataset"})
-#    shuffle_buffer: Optional[int] = field(default=5000, metadata={"help": "the shuffle buffer size"})
-#    seq_length: Optional[int] = field(default=2600, metadata={"help": "the sequence length"})
-#    num_workers: Optional[int] = field(default=4, metadata={"help": "the number of workers"})
-#
-#    eval_steps: Optional[int] = field(default=200, metadata={"help": "the evaluation frequency"})
-#    logging_steps: Optional[int] = field(default=10, metadata={"help": "the logging frequency"})
-#    per_device_train_batch_size: Optional[int] = field(default=1, metadata={"help": "the per device train batch size"})
-#    per_device_eval_batch_size: Optional[int] = field(default=1, metadata={"help": "the per device eval batch size"})
-#    gradient_accumulation_steps: Optional[int] = field(default=32, metadata={"help": "the gradient accumulation steps"})
-#    gradient_checkpointing: Optional[bool] = field(
-#        default=True, metadata={"help": "whether to use gradient checkpointing"}
-#    )
-#    group_by_length: Optional[bool] = field(default=False, metadata={"help": "whether to group by length"})
-#    packing: Optional[bool] = field(default=True, metadata={"help": "whether to use packing for SFTTrainer"})
-#
-#    lora_alpha: Optional[float] = field(default=512, metadata={"help": "the lora alpha parameter"})
-#    lora_dropout: Optional[float] = field(default=0.05, metadata={"help": "the lora dropout parameter"})
-#    lora_r: Optional[int] = field(default=256, metadata={"help": "the lora r parameter"})
-#
-#    learning_rate: Optional[float] = field(default=1e-4, metadata={"help": "the learning rate"})
-#    lr_scheduler_type: Optional[str] = field(default="cosine", metadata={"help": "the lr scheduler type"})
-#    num_warmup_steps: Optional[int] = field(default=100, metadata={"help": "the number of warmup steps"})
-#    weight_decay: Optional[float] = field(default=0.05, metadata={"help": "the weight decay"})
-#    optimizer_type: Optional[str] = field(default="paged_adamw_32bit", metadata={"help": "the optimizer type"})
-#
-#    output_dir: Optional[str] = field(default="./results2", metadata={"help": "the output directory"})
-#    log_freq: Optional[int] = field(default=1, metadata={"help": "the logging frequency"})
 
 
 def create_datasets(
@@ -120,21 +80,6 @@ def chars_token_ratio(dataset, tokenizer, formatting_func, nb_examples=400):
     return total_characters / total_tokens
 
 
-# def print_trainable_parameters(model):
-#    """
-#    Prints the number of trainable parameters in the model.
-#    """
-#    trainable_params = 0
-#    all_param = 0
-#    for _, param in model.named_parameters():
-#        all_param += param.numel()
-#        if param.requires_grad:
-#            trainable_params += param.numel()
-#    print(
-#        f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}"
-#    )
-
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="HuggingFaceH4/zephyr-7b-alpha", help="the model name")
@@ -170,7 +115,7 @@ def parse_args():
     parser.add_argument("--weight_decay", type=float, default=0.05, help="the weight decay")
     parser.add_argument("--optimizer_type", type=str, default="paged_adamw_32bit", help="the optimizer type")
 
-    parser.add_argument("--output_dir", type=str, default="./results2", help="the output directory")
+    parser.add_argument("--output_dir", type=str, default="./generator_finetuned_model", help="the output directory")
     parser.add_argument("--neftune_noise_alpha", type=int, default=5, help="the noise alpha for neftune")
     parser.add_argument("--log_freq", type=int, default=1, help="the logging frequency")
     return parser.parse_args()
@@ -212,15 +157,14 @@ def train_generator(
 
     bnb_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.bfloat16)
 
-    base_model = (
-        AutoModelForCausalLM.from_pretrained(
-            model_name,
-            quantization_config=bnb_config,
-            device_map={"": Accelerator().local_process_index},
-            trust_remote_code=True,
-            use_auth_token=True,
-        ),
+    base_model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        quantization_config=bnb_config,
+        device_map={"": Accelerator().local_process_index},
+        trust_remote_code=True,
+        use_auth_token=True,
     )
+
     base_model.config.use_cache = False
 
     peft_config = LoraConfig(
