@@ -1,6 +1,7 @@
 import os
 import tempfile
 import re
+import sentencepiece as spm
 
 from transformers import AutoTokenizer
 
@@ -39,7 +40,7 @@ def files_chunker(input_directory, model, context_length, output_directory, prom
                 o.write(chunk)
 
 
-def create_domain_tokenizer(text):
+def create_domain_tokenizer(text_file):
     """
     train and return domain tokenizer
     """
@@ -48,10 +49,41 @@ def create_domain_tokenizer(text):
         model_prefix = f"{temp_dir}/domain"
 
         # Train the SentencePiece model, the model is saved in the temporary directory
-        spm.SentencePieceTrainer.train(input=text, model_prefix=model_prefix, vocab_size=32000, character_coverage=1.0)
+        spm.SentencePieceTrainer.train(input=text_file, model_prefix=model_prefix, vocab_size=32000, character_coverage=1.0)
 
         sp_model_file = f"{model_prefix}.model"
         return spm.SentencePieceProcessor(model_file=sp_model_file)
+
+
+def split_to_sentences(infile):
+    text = infile.read()
+    sentences = re.split(r"[.?!]\s+", text)
+
+    return sentences
+
+
+# TODO:  revisit the errors part
+def create_domain_tokenizer_from_files(directory_with_files):
+    # open a tempfile and add sentences from files in directory_with_files to it
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_file = open(os.path.join(temp_dir, "temp.txt"), "w", encoding="utf-8")
+        for filename in os.listdir(directory_with_files):
+            try:
+                with open(os.path.join(directory_with_files, filename), "r", encoding="utf-8") as infile:
+                    sentences = split_to_sentences(infile)
+
+            except UnicodeDecodeError:
+                with open(
+                    os.path.join(directory_with_files, filename), "r", encoding="utf-8", errors="replace"
+                ) as infile:
+                    sentences = split_to_sentences(infile)
+
+            for sentence in sentences:
+                sentence = sentence.strip()
+                if sentence and sentence != "":
+                    temp_file.write(sentence + "\n")
+
+        return create_domain_tokenizer(os.path.join(temp_dir, "temp.txt"))
 
 
 def fix_first_prompt(text, chat_chain):
@@ -69,6 +101,7 @@ def fix_first_prompt(text, chat_chain):
 
 # TODO: type hinting is very necessary here
 # TODO: add test
+# TODO: refactor this as a state machine?
 def question_and_answer_extractor(whole_text, context):
     whole_text = whole_text.split("\n")
     question = []
@@ -93,15 +126,6 @@ def question_and_answer_extractor(whole_text, context):
         # ignore empty lines
         if text == "":
             continue
-
-        # task regex to match Task 1, task 1 , task
-        task_regex = r"^\*?\*?task\s*\d*"
-
-        # question regex
-        question_regex = r"^question\s*\d*"
-
-        # answer regex
-        answer_regex = r"^answer\s*\d*"
 
         # if the line start matches the question regex or the task regex
         if re.match(question_regex, text) or re.match(task_regex, text):

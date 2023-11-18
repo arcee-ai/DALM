@@ -10,9 +10,9 @@ import glob
 from tqdm.contrib.concurrent import process_map
 from pysbd import Segmenter
 import copy
-from functools import partial
-from dalm.datasets.reading_comprehension_generation.utils import create_domain_tokenizer
+from dalm.datasets.reading_comprehension_generation.utils import create_domain_tokenizer, create_domain_tokenizer_from_files
 import pprint
+from warnings import warn
 
 TYPES = ["nli", "common_reason", "paraphrase", "word2text", "summarize", "text_completion"]
 
@@ -82,7 +82,6 @@ class BaseType(object):
         4. length 2 template and qa_demos
 
         """
-        print(template)
         qa_demos = kw_dic.get("qa_demos", [])
 
         if "qa_demos" in kw_dic.keys():
@@ -1025,8 +1024,6 @@ class overall(BaseType):
         else:
             qa_demos = []
 
-        print("qa_demos", qa_demos)
-
         def summaize_only(count_dict):
             count_dict["summarize"] = 1
             count_dict["text_completion"] = 0
@@ -1083,13 +1080,11 @@ class overall(BaseType):
         #    read_func = np.random.choice([summaize_only, no_summarize_or_completion], p=[0.5, 0.5])
         if "text_completion" in insert_types and len(overall_entry["text_completion"]["sents"]) >= 2:
             np.random.seed(seed)
-            print("text_completion")
             if len(qa_demos) == 0:
                 read_func = completion_only
             else:
                 read_func = np.random.choice([completion_only, no_summarize_or_completion], p=[0.5, 0.5])
         else:
-            print("no_summarize_or_completion")
             read_func = no_summarize_or_completion
 
         return read_func(count_dict)
@@ -1168,36 +1163,76 @@ class RC:
 
         return {"read_compre": read_compre_list, "file_name": entry["file_name"]}
 
+    def create_dataset(self, input_dir, output_dir ,workers=1):
+        print("loading raw texts in the input folder...")
+        paths = glob.glob(f"{input_dir}/*")
+        # print(f'paths: {paths}')
+
+        raw_texts = []
+        # NOTE: use generator here 
+        # NOTE: do I really need TQDM here?
+        for text_id, path in tqdm(enumerate(paths)):
+            file_name = path.split("/")[-1]
+
+            try:
+                with open(path, "r", encoding="utf8") as f:
+                    text = f.read().strip()
+
+            except UnicodeDecodeError:
+                with open(path, "r", encoding="utf8", errors="replace") as f:
+                    text = f.read().strip()
+
+            raw_texts.append({"text": text, "text_id": text_id, "file_name": file_name})
+
+        print("transferring raw texts into reading comprehension...")
+        read_compre = list(process_map(self.generate, raw_texts, max_workers=workers, chunksize=8192))
+
+        print("saving reading comprehension texts...")
+        # sort by text_id to align with the order of raw texts
+        for entry in read_compre:
+            for index, read_compre_example in enumerate(entry["read_compre"]):
+                file_name = entry["file_name"]
+                path = os.path.join(output_dir, f"{file_name}_{str(index)}")
+
+                with open(path, "w") as f:
+                    f.write(pprint.pformat(read_compre_example))
+                    f.close()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_dir", type=str, help="directory of the input raw texts", default="./data")
     parser.add_argument(
-        "--output_dir", type=str, help="directory of the output reading comprehension texts", default="./output"
+        "--output_dir", type=str, help="directory of the output reading comprehension texts", default="./output2"
     )
     parser.add_argument(
         "--ori_spm_path", type=str, help="path of the original sentencepiece model", default="./tokenizers/general.spm"
     )
     parser.add_argument(
-        "--domain_spm_path", type=str, help="path of the domain sentencepiece model", default="./tokenizers/domain.spm"
+        "--domain_spm_path", type=str, help="path of the domain sentencepiece model", # default="./tokenizers/domain.spm"
     )
     parser.add_argument(
         "--domain_tokenizer_training_text",
         type=str,
         help="path of the domain sentencepiece model",
-        default="./data/domain_tokenizer_training_text.txt",
     )
 
     args = parser.parse_args()
 
     if not (args.domain_spm_path or args.domain_tokenizer_training_text):
-        raise ValueError("domain_spm_path or domain_tokenizer_training_text should be provided")
+        # warn user that the domain tokenizer will be created from the input files
+        warn(
+            "No domain tokenizer is provided nor explicit file for training domain tokenizer is provided, "
+            "the domain tokenizer will be created from the input files, "
+        )
 
-    if not args.domain_spm_path:
+    if args.domain_tokenizer_training_text:
         # train domain tokenizer
         domain_spm = create_domain_tokenizer(args.domain_tokenizer_training_text)
-    else:
+    elif args.domain_spm_path:
         domain_spm = spm.SentencePieceProcessor(model_file=args.domain_spm_path)
+    else:
+        domain_spm = create_domain_tokenizer_from_files(args.input_dir)
 
     ori_spm = spm.SentencePieceProcessor(model_file=args.ori_spm_path)
 
@@ -1205,39 +1240,11 @@ if __name__ == "__main__":
     max_workers = get_max_workers()
     print(f"max_workers: {max_workers}")
 
-    # load sentences in the input file
-    print("loading raw texts in the input folder...")
-    paths = glob.glob(f"{args.input_dir}/*")
-    # print(f'paths: {paths}')
-
-    raw_texts = []
-    for text_id, path in tqdm(enumerate(paths)):
-        file_name = path.split("/")[-1]
-
-        try:
-            with open(path, "r", encoding="utf8") as f:
-                text = f.read().strip()
-
-        except UnicodeDecodeError:
-            with open(path, "r", encoding="utf8", errors="replace") as f:
-                text = f.read().strip()
-
-        raw_texts.append({"text": text, "text_id": text_id, "file_name": file_name})
-
     rc = RC(ori_spm, domain_spm)
+    # side effect warning
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
 
-    print("transferring raw texts into reading comprehension...")
-    read_compre = list(process_map(rc.generate, raw_texts, max_workers=max_workers, chunksize=8192))
-
-    print("saving reading comprehension texts...")
-    # sort by text_id to align with the order of raw texts
-    for entry in read_compre:
-        for index, read_compre_example in enumerate(entry["read_compre"]):
-            file_name = entry["file_name"]
-            path = os.path.join(args.output_dir, f"{file_name}_{str(index)}")
-
-            with open(path, "w") as f:
-                f.write(pprint.pformat(read_compre_example))
-                f.close()
+    rc.create_dataset(args.input_dir, args.output_dir, workers=max_workers)
 
     print(f"saved to {args.output_dir}")

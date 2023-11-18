@@ -3,9 +3,8 @@ import argparse
 from transformers import pipeline, AutoTokenizer
 import torch
 import pickle
-from typing import Optional
 from dalm.datasets.reading_comprehension_generation.utils import list_dir, text_chunker, question_and_answer_extractor
-import pprint
+import json
 
 
 def gen_prompt(text):
@@ -30,7 +29,7 @@ def generate_synthetic_data(model_pipeline, text, generation_params):
 def generate_synthetic_dataset(
     model_name,
     input_directory,
-    state_file,
+    state_file=None,
     chunk=False,
     context_length=2048,
     generation_params={
@@ -52,25 +51,27 @@ def generate_synthetic_dataset(
         CONSTANT = len(tokenizer(tokens)["input_ids"])
         k = context_length - CONSTANT
 
-    if os.path.exists(state_file):
-        with open(state_file, "rb") as f:
-            state = pickle.load(f)
-    else:
-        state = {"processed_files": []}
-        pickle.dump(state, open(state_file, "wb"))
+    if state_file:
+        if os.path.exists(state_file):
+            with open(state_file, "rb") as f:
+                state = pickle.load(f)
+        else:
+            state = {"processed_files": []}
+            pickle.dump(state, open(state_file, "wb"))
 
     for file, text in input_files:
-        if file in state["processed_files"]:
+        if state and file in state["processed_files"]:
             continue
-        else:
-            if chunk:
-                for chunk_ in text_chunker(text, tokenizer, k):
-                    gen_text = generate_synthetic_data(model_pipeline, chunk_, generation_params)
-                    yield gen_text, chunk_
-            else:
-                gen_text = generate_synthetic_data(model_pipeline, text, generation_params)
-                yield gen_text, text
 
+        if chunk:
+            for chunk_ in text_chunker(text, tokenizer, k):
+                gen_text = generate_synthetic_data(model_pipeline, chunk_, generation_params)
+                yield gen_text, chunk_
+        else:
+            gen_text = generate_synthetic_data(model_pipeline, text, generation_params)
+            yield gen_text, text
+
+        if state:
             state["processed_files"].append(file)
             pickle.dump(state, open(state_file, "wb"))
 
@@ -80,7 +81,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", type=str, required=True)
     parser.add_argument("--input_directory", type=str, required=True)
     parser.add_argument("--output_directory", type=str, required=True)
-    parser.add_argument("--state_file", type=str, required=True)
+    parser.add_argument("--state_file", type=str, required=False, default="rc_generation_state.pkl")
     parser.add_argument("--context_length", type=int, default=2048)
     parser.add_argument("--chunk", action="store_true")
 
@@ -100,4 +101,4 @@ if __name__ == "__main__":
         if qanda:
             output_file = f"gen_{index}.txt"
             with open(os.path.join(args.output_directory, output_file), "w") as o:
-                o.write(pprint.pformat(qanda))
+                json.dump(qanda, o)
