@@ -2,7 +2,8 @@ from typing import Optional
 from enum import Enum
 import os
 import json
-from datasets import load_dataset, concatenate_datasets
+import datasets
+import sentencepiece as spm
 
 from dalm.datasets.reading_comprehension_generation.regex_based import RC
 from dalm.datasets.reading_comprehension_generation.synthetic_based import generate_synthetic_dataset
@@ -50,21 +51,24 @@ def pipeline(
     lr_scheduler_type: Optional[str] = "linear",
     num_warmup_steps: Optional[int] = 0,
     weight_decay: Optional[float] = 0.0,
-    optimizer_type: Optional[str] = "adamw",
+    optimizer_type: Optional[str] = "paged_adamw_32bit",
     model_output_dir: Optional[str] = "model_output_dir",
     log_freq: Optional[int] = 100,
     neftune_noise_alpha: Optional[int] = 5,
     log_with: Optional[str] = "wandb",
     generation_state_file: Optional[str] = "generation_state.pkl",
 ):
+    domain_spm = spm.SentencePieceProcessor(model_file=domain_spm_path)
+    ori_spm = spm.SentencePieceProcessor(model_file=general_spm_path)
+
     # generate regex based reading comprehension dataset
     if comprehension_type in [SynthMode.REGEX, SynthMode.BOTH]:
         # generate regex based reading comprehension dataset
-        regex_rc_gen = RC(model_name, general_spm_path, domain_spm_path)
+        regex_rc_gen = RC(ori_spm, domain_spm)
 
         # NOTE: this is a simple check to see if the dataset is already generated
         if not (os.path.exists(regex_dataset_output_path) and len(os.listdir(regex_dataset_output_path)) > 0):
-            regex_rc_gen.generate_dataset(
+            regex_rc_gen.create_dataset(
                 dataset_path,
                 regex_dataset_output_path,
             )
@@ -75,7 +79,7 @@ def pipeline(
         for index, (gen_text, context) in enumerate(
             generate_synthetic_dataset(
                 model_name=llm_synth_model_name,
-                input_directory=llm_dataset_output_path,
+                input_directory=dataset_path,
                 state_file=generation_state_file,
                 chunk=chunk,
                 context_length=llm_synth_model_context_length,
@@ -90,27 +94,27 @@ def pipeline(
     # mix both and make it a huggingface dataset
     list_of_data = []
     if comprehension_type in [SynthMode.REGEX, SynthMode.BOTH]:
-        a1 = load_dataset("json", data_files=regex_dataset_output_path)
-        # for file in os.listdir(regex_dataset_output_path):
-        #    text = open(file, 'r').read()
-        #    list_of_data.append(text)
+        # a1 = load_dataset("json", data_dir=regex_dataset_output_path) This does not work
+        for file in os.listdir(regex_dataset_output_path):
+            text = json.load(open(os.path.join(regex_dataset_output_path, file), "r"))
+            list_of_data.append({"messages": text})
 
     if comprehension_type in [SynthMode.LLM, SynthMode.BOTH]:
-        a2 = load_dataset("json", data_files=llm_dataset_output_path)
-        # for file in os.listdir(llm_dataset_output_path):
-        #    text = open(file, 'r').read()
-        #    list_of_data.append(text)
+        # a2 = load_dataset("json", data_dir=llm_dataset_output_path) This does not work
+        for file in os.listdir(llm_dataset_output_path):
+            text = json.load(open(os.path.join(llm_dataset_output_path, file), "r"))
+            list_of_data.append({"messages": text})
 
     if comprehension_type == SynthMode.BOTH:
-        dataset = concatenate_datasets([a1, a2])
+        dataset = datasets.Dataset.from_list(list_of_data)
 
     dataset.save_to_disk("reading_comprehension_dataset")  # TODO: change name from
 
-    del dataset, a1, a2  # TODO: change name
+    # del dataset # TODO: change name
 
     train_generator(
+        model_name=model_name,
         dataset_name="reading_comprehension_dataset",
-        num_train_epochs=num_train_epochs,
         num_train_epochs=num_train_epochs,
         split=split,
         size_valid_set=size_valid_set,
@@ -134,7 +138,7 @@ def pipeline(
         num_warmup_steps=num_warmup_steps,
         weight_decay=weight_decay,
         optimizer_type=optimizer_type,
-        model_output_dir=model_output_dir,
+        output_dir=model_output_dir,
         log_freq=log_freq,
         neftune_noise_alpha=neftune_noise_alpha,
         log_with=log_with,
@@ -146,7 +150,9 @@ if __name__ == "__main__":
         "HuggingFaceH4/zephyr-7b-beta",
         comprehension_type=SynthMode.BOTH,
         llm_synth_model_name="HuggingFaceH4/zephyr-7b-beta",
-        domain_spm_path="domain.spm",
+        domain_spm_path="./tokenizers/domain.spm",
+        general_spm_path="./tokenizers/general.spm",
         chunk=True,
-        dataset_path="./data",
+        dataset_path="./data_llm",
+        packing=True,
     )

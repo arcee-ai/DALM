@@ -10,8 +10,11 @@ import glob
 from tqdm.contrib.concurrent import process_map
 from pysbd import Segmenter
 import copy
-from dalm.datasets.reading_comprehension_generation.utils import create_domain_tokenizer, create_domain_tokenizer_from_files
-import pprint
+from dalm.datasets.reading_comprehension_generation.utils import (
+    create_domain_tokenizer,
+    create_domain_tokenizer_from_files,
+)
+import json
 from warnings import warn
 
 TYPES = ["nli", "common_reason", "paraphrase", "word2text", "summarize", "text_completion"]
@@ -1163,13 +1166,13 @@ class RC:
 
         return {"read_compre": read_compre_list, "file_name": entry["file_name"]}
 
-    def create_dataset(self, input_dir, output_dir ,workers=1):
+    def create_dataset(self, input_dir, output_dir, workers=1):
         print("loading raw texts in the input folder...")
         paths = glob.glob(f"{input_dir}/*")
         # print(f'paths: {paths}')
 
         raw_texts = []
-        # NOTE: use generator here 
+        # NOTE: use generator here
         # NOTE: do I really need TQDM here?
         for text_id, path in tqdm(enumerate(paths)):
             file_name = path.split("/")[-1]
@@ -1195,8 +1198,7 @@ class RC:
                 path = os.path.join(output_dir, f"{file_name}_{str(index)}")
 
                 with open(path, "w") as f:
-                    f.write(pprint.pformat(read_compre_example))
-                    f.close()
+                    json.dump(read_compre_example, f)
 
 
 if __name__ == "__main__":
@@ -1209,7 +1211,9 @@ if __name__ == "__main__":
         "--ori_spm_path", type=str, help="path of the original sentencepiece model", default="./tokenizers/general.spm"
     )
     parser.add_argument(
-        "--domain_spm_path", type=str, help="path of the domain sentencepiece model", # default="./tokenizers/domain.spm"
+        "--domain_spm_path",
+        type=str,
+        help="path of the domain sentencepiece model",  # default="./tokenizers/domain.spm"
     )
     parser.add_argument(
         "--domain_tokenizer_training_text",

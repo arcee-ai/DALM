@@ -3,7 +3,7 @@ from typing import Optional
 
 import torch
 from accelerate import Accelerator
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 from peft import LoraConfig
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments
@@ -24,13 +24,20 @@ def create_datasets(
     num_workers: int,
     tokenizer: AutoTokenizer,
     formatting_func: callable,
+    local_dataset: bool = True,
 ):
-    dataset = load_dataset(
-        dataset_name,
-        split=split,
-        num_proc=num_workers if not streaming else None,
-        streaming=streaming,
-    )
+    if local_dataset:
+        dataset = load_from_disk(
+            dataset_name,
+        )
+        streaming = False
+    else:
+        dataset = load_dataset(
+            dataset_name,
+            split=split,
+            num_proc=num_workers if not streaming else None,
+            streaming=streaming,
+        )
     if streaming:
         print("Loading the dataset in streaming mode")
         valid_data = dataset.take(size_valid_set)
