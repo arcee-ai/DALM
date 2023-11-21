@@ -6,14 +6,46 @@ import pickle
 from dalm.datasets.reading_comprehension_generation.utils import list_dir, text_chunker, question_and_answer_extractor
 import json
 from datasets import Dataset
+import logging
+
+logger = logging.getLogger(__name__)
+
+PROMPT = (
+    "There are 4 types of reading comprehension tasks. "
+    "The point of reading comprehension tasks is to be assigned a text and questions to prompt answers so as to test conceptual and procedural knowledge "
+    "present in the text. The four types of reading comprehension tasks are : 1. complete-the-sentence Q&A TASK "
+    "2.true/false Q&A TASK (description: a sentence is posed and the user is asked to state the correctness of the statement) "
+    "3. frame a sentence with domain specific keywords(these keywords are required to be present in the text) Q&A TASK "
+    "4. Normal questions and answer Task (description: longform Q&A to test procedural and conceptual knowledge). "
+    "An example of all four tasks given an example text is as follows: "
+    "\n EXAMPLE TEXT: The insights into the mechanisms of memory consolidation during the sleep processes in human and animal brain led to other "
+    "biologically inspired approaches. While declarative memories are in the classical picture consolidated by hippocampo-neocortical dialog during NREM phase "
+    "of sleep, some types of procedural memories were suggested not to rely on the hippocampus and involve REM phase of the sleep. "
+    "This inspired models where internal representations (memories) created by previous learning are spontaneously replayed during sleep-like periods in the network "
+    "itself (i.e. without help of secondary network performed by generative replay approaches mentioned above).\n"
+    "Question: [type: true/false] Is the following sentence true?  all types of procedural memories rely on the hippocampus\n"
+    "Answer: False. The text clearly states there are some types of procedural memories not reliant on the hippocampus\n--------\n"
+    "Question [type: complete-the-sentence] Complete the following sentence:  The insights into ____ in human and animal brain led to other _____ approaches\n"
+    "Answer: The insights into the mechanisms of memory consolidation during the sleep processes in human and animal brain led to other biologically inspired approaches\n------\n"
+    "Question [type 3 domain-keywords] Make a sentence with the following keywords 'hippocampo-neocortical', 'declarative' and 'NREM'\n"
+    "Answer: declarative memories are in the classical picture consolidated by hippocampo-neocortical dialog during NREM phase of sleep\n-------\n"
+    "Question [type: normal q&a] Some types of procedural memories were suggested not to rely on the hippocampus and involve REM phase of the sleep. What did this go on to inspire?\n"
+    "Answer This inspired models where internal representations (memories) created by previous learning are spontaneously replayed during sleep-like periods in the network itself [END OF EXAMPLE]\n\n "
+    "Similar to the above, could you craft 4 different reading comprehension tasks (make sure your output is a list of question answer pairs and each question is labelled QUESTION and answer is labelled ANSWER "
+    "and there is one question and answer per task) based solely and completely focused on the following TEXT: "
+)
 
 
 def gen_prompt(text):
-    prompt = f"There are 4 types of reading comprehension tasks. The point of reading comprehension tasks is to be assigned a text and questions to prompt answers so as to test conceptual and procedural knowledge present in the text. The four types of reading comprehension tasks are : 1. complete-the-sentence Q&A TASK   2.true/false Q&A TASK (description: a sentence is posed and the user is asked to state the correctness of the statement)3. frame a sentence with domain specific keywords(these keywords are required to be present in the text) Q&A TASK  4. Normal questions and answer Task (description: longform Q&A to test procedural and conceptual knowledge). An example of all four tasks given an example text is as follows: \n EXAMPLE TEXT: The insights into the mechanisms of memory consolidation during the sleep processes in human and animal brain led to other biologically inspired approaches. While declarative memories are in the classical picture consolidated by hippocampo-neocortical dialog during NREM phase of sleep, some types of procedural memories were suggested not to rely on the hippocampus and involve REM phase of the sleep. This inspired models where internal representations (memories) created by previous learning are spontaneously replayed during sleep-like periods in the network itself (i.e. without help of secondary network performed by generative replay approaches mentioned above).\nQuestion: [type: true/false] Is the following sentence true?  all types of procedural memories rely on the hippocampus\nAnswer: False. The text clearly states there are some types of procedural memories not reliant on the hippocampus\n--------\nQuestion [type: complete-the-sentence] Complete the following sentence:  The insights into ____ in human and animal brain led to other _____ approaches\nAnswer: The insights into the mechanisms of memory consolidation during the sleep processes in human and animal brain led to other biologically inspired approaches\n------\nQuestion [type 3 domain-keywords] Make a sentence with the following keywords 'hippocampo-neocortical', 'declarative' and 'NREM'\nAnswer: declarative memories are in the classical picture consolidated by hippocampo-neocortical dialog during NREM phase of sleep\n-------\nQuestion [type: normal q&a] Some types of procedural memories were suggested not to rely on the hippocampus and involve REM phase of the sleep. What did this go on to inspire?\nAnswer This inspired models where internal representations (memories) created by previous learning are spontaneously replayed during sleep-like periods in the network itself [END OF EXAMPLE]\n\n Similar to the above, could you craft 4 different reading comprehension tasks (make sure your output is a list of question answer pairs and each question is labelled QUESTION and answer is labelled ANSWER and there is  one question and answer per task) based solely and completely focused on the following TEXT: {text}"
+    prompt = PROMPT + text
+
     return [
         {
             "role": "system",
-            "content": "You are a helpful and meticulous instruction following question and answer making chatbot. Please refrain from acknowledgments, additions or niceties of any sort",
+            "content": (
+                "You are a helpful and meticulous instruction following question and answer making chatbot. "
+                "Please refrain from acknowledgments, additions or niceties of any sort"
+            ),
         },
         {"role": "user", "content": prompt},
     ]
@@ -91,15 +123,18 @@ if __name__ == "__main__":
             state = {"processed_files": []}
             pickle.dump(state, open(args.state_file, "wb"))
 
-    for index, (filename, context, gen_text) in enumerate(
-        generate_synthetic_dataset(
-            model_name=args.model_name,
-            input_directory=args.input_directory,
-            processed_files=state["processed_files"] if args.state_file else [],
-            chunk=args.chunk,
-            context_length=args.context_length,
-        )
-    ):
+    files_missed = 0
+    total_files = 0
+
+    synth_dataset_generator = generate_synthetic_dataset(
+        model_name=args.model_name,
+        input_directory=args.input_directory,
+        processed_files=state["processed_files"] if args.state_file else [],
+        chunk=args.chunk,
+        context_length=args.context_length,
+    )
+
+    for index, (filename, context, gen_text) in enumerate(synth_dataset_generator):
         state["processed_files"].append(filename)
         pickle.dump(state, open(args.state_file, "wb"))
         qanda = question_and_answer_extractor(gen_text, context)
@@ -107,7 +142,19 @@ if __name__ == "__main__":
             output_file = f"gen_{index}.json"
             with open(os.path.join(args.output_directory, output_file), "w") as o:
                 json.dump(qanda, o)
+        else:
+            logger.warning(f"No question and answer pairs found for {filename}")
+            files_missed += 1
+        total_files += 1
+
+    unit = "chunks" if args.chunk else "files"
+
+    logger.info(" Statistics ")
+    logger.info(f"Total number of successfully extracted q&a {unit}: {total_files - files_missed}")
+    logger.info(f"Total {unit} missed: {files_missed} out of {total_files}")
 
     if args.make_dataset:
         dataset = Dataset.from_list(args.output_directory, split="train")
         dataset.save_to_disk(args.dataset_name)
+
+    logger.info("Done generating synthetic dataset")
