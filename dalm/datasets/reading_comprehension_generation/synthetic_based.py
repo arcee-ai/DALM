@@ -98,8 +98,7 @@ def generate_synthetic_dataset(
             gen_text = generate_synthetic_data(model_pipeline, text, generation_params)
             yield file, text, gen_text
 
-
-if __name__ == "__main__":
+def parse_args():
     parser = argparse.ArgumentParser("Generate synthetic dataset for reading comprehension")
     parser.add_argument("--model_name", type=str, default="HuggingFaceH4/zephyr-7b-alpha")
     parser.add_argument("--input_directory", type=str, required=True, help="Directory containing the input files")
@@ -122,8 +121,10 @@ if __name__ == "__main__":
         "--dataset_name", type=str, default="synthetic_rc_dataset", help="name of the dataset to be saved"
     )
 
-    args = parser.parse_args()
+    return parser.parse_args()
 
+def main():
+    args = parse_args()
     """
     Pipeline here includes chunking, generation and parsing of question and answer into a list of exchanges
     that can be used directly for training
@@ -171,11 +172,18 @@ if __name__ == "__main__":
     logger.info(f"Total {unit} missed: {files_missed} out of {total_files}")
 
     in_memory_dataset = []
-    for file in os.listdir(args.output_dir):
-        with open(os.path.join(args.output_dir, file), "r") as f:
+    for file in os.listdir(args.output_directory):
+        with open(os.path.join(args.output_directory, file), "r") as f:
             in_memory_dataset.append({"messages": json.load(f)})
 
     dataset = Dataset.from_list(in_memory_dataset)
     dataset.save_to_disk(args.dataset_name)
 
     logger.info("Done generating synthetic dataset")
+
+
+if __name__ == "__main__":
+    main()
+    
+
+    
