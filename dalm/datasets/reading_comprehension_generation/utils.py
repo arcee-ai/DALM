@@ -7,7 +7,7 @@ import sentencepiece as spm
 from transformers import AutoTokenizer
 
 
-def list_dir(directory: str) -> Iterator[Tuple(str, str)]:
+def list_dir(directory: str) -> Iterator[Tuple[str, str]]:
     for file in os.listdir(directory):
         file_path = os.path.join(directory, file)
         with open(file_path, "r") as file_contents:
