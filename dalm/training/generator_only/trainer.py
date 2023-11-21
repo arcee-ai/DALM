@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Optional
 
@@ -12,6 +13,8 @@ from trl import SFTTrainer
 
 import argparse
 
+logger = logging.getLogger(__name__)
+
 
 def create_datasets(
     dataset_name: str,
@@ -21,7 +24,7 @@ def create_datasets(
     streaming: bool,
     shuffle_buffer: int,
     num_workers: int,
-    local_dataset: bool=False,
+    local_dataset: bool = False,
 ):
     if local_dataset:
         dataset = load_from_disk(
@@ -35,7 +38,7 @@ def create_datasets(
             streaming=streaming,
         )
     if streaming:
-        print("Loading the dataset in streaming mode")
+        logging.info("Loading the dataset in streaming mode")
         valid_data = dataset.take(size_valid_set)
         train_data = dataset.skip(size_valid_set)
         train_data = train_data.shuffle(buffer_size=shuffle_buffer, seed=None)
@@ -43,7 +46,7 @@ def create_datasets(
         dataset = dataset.train_test_split(test_size=validation_split, seed=None)
         train_data = dataset["train"]
         valid_data = dataset["test"]
-        print(f"Size of the train set: {len(train_data)}. Size of the validation set: {len(valid_data)}")
+        logging.info(f"Size of the train set: {len(train_data)}. Size of the validation set: {len(valid_data)}")
 
     return train_data, valid_data
 
@@ -68,10 +71,17 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="HuggingFaceH4/zephyr-7b-alpha", help="the model name")
     parser.add_argument("--log_with", type=str, default="wandb", help="use 'wandb' to log with wandb")
-    parser.add_argument("--dataset_name", type=str, required=True, help="The dataset name corresponding to one sitting on huggingface or a local one. If local, be sure to set the local_dataset flag")
+    parser.add_argument(
+        "--dataset_name",
+        type=str,
+        required=True,
+        help="The dataset name corresponding to one sitting on huggingface or a local one. If local, be sure to set the local_dataset flag",
+    )
     parser.add_argument("--local_dataset", type=bool, default=False, help="whether to load the dataset from disk")
     parser.add_argument("--split", type=str, default="train", help="the split to use")
-    parser.add_argument("--size_valid_set", type=int, default=4000, help="the size of the validation set (when streaming is enabled)")
+    parser.add_argument(
+        "--size_valid_set", type=int, default=4000, help="the size of the validation set (when streaming is enabled)"
+    )
     parser.add_argument("--validation_split", type=float, default=0.05, help="the validation split percentage")
     parser.add_argument("--streaming", type=bool, default=False, help="whether to stream the dataset")
     parser.add_argument("--shuffle_buffer", type=int, default=5000, help="the shuffle buffer size")
@@ -117,27 +127,27 @@ def train_generator(
     streaming: bool,
     shuffle_buffer: Optional[int],
     seq_length: int,
-    num_workers:int,
-    eval_steps:int,
-    logging_steps:int,
-    per_device_train_batch_size:int,
-    per_device_eval_batch_size:int,
-    gradient_accumulation_steps:int,
-    gradient_checkpointing:int,
-    group_by_length:int,
-    packing:bool,
-    lora_alpha:int,
-    lora_dropout:float,
-    lora_r:int,
-    learning_rate:float,
-    lr_scheduler_type:float,
-    num_warmup_steps:int,
-    weight_decay:float,
-    optimizer_type:str,
-    output_dir:str,
-    neftune_noise_alpha:int,
-    log_with:str,
-    run_name:str,
+    num_workers: int,
+    eval_steps: int,
+    logging_steps: int,
+    per_device_train_batch_size: int,
+    per_device_eval_batch_size: int,
+    gradient_accumulation_steps: int,
+    gradient_checkpointing: int,
+    group_by_length: int,
+    packing: bool,
+    lora_alpha: int,
+    lora_dropout: float,
+    lora_r: int,
+    learning_rate: float,
+    lr_scheduler_type: float,
+    num_warmup_steps: int,
+    weight_decay: float,
+    optimizer_type: str,
+    output_dir: str,
+    neftune_noise_alpha: int,
+    log_with: str,
+    run_name: str,
 ):
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     tokenizer.pad_token = tokenizer.eos_token
@@ -194,18 +204,11 @@ def train_generator(
         return text
 
     train_dataset, eval_dataset = create_datasets(
-        dataset_name,
-        split,
-        validation_split,
-        size_valid_set,
-        streaming,
-        shuffle_buffer,
-        num_workers,
-        local_dataset
+        dataset_name, split, validation_split, size_valid_set, streaming, shuffle_buffer, num_workers, local_dataset
     )
 
     chars_per_token = chars_token_ratio(train_dataset, tokenizer, prepare_sample_text)
-    print(f"The character to token ratio of the dataset is: {chars_per_token:.2f}")
+    logging.info(f"The character to token ratio of the dataset is: {chars_per_token:.2f}")
 
     trainer = SFTTrainer(
         model=base_model,
@@ -217,6 +220,7 @@ def train_generator(
         tokenizer=tokenizer,
         args=training_args,
         chars_per_token=chars_per_token,
+        formatting_func=prepare_sample_text,
     )
 
     trainer.train()
