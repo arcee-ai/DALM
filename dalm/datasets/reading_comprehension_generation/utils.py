@@ -1,4 +1,4 @@
-from typing import Generator, List, Dict
+from typing import Iterator, List, Dict, Tuple
 import os
 import tempfile
 import re
@@ -7,7 +7,7 @@ import sentencepiece as spm
 from transformers import AutoTokenizer
 
 
-def list_dir(directory: str) -> Generator[str, str]:
+def list_dir(directory: str) -> Iterator[Tuple(str, str)]:
     for file in os.listdir(directory):
         file_path = os.path.join(directory, file)
         with open(file_path, "r") as file_contents:
@@ -15,7 +15,7 @@ def list_dir(directory: str) -> Generator[str, str]:
         yield file, contents
 
 
-def text_chunker(text: str, tokenizer, chunk_size: int) -> Generator[str]:
+def text_chunker(text: str, tokenizer, chunk_size: int) -> Iterator[str]:
     tokens = tokenizer(text, return_tensors="pt")["input_ids"]
     for i in range(0, tokens.shape[1], chunk_size):
         chunk = tokens[:, i : i + chunk_size]

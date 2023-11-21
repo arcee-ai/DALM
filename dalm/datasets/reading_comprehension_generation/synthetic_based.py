@@ -8,7 +8,7 @@ import json
 from datasets import Dataset
 import logging
 
-from typing import Dict, Any, Generator
+from typing import Dict, Any, Iterator, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ def generate_synthetic_dataset(
         "top_p": 0.95,
         "return_full_text": False,
     },
-) -> Generator[str, str, str]:
+) -> Iterator[Tuple[str, str, str]]:
     model_pipeline = pipeline("text-generation", model=model_name, torch_dtype=torch.bfloat16, device_map="auto")
 
     input_files = list_dir(input_directory)
@@ -183,7 +183,5 @@ def main():
 
 
 if __name__ == "__main__":
+    logger.setLevel(logging.INFO)
     main()
-    
-
-    
