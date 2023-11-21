@@ -1241,7 +1241,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_dataset_name",
         type=str,
-        required=True
+        required=True,
         help="name of the output dataset",
     )
 
