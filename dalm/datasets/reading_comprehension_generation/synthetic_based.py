@@ -1,10 +1,11 @@
 import os
 import argparse
-from transformers import pipeline, AutoTokenizer
+from transformers import pipeline
 import torch
 import pickle
 from dalm.datasets.reading_comprehension_generation.utils import list_dir, text_chunker, question_and_answer_extractor
 import json
+from datasets import Dataset
 
 
 def gen_prompt(text):
@@ -72,6 +73,8 @@ if __name__ == "__main__":
     parser.add_argument("--state_file", type=str, required=False, default="rc_generation_state.pkl")
     parser.add_argument("--context_length", type=int, default=2048)
     parser.add_argument("--chunk", action="store_true")
+    parser.add_argument("--make_dataset", action="store_true", help="make a dataset from the generated text")
+    parser.add_argument("--dataset_name", type=str, default="synthetic_rc_dataset")
 
     args = parser.parse_args()
 
@@ -90,11 +93,11 @@ if __name__ == "__main__":
 
     for index, (filename, context, gen_text) in enumerate(
         generate_synthetic_dataset(
-            model_name=args.model_name, 
+            model_name=args.model_name,
             input_directory=args.input_directory,
             processed_files=state["processed_files"] if args.state_file else [],
             chunk=args.chunk,
-            context_length=args.context_length
+            context_length=args.context_length,
         )
     ):
         state["processed_files"].append(filename)
@@ -104,3 +107,7 @@ if __name__ == "__main__":
             output_file = f"gen_{index}.json"
             with open(os.path.join(args.output_directory, output_file), "w") as o:
                 json.dump(qanda, o)
+
+    if args.make_dataset:
+        dataset = Dataset.from_list(args.output_directory, split="train")
+        dataset.save_to_disk(args.dataset_name)

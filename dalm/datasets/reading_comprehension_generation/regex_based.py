@@ -16,6 +16,7 @@ from dalm.datasets.reading_comprehension_generation.utils import (
 )
 import json
 from warnings import warn
+import datasets
 
 TYPES = ["nli", "common_reason", "paraphrase", "word2text", "summarize", "text_completion"]
 
@@ -1203,7 +1204,7 @@ class RC:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input_dir", type=str, help="directory of the input raw texts", default="./data")
+    parser.add_argument("--input_dir", type=str, help="directory of the input raw texts", required=True)
     parser.add_argument(
         "--output_dir", type=str, help="directory of the output reading comprehension texts", default="./output2"
     )
@@ -1219,6 +1220,15 @@ if __name__ == "__main__":
         "--domain_tokenizer_training_text",
         type=str,
         help="path of the domain sentencepiece model",
+    )
+    parser.add_argument(
+        "--make_dataset", action="store_true", help="whether to make dataset from raw texts"
+    )
+    parser.add_argument(
+        "--output_dataset_name",
+        type=str,
+        required=False
+        help="name of the output dataset",
     )
 
     args = parser.parse_args()
@@ -1238,13 +1248,13 @@ if __name__ == "__main__":
     else:
         domain_spm = create_domain_tokenizer_from_files(args.input_dir)
 
-    ori_spm = spm.SentencePieceProcessor(model_file=args.ori_spm_path)
+    general_spm = spm.SentencePieceProcessor(model_file=args.ori_spm_path)
 
     # get max worker for multi-process
     max_workers = get_max_workers()
     print(f"max_workers: {max_workers}")
 
-    rc = RC(ori_spm, domain_spm)
+    rc = RC(general_spm, domain_spm)
     # side effect warning
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
@@ -1252,3 +1262,16 @@ if __name__ == "__main__":
     rc.create_dataset(args.input_dir, args.output_dir, workers=max_workers)
 
     print(f"saved to {args.output_dir}")
+
+    if args.make_dataset:
+        # make dataset from reading comprehension texts
+        print("making dataset...")
+        in_memory_dataset = []
+        for file in os.listdir(args.output_dir):
+            with open(os.path.join(args.output_dir, file), "r") as f:
+                in_memory_dataset.append(json.load(f))
+
+        regex_dataset=datasets.Dataset.from_list(in_memory_dataset)
+        regex_dataset.save_to_disk(args.output_dataset_name)
+
+        print("done")
