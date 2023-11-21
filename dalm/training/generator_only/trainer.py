@@ -20,7 +20,7 @@ def create_datasets(
     streaming: bool,
     shuffle_buffer: int,
     num_workers: int,
-    local_dataset: bool = True,
+    local_dataset: bool=False,
 ):
     if local_dataset:
         dataset = load_from_disk(
@@ -130,7 +130,7 @@ def train_generator(
     weight_decay,
     optimizer_type,
     output_dir,
-    log_freq,
+    log_steps,
     neftune_noise_alpha=5,
     log_with="wandb",
 ):
@@ -180,7 +180,8 @@ def train_generator(
         remove_unused_columns=False,
         run_name="generator_tuning",
         weight_decay=weight_decay,
-        log_freq=log_freq,
+        logging_steps=log_steps,
+        neftune_noise_alpha=neftune_noise_alpha,
     )
 
     def prepare_sample_text(example):
@@ -194,10 +195,7 @@ def train_generator(
         size_valid_set,
         streaming,
         shuffle_buffer,
-        seq_length,
         num_workers,
-        tokenizer,
-        prepare_sample_text,
     )
 
     chars_per_token = chars_token_ratio(train_dataset, tokenizer, prepare_sample_text)
@@ -212,7 +210,6 @@ def train_generator(
         max_seq_length=seq_length,
         tokenizer=tokenizer,
         args=training_args,
-        neftune_noise_alpha=neftune_noise_alpha,
         chars_per_token=chars_per_token,
     )
 
@@ -252,7 +249,7 @@ def main():
         weight_decay=args.weight_decay,
         optimizer_type=args.optimizer_type,
         output_dir=args.output_dir,
-        log_freq=args.log_freq,
+        log_steps=args.log_steps,
         log_with=args.log_with,
         neftune_noise_alpha=args.neftune_noise_alpha,
     )
