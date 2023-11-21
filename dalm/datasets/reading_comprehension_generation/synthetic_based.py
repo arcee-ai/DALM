@@ -29,7 +29,7 @@ def generate_synthetic_data(model_pipeline, text, generation_params):
 def generate_synthetic_dataset(
     model_name,
     input_directory,
-    state_file=None,
+    processed_files=[],
     chunk=False,
     context_length=2048,
     generation_params={
@@ -51,29 +51,17 @@ def generate_synthetic_dataset(
         CONSTANT = len(tokenizer(tokens)["input_ids"])
         k = context_length - CONSTANT
 
-    if state_file:
-        if os.path.exists(state_file):
-            with open(state_file, "rb") as f:
-                state = pickle.load(f)
-        else:
-            state = {"processed_files": []}
-            pickle.dump(state, open(state_file, "wb"))
-
     for file, text in input_files:
-        if state and file in state["processed_files"]:
+        if file in processed_files:
             continue
 
         if chunk:
             for chunk_ in text_chunker(text, tokenizer, k):
                 gen_text = generate_synthetic_data(model_pipeline, chunk_, generation_params)
-                yield gen_text, chunk_
+                yield file, chunk_, gen_text
         else:
             gen_text = generate_synthetic_data(model_pipeline, text, generation_params)
-            yield gen_text, text
-
-        if state:
-            state["processed_files"].append(file)
-            pickle.dump(state, open(state_file, "wb"))
+            yield file, text, gen_text
 
 
 if __name__ == "__main__":
@@ -92,13 +80,27 @@ if __name__ == "__main__":
     that can be used directly for training
     """
 
-    for index, (gen_text, context) in enumerate(
+    if args.state_file:
+        if os.path.exists(args.state_file):
+            with open(args.state_file, "rb") as f:
+                state = pickle.load(f)
+        else:
+            state = {"processed_files": []}
+            pickle.dump(state, open(args.state_file, "wb"))
+
+    for index, (filename, context, gen_text) in enumerate(
         generate_synthetic_dataset(
-            args.model_name, args.input_directory, args.state_file, args.chunk, args.context_length
+            model_name=args.model_name, 
+            input_directory=args.input_directory,
+            processed_files=state["processed_files"] if args.state_file else [],
+            chunk=args.chunk,
+            context_length=args.context_length
         )
     ):
+        state["processed_files"].append(filename)
+        pickle.dump(state, open(args.state_file, "wb"))
         qanda = question_and_answer_extractor(gen_text, context)
         if qanda:
-            output_file = f"gen_{index}.txt"
+            output_file = f"gen_{index}.json"
             with open(os.path.join(args.output_directory, output_file), "w") as o:
                 json.dump(qanda, o)
