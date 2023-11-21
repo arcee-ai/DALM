@@ -1,3 +1,4 @@
+from typing import Generator, List, Dict
 import os
 import tempfile
 import re
@@ -6,7 +7,7 @@ import sentencepiece as spm
 from transformers import AutoTokenizer
 
 
-def list_dir(directory):
+def list_dir(directory: str) -> Generator[str, str]:
     for file in os.listdir(directory):
         file_path = os.path.join(directory, file)
         with open(file_path, "r") as file_contents:
@@ -14,7 +15,7 @@ def list_dir(directory):
         yield file, contents
 
 
-def text_chunker(text, tokenizer, chunk_size):
+def text_chunker(text: str, tokenizer, chunk_size: int) -> Generator[str]:
     tokens = tokenizer(text, return_tensors="pt")["input_ids"]
     for i in range(0, tokens.shape[1], chunk_size):
         chunk = tokens[:, i : i + chunk_size]
@@ -23,7 +24,7 @@ def text_chunker(text, tokenizer, chunk_size):
 
 
 # standalone
-def files_chunker(input_directory, model, context_length, output_directory, prompt):
+def files_chunker(input_directory: str, model: str, context_length: int, output_directory: str, prompt: str) -> None:
     tokenizer = AutoTokenizer.from_pretrained(model)
 
     tokens = tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
@@ -40,7 +41,7 @@ def files_chunker(input_directory, model, context_length, output_directory, prom
                 o.write(chunk)
 
 
-def create_domain_tokenizer(text_file):
+def create_domain_tokenizer(text_file: str) -> spm.SentencePieceProcessor:
     """
     train and return domain tokenizer
     """
@@ -49,13 +50,15 @@ def create_domain_tokenizer(text_file):
         model_prefix = f"{temp_dir}/domain"
 
         # Train the SentencePiece model, the model is saved in the temporary directory
-        spm.SentencePieceTrainer.train(input=text_file, model_prefix=model_prefix, vocab_size=32000, character_coverage=1.0)
+        spm.SentencePieceTrainer.train(
+            input=text_file, model_prefix=model_prefix, vocab_size=32000, character_coverage=1.0
+        )
 
         sp_model_file = f"{model_prefix}.model"
         return spm.SentencePieceProcessor(model_file=sp_model_file)
 
 
-def split_to_sentences(infile):
+def split_to_sentences(infile: str) -> List[str]:
     text = infile.read()
     sentences = re.split(r"[.?!]\s+", text)
 
@@ -63,7 +66,7 @@ def split_to_sentences(infile):
 
 
 # TODO:  revisit the errors part
-def create_domain_tokenizer_from_files(directory_with_files):
+def create_domain_tokenizer_from_files(directory_with_files: str) -> spm.SentencePieceProcessor:
     # open a tempfile and add sentences from files in directory_with_files to it
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_file = open(os.path.join(temp_dir, "temp.txt"), "w", encoding="utf-8")
@@ -86,7 +89,7 @@ def create_domain_tokenizer_from_files(directory_with_files):
         return create_domain_tokenizer(os.path.join(temp_dir, "temp.txt"))
 
 
-def fix_first_prompt(text, chat_chain):
+def fix_first_prompt(text: str, chat_chain: List[Dict[str, str]]) -> List[Dict[str, str]]:
     # remove the first prompt
     first_prompt = chat_chain.pop(0)
     first_prompt = [
@@ -99,10 +102,9 @@ def fix_first_prompt(text, chat_chain):
     return first_prompt + chat_chain
 
 
-# TODO: type hinting is very necessary here
 # TODO: add test
 # TODO: refactor this as a state machine?
-def question_and_answer_extractor(whole_text, context):
+def question_and_answer_extractor(whole_text: str, context: str) -> List[Dict[str, str]] | None:
     whole_text = whole_text.split("\n")
     question = []
     answer = []
