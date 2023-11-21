@@ -1,12 +1,14 @@
 import os
 import argparse
-from transformers import pipeline
+from transformers import pipeline, Pipeline
 import torch
 import pickle
 from dalm.datasets.reading_comprehension_generation.utils import list_dir, text_chunker, question_and_answer_extractor
 import json
 from datasets import Dataset
 import logging
+
+from typing import Dict, Any, Generator
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ PROMPT = (
 )
 
 
-def gen_prompt(text):
+def gen_prompt(text: str) -> Dict[str, Any]:
     prompt = PROMPT + text
 
     return [
@@ -51,7 +53,7 @@ def gen_prompt(text):
     ]
 
 
-def generate_synthetic_data(model_pipeline, text, generation_params):
+def generate_synthetic_data(model_pipeline: Pipeline, text:str, generation_params: Dict[str, Any]) -> str:
     prompt = gen_prompt(text)
     prompt = model_pipeline.tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
     outputs = model_pipeline(prompt, **generation_params)
@@ -60,12 +62,12 @@ def generate_synthetic_data(model_pipeline, text, generation_params):
 
 
 def generate_synthetic_dataset(
-    model_name,
-    input_directory,
-    processed_files=[],
-    chunk=False,
-    context_length=2048,
-    generation_params={
+    model_name: str,
+    input_directory: str,
+    processed_files:[str] = [],
+    chunk:bool=False,
+    context_length:int=2048,
+    generation_params:Dict[str, Any]={
         "max_new_tokens": 600,
         "do_sample": True,
         "temperature": 0.7,
@@ -73,7 +75,7 @@ def generate_synthetic_dataset(
         "top_p": 0.95,
         "return_full_text": False,
     },
-):
+) -> Generator[str, str, str]:
     model_pipeline = pipeline("text-generation", model=model_name, torch_dtype=torch.bfloat16, device_map="auto")
 
     input_files = list_dir(input_directory)
