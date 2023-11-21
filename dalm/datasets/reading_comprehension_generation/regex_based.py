@@ -1,3 +1,28 @@
+"""
+    MIT License
+
+    Copyright (c) Microsoft Corporation, Arcee.ai
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE
+"""
+
+
 from concurrent.futures import ProcessPoolExecutor
 import random
 import os
@@ -5,8 +30,6 @@ import sentencepiece as spm
 import numpy as np
 import re
 import argparse
-from tqdm import tqdm
-import glob
 from tqdm.contrib.concurrent import process_map
 from pysbd import Segmenter
 import copy
@@ -17,6 +40,9 @@ from dalm.datasets.reading_comprehension_generation.utils import (
 import json
 from warnings import warn
 import datasets
+import logging
+
+logger = logging.getLogger(__name__)
 
 TYPES = ["nli", "common_reason", "paraphrase", "word2text", "summarize", "text_completion"]
 
@@ -1074,14 +1100,12 @@ class overall(BaseType):
             read_compre_demo = overall_cls.format_single_demo(entry, seed)
             return read_compre_demo, count_dict
 
-        # if ('summarize' in insert_types and overall_entry['summarize']['title'] is not None) and ('text_completion' in insert_types and len(overall_entry['text_completion']['sents']) >=2):
-        #    np.random.seed(seed)
-        #    print('summarize_and_completion')
-        #    read_func = np.random.choice([summaize_only, completion_only, summarize_and_completion, no_summarize_or_completion], p=[0.4, 0.1, 0.4, 0.1])
-        # elif ('summarize' in insert_types and overall_entry['summarize']['title'] is not None):
-        #    np.random.seed(seed)
-        #    print('summarize_only')
-        #    read_func = np.random.choice([summaize_only, no_summarize_or_completion], p=[0.5, 0.5])
+        if ('summarize' in insert_types and overall_entry['summarize']['title'] is not None) and ('text_completion' in insert_types and len(overall_entry['text_completion']['sents']) >=2):
+           np.random.seed(seed)
+           read_func = np.random.choice([summaize_only, completion_only, summarize_and_completion, no_summarize_or_completion], p=[0.4, 0.1, 0.4, 0.1])
+        elif ('summarize' in insert_types and overall_entry['summarize']['title'] is not None):
+           np.random.seed(seed)
+           read_func = np.random.choice([summaize_only, no_summarize_or_completion], p=[0.5, 0.5])
         if "text_completion" in insert_types and len(overall_entry["text_completion"]["sents"]) >= 2:
             np.random.seed(seed)
             if len(qa_demos) == 0:
@@ -1123,7 +1147,7 @@ def search(entry, overall_cls, segmenter, inited_type_map, domain_name, TYPES):
     return {"read_compre": read_compre_list, "file_name": entry["file_name"]}
 
 
-class RC:
+class RegexBasedReadingComprehension:
     def __init__(self, general_spm, domain_spm):
         self.inited_type_map = {}
 
@@ -1167,46 +1191,39 @@ class RC:
 
         return {"read_compre": read_compre_list, "file_name": entry["file_name"]}
 
-    def create_dataset(self, input_dir, output_dir, workers=1):
-        print("loading raw texts in the input folder...")
-        paths = glob.glob(f"{input_dir}/*")
-        # print(f'paths: {paths}')
+    def dataset_generator(self, input_dir, workers=1):
+        files = os.listdir(input_dir)
 
         raw_texts = []
-        # NOTE: use generator here
-        # NOTE: do I really need TQDM here?
-        for text_id, path in tqdm(enumerate(paths)):
-            file_name = path.split("/")[-1]
-
+        for text_id, filename in enumerate(files):
             try:
-                with open(path, "r", encoding="utf8") as f:
+                with open(os.path.join(input_dir, filename), "r", encoding="utf8") as f:
                     text = f.read().strip()
 
             except UnicodeDecodeError:
-                with open(path, "r", encoding="utf8", errors="replace") as f:
+                with open(os.path.join(input_dir, filename), "r", encoding="utf8", errors="replace") as f:
                     text = f.read().strip()
 
             raw_texts.append({"text": text, "text_id": text_id, "file_name": file_name})
 
-        print("transferring raw texts into reading comprehension...")
+        logger.info("transferring raw texts into reading comprehension...")
         read_compre = list(process_map(self.generate, raw_texts, max_workers=workers, chunksize=8192))
 
-        print("saving reading comprehension texts...")
+        logger.info("saving reading comprehension texts...")
         # sort by text_id to align with the order of raw texts
         for entry in read_compre:
             for index, read_compre_example in enumerate(entry["read_compre"]):
                 file_name = entry["file_name"]
-                path = os.path.join(output_dir, f"{file_name}_{str(index)}")
-
-                with open(path, "w") as f:
-                    json.dump(read_compre_example, f)
+                yield index, filename, read_compre_example
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_dir", type=str, help="directory of the input raw texts", required=True)
     parser.add_argument(
-        "--output_dir", type=str, help="directory of the output reading comprehension texts", default="./output2"
+        "--debug_output_dir", type=str, help="if directory of the output reading comprehension texts",
     )
     parser.add_argument(
         "--ori_spm_path", type=str, help="path of the original sentencepiece model", default="./tokenizers/general.spm"
@@ -1222,12 +1239,9 @@ if __name__ == "__main__":
         help="path of the domain sentencepiece model",
     )
     parser.add_argument(
-        "--make_dataset", action="store_true", help="whether to make dataset from raw texts"
-    )
-    parser.add_argument(
         "--output_dataset_name",
         type=str,
-        required=False
+        required=True
         help="name of the output dataset",
     )
 
@@ -1235,7 +1249,7 @@ if __name__ == "__main__":
 
     if not (args.domain_spm_path or args.domain_tokenizer_training_text):
         # warn user that the domain tokenizer will be created from the input files
-        warn(
+        logger.warn(
             "No domain tokenizer is provided nor explicit file for training domain tokenizer is provided, "
             "the domain tokenizer will be created from the input files, "
         )
@@ -1252,26 +1266,29 @@ if __name__ == "__main__":
 
     # get max worker for multi-process
     max_workers = get_max_workers()
-    print(f"max_workers: {max_workers}")
+    logger.info(f"max_workers for generation of regex data: {max_workers}")
 
-    rc = RC(general_spm, domain_spm)
-    # side effect warning
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
+    rc = RegexBasedReadingComprehension(general_spm, domain_spm)
+    dataset_generator = rc.dataset_generator(args.input_dir, workers=max_workers)
 
-    rc.create_dataset(args.input_dir, args.output_dir, workers=max_workers)
-
-    print(f"saved to {args.output_dir}")
-
-    if args.make_dataset:
-        # make dataset from reading comprehension texts
-        print("making dataset...")
+    if args.debug_output_dir:
         in_memory_dataset = []
-        for file in os.listdir(args.output_dir):
-            with open(os.path.join(args.output_dir, file), "r") as f:
-                in_memory_dataset.append(json.load(f))
 
-        regex_dataset=datasets.Dataset.from_list(in_memory_dataset)
-        regex_dataset.save_to_disk(args.output_dataset_name)
+        logger.info("saving debug data...")
+        os.makedirs(args.debug_output_dir, exist_ok=True)
 
-        print("done")
+        for index, filename, read_compre_example in dataset_generator:
+            with open(os.path.join(args.debug_output_dir, f"{filename}_{index}.json"), "w", encoding="utf8") as f:
+                json.dump({"messages":read_compre_example}, f)
+            in_memory_dataset.append({"messages":read_compre_example})
+    else:
+        in_memory_dataset = [{"messages":rc_text} for _,_,rc_text in  dataset_generator]
+
+
+    # make dataset from reading comprehension texts
+    logger.info("making dataset...")
+
+    regex_dataset=datasets.Dataset.from_list(in_memory_dataset)
+    regex_dataset.save_to_disk(args.output_dataset_name)
+
+    logger.info("done")
