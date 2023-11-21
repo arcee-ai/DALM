@@ -9,7 +9,6 @@ from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments
 
 from trl import SFTTrainer
-from trl.trainer import ConstantLengthDataset
 
 import argparse
 
@@ -20,17 +19,13 @@ def create_datasets(
     size_valid_set: Optional[int],
     streaming: bool,
     shuffle_buffer: int,
-    seq_length: int,
     num_workers: int,
-    tokenizer: AutoTokenizer,
-    formatting_func: callable,
     local_dataset: bool = True,
 ):
     if local_dataset:
         dataset = load_from_disk(
             dataset_name,
         )
-        streaming = False
     else:
         dataset = load_dataset(
             dataset_name,
@@ -49,34 +44,15 @@ def create_datasets(
         valid_data = dataset["test"]
         print(f"Size of the train set: {len(train_data)}. Size of the validation set: {len(valid_data)}")
 
-    chars_per_token = chars_token_ratio(train_data, tokenizer, formatting_func)
-    print(f"The character to token ratio of the dataset is: {chars_per_token:.2f}")
-
-    train_dataset = ConstantLengthDataset(
-        tokenizer,
-        train_data,
-        formatting_func=formatting_func,
-        infinite=True,
-        seq_length=seq_length,
-        chars_per_token=chars_per_token,
-    )
-    valid_dataset = ConstantLengthDataset(
-        tokenizer,
-        valid_data,
-        formatting_func=formatting_func,
-        infinite=False,
-        seq_length=seq_length,
-        chars_per_token=chars_per_token,
-    )
-    return train_dataset, valid_dataset
+    return train_data, valid_data
 
 
-def chars_token_ratio(dataset, tokenizer, formatting_func, nb_examples=400):
+def chars_token_ratio(dataset, tokenizer, formatting_func, sample_size=400):
     """
     Estimate the average number of characters per token in the dataset.
     """
     total_characters, total_tokens = 0, 0
-    for _, example in tqdm(zip(range(nb_examples), iter(dataset)), total=nb_examples):
+    for _, example in tqdm(zip(range(sample_size), iter(dataset)), total=sample_size):
         text = formatting_func(example)
         total_characters += len(text)
         if tokenizer.is_fast:
@@ -91,9 +67,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="HuggingFaceH4/zephyr-7b-alpha", help="the model name")
     parser.add_argument("--log_with", type=str, default="wandb", help="use 'wandb' to log with wandb")
-    parser.add_argument(
-        "--dataset_name", type=str, default="arcee-ai/azure-reading-comprehension-dataset", help="the dataset name"
-    )
+    parser.add_argument("--dataset_name", type=str, required=True, help="The dataset name either corresponding repo or  Format should be that of ChatML")
     parser.add_argument("--split", type=str, default="train", help="the split to use")
     parser.add_argument("--size_valid_set", type=int, default=4000, help="the size of the validation set")
     parser.add_argument("--streaming", type=bool, default=False, help="whether to stream the dataset")
@@ -189,6 +163,7 @@ def train_generator(
         output_dir=output_dir,
         per_device_train_batch_size=per_device_train_batch_size,
         gradient_accumulation_steps=gradient_accumulation_steps,
+        gradient_checkpointing=gradient_checkpointing,
         per_device_eval_batch_size=per_device_eval_batch_size,
         learning_rate=learning_rate,
         logging_steps=logging_steps,
@@ -204,6 +179,8 @@ def train_generator(
         bf16=True,
         remove_unused_columns=False,
         run_name="generator_tuning",
+        weight_decay=weight_decay,
+        log_freq=log_freq,
     )
 
     def prepare_sample_text(example):
@@ -223,6 +200,9 @@ def train_generator(
         prepare_sample_text,
     )
 
+    chars_per_token = chars_token_ratio(train_dataset, tokenizer, prepare_sample_text)
+    print(f"The character to token ratio of the dataset is: {chars_per_token:.2f}")
+
     trainer = SFTTrainer(
         model=base_model,
         train_dataset=train_dataset,
@@ -233,6 +213,7 @@ def train_generator(
         tokenizer=tokenizer,
         args=training_args,
         neftune_noise_alpha=neftune_noise_alpha,
+        chars_per_token=chars_per_token,
     )
 
     trainer.train()
