@@ -53,7 +53,7 @@ def gen_prompt(text: str) -> Dict[str, Any]:
     ]
 
 
-def generate_synthetic_data(model_pipeline: Pipeline, text:str, generation_params: Dict[str, Any]) -> str:
+def generate_synthetic_data(model_pipeline: Pipeline, text: str, generation_params: Dict[str, Any]) -> str:
     prompt = gen_prompt(text)
     prompt = model_pipeline.tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
     outputs = model_pipeline(prompt, **generation_params)
@@ -64,10 +64,10 @@ def generate_synthetic_data(model_pipeline: Pipeline, text:str, generation_param
 def generate_synthetic_dataset(
     model_name: str,
     input_directory: str,
-    processed_files:[str] = [],
-    chunk:bool=False,
-    context_length:int=2048,
-    generation_params:Dict[str, Any]={
+    processed_files: [str],
+    chunk: bool,
+    context_length: int,
+    generation_params: Dict[str, Any] = {
         "max_new_tokens": 600,
         "do_sample": True,
         "temperature": 0.7,
@@ -100,15 +100,27 @@ def generate_synthetic_dataset(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, required=True)
-    parser.add_argument("--input_directory", type=str, required=True)
-    parser.add_argument("--output_directory", type=str, required=True)
-    parser.add_argument("--state_file", type=str, required=False, default="rc_generation_state.pkl")
-    parser.add_argument("--context_length", type=int, default=2048)
-    parser.add_argument("--chunk", action="store_true")
-    parser.add_argument("--make_dataset", action="store_true", help="make a dataset from the generated text")
-    parser.add_argument("--dataset_name", type=str, default="synthetic_rc_dataset")
+    parser = argparse.ArgumentParser("Generate synthetic dataset for reading comprehension")
+    parser.add_argument("--model_name", type=str, default="HuggingFaceH4/zephyr-7b-alpha")
+    parser.add_argument("--input_directory", type=str, required=True, help="Directory containing the input files")
+    parser.add_argument(
+        "--output_directory",
+        type=str,
+        required=True,
+        help="Directory to save the generated files (serves as intermediate step and for debugging purposes)",
+    )
+    parser.add_argument(
+        "--state_file",
+        type=str,
+        required=False,
+        default="rc_generation_state.pkl",
+        help="File to save the state of the generation",
+    )
+    parser.add_argument("--context_length", type=int, default=4192, help="context length to calulcate the chunk size")
+    parser.add_argument("--no_chunk", action="store_false")
+    parser.add_argument(
+        "--dataset_name", type=str, default="synthetic_rc_dataset", help="name of the dataset to be saved"
+    )
 
     args = parser.parse_args()
 
@@ -125,6 +137,9 @@ if __name__ == "__main__":
             state = {"processed_files": []}
             pickle.dump(state, open(args.state_file, "wb"))
 
+    if not os.path.exists(args.output_directory):
+        os.makedirs(args.output_directory)
+
     files_missed = 0
     total_files = 0
 
@@ -132,7 +147,7 @@ if __name__ == "__main__":
         model_name=args.model_name,
         input_directory=args.input_directory,
         processed_files=state["processed_files"] if args.state_file else [],
-        chunk=args.chunk,
+        chunk=args.no_chunk,
         context_length=args.context_length,
     )
 
@@ -149,14 +164,18 @@ if __name__ == "__main__":
             files_missed += 1
         total_files += 1
 
-    unit = "chunks" if args.chunk else "files"
+    unit = "files" if args.no_chunk else "chunks"
 
     logger.info(" Statistics ")
     logger.info(f"Total number of successfully extracted q&a {unit}: {total_files - files_missed}")
     logger.info(f"Total {unit} missed: {files_missed} out of {total_files}")
 
-    if args.make_dataset:
-        dataset = Dataset.from_list(args.output_directory, split="train")
-        dataset.save_to_disk(args.dataset_name)
+    in_memory_dataset = []
+    for file in os.listdir(args.output_dir):
+        with open(os.path.join(args.output_dir, file), "r") as f:
+            in_memory_dataset.append({"messages": json.load(f)})
+
+    dataset = Dataset.from_list(in_memory_dataset)
+    dataset.save_to_disk(args.dataset_name)
 
     logger.info("Done generating synthetic dataset")
