@@ -1,10 +1,10 @@
-from typing import Iterator, List, Dict, Tuple
 import os
-import tempfile
 import re
-import sentencepiece as spm
+import tempfile
+from typing import Dict, Iterator, List, Tuple
 
-from transformers import AutoTokenizer
+import sentencepiece as spm  # type: ignore[import-untyped]
+from transformers import AutoTokenizer, PreTrainedTokenizerBase
 
 
 def list_dir(directory: str) -> Iterator[Tuple[str, str]]:
@@ -15,7 +15,7 @@ def list_dir(directory: str) -> Iterator[Tuple[str, str]]:
         yield file, contents
 
 
-def text_chunker(text: str, tokenizer, chunk_size: int) -> Iterator[str]:
+def text_chunker(text: str, tokenizer: PreTrainedTokenizerBase, chunk_size: int) -> Iterator[str]:
     tokens = tokenizer(text, return_tensors="pt")["input_ids"]
     for i in range(0, tokens.shape[1], chunk_size):
         chunk = tokens[:, i : i + chunk_size]
@@ -51,15 +51,14 @@ def create_domain_tokenizer(text_file: str) -> spm.SentencePieceProcessor:
 
         # Train the SentencePiece model, the model is saved in the temporary directory
         spm.SentencePieceTrainer.train(
-            input=text_file, model_prefix=model_prefix, vocab_size=32000, character_coverage=1.0
+            input=text_file, model_prefix=model_prefix, vocab_size=4000, character_coverage=1.0
         )
 
         sp_model_file = f"{model_prefix}.model"
         return spm.SentencePieceProcessor(model_file=sp_model_file)
 
 
-def split_to_sentences(infile: str) -> List[str]:
-    text = infile.read()
+def split_to_sentences(text: str) -> List[str]:
     sentences = re.split(r"[.?!]\s+", text)
 
     return sentences
@@ -73,13 +72,13 @@ def create_domain_tokenizer_from_files(directory_with_files: str) -> spm.Sentenc
         for filename in os.listdir(directory_with_files):
             try:
                 with open(os.path.join(directory_with_files, filename), "r", encoding="utf-8") as infile:
-                    sentences = split_to_sentences(infile)
+                    sentences = split_to_sentences(infile.read())
 
             except UnicodeDecodeError:
                 with open(
                     os.path.join(directory_with_files, filename), "r", encoding="utf-8", errors="replace"
                 ) as infile:
-                    sentences = split_to_sentences(infile)
+                    sentences = split_to_sentences(infile.read())
 
             for sentence in sentences:
                 sentence = sentence.strip()
@@ -92,22 +91,22 @@ def create_domain_tokenizer_from_files(directory_with_files: str) -> spm.Sentenc
 def fix_first_prompt(text: str, chat_chain: List[Dict[str, str]]) -> List[Dict[str, str]]:
     # remove the first prompt
     first_prompt = chat_chain.pop(0)
-    first_prompt = [
+    fixed_first_prompt = [
         {
             "content": f"Based on the following text: \n {text}, \n I'd like you to answer a few questions\n"
             + first_prompt["content"],
             "role": "user",
         }
     ]
-    return first_prompt + chat_chain
+    return fixed_first_prompt + chat_chain
 
 
 # TODO: add test
 # TODO: refactor this as a state machine?
 def question_and_answer_extractor(whole_text: str, context: str) -> List[Dict[str, str]] | None:
-    whole_text = whole_text.split("\n")
-    question = []
-    answer = []
+    text_lines = whole_text.split("\n")
+    question: List[str] = []
+    answer: List[str] = []
 
     question_context = False
     answer_context = False
@@ -121,7 +120,7 @@ def question_and_answer_extractor(whole_text: str, context: str) -> List[Dict[st
     # answer regex
     answer_regex = r"^answer\s*\d*"
 
-    for i in whole_text:
+    for i in text_lines:
         raw_text = i.strip()
         text = raw_text.lower()
 
