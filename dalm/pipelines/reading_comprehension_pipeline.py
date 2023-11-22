@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Optional
 
 import datasets
-import sentencepiece as spm
+import sentencepiece as spm # type: ignore[import-untyped]
 
 from dalm.datasets.reading_comprehension_generation.regex_based import RegexBasedReadingComprehension
 from dalm.datasets.reading_comprehension_generation.synthetic_based import generate_synthetic_dataset
@@ -16,74 +16,85 @@ from dalm.datasets.reading_comprehension_generation.utils import (
     create_domain_tokenizer_from_files,
     question_and_answer_extractor,
 )
+from dataclasses import dataclass
 from dalm.training.generator_only.trainer import train_generator
 
 logger = logging.getLogger(__name__)
-
 
 class SynthMode(Enum):
     REGEX = "regex"
     LLM = "llm"
     BOTH = "both"
 
+@dataclass
+class LLMKwargs:
+    model_name: str
+    context_length: Optional[int]
+    dataset_output_path: str
+    chunk: bool
+
+    def __post_init__(self) -> None:
+        if self.chunk and not self.context_length:
+            raise ValueError("context_length is required for chunking")
+
+
+@dataclass
+class SynthKwargs:
+    general_spm_path: str
+    domain_spm_path:  Optional[str]
 
 def pipeline(
     model_name: str,
     output_dataset_name: str,
-    comprehension_type: SynthMode = SynthMode.BOTH,
-    llm_synth_model_name: Optional[str] = None,
-    llm_synth_model_context_length: Optional[int] = 4192,
-    llm_dataset_output_path: Optional[str] = "llm_dataset",
-    general_spm_path: Optional[str] = None,
-    domain_spm_path: Optional[str] = None,
-    dataset_path: Optional[str] = None,
-    chunk: Optional[bool] = False,
-    num_train_epochs: Optional[int] = 1,
-    split: Optional[str] = "train",
-    size_valid_set: Optional[int] = 1000,
-    streaming: Optional[bool] = False,
-    shuffle_buffer: Optional[int] = 10000,
-    seq_length: Optional[int] = 2600,
-    num_workers: Optional[int] = 4,
-    eval_steps: Optional[int] = 200,
-    logging_steps: Optional[int] = 1000,
-    per_device_train_batch_size: Optional[int] = 1,
-    per_device_eval_batch_size: Optional[int] = 1,
-    gradient_accumulation_steps: Optional[int] = 1,
-    gradient_checkpointing: Optional[bool] = False,
-    group_by_length: Optional[bool] = False,
-    packing: Optional[bool] = False,
-    lora_alpha: Optional[int] = 16,
-    lora_dropout: Optional[float] = 0.05,
-    lora_r: Optional[int] = 8,
-    learning_rate: Optional[float] = 5e-5,
-    lr_scheduler_type: Optional[str] = "linear",
-    num_warmup_steps: Optional[int] = 0,
-    weight_decay: Optional[float] = 0.0,
-    optimizer_type: Optional[str] = "paged_adamw_32bit",
-    model_output_dir: Optional[str] = "model_output_dir",
-    log_freq: Optional[int] = 100,
-    neftune_noise_alpha: Optional[int] = 5,
-    log_with: Optional[str] = "wandb",
-    generation_state_file: Optional[str] = "generation_state.pkl",
+    dataset_path: str,
+    comprehension_type: SynthMode,
+    num_train_epochs: int,
+    split: str,
+    streaming: bool,
+    shuffle_buffer: int,
+    seq_length: int,
+    num_workers:int,
+    eval_steps:int,
+    logging_steps: int,
+    per_device_train_batch_size: int,
+    per_device_eval_batch_size: int,
+    gradient_accumulation_steps: int,
+    gradient_checkpointing: bool,
+    group_by_length: bool,
+    packing: bool,
+    lora_alpha: int,
+    lora_dropout: float,
+    lora_r: int,
+    learning_rate: float,
+    lr_scheduler_type: str,
+    num_warmup_steps: int,
+    weight_decay: float,
+    optimizer_type: str,
+    model_output_dir: str,
+    neftune_noise_alpha: int,
+    log_with: str,
+    run_name: str,
+    generation_state_file: str,
+    size_valid_set: Optional[int],
+    validation_split: Optional[float],
+    llm_kwargs: Optional[LLMKwargs],
+    synth_kwargs: Optional[SynthKwargs],
 ) -> None:
     if comprehension_type in [SynthMode.LLM, SynthMode.BOTH]:
-        if not llm_synth_model_name:
-            raise ValueError("llm_synth_model_name is required for LLM based generation")
-        if not llm_dataset_output_path:
-            raise ValueError("llm_dataset_output_path is required for LLM based generation")
+        if not llm_kwargs:
+            raise ValueError("llm_kwargs is required for LLM based generation")
 
     if comprehension_type in [SynthMode.REGEX, SynthMode.BOTH]:
-        if not domain_spm_path:
+        if not synth_kwargs:
+            raise ValueError("synth_kwargs is required for regex based generation")
+
+        if synth_kwargs and synth_kwargs.domain_spm_path:
+             domain_spm = spm.SentencePieceProcessor(model_file=synth_kwargs.domain_spm_path)
+        else:
             logger.warning("No domain tokenizer provided. The domain tokenizer will be created from the input files")
             domain_spm = create_domain_tokenizer_from_files(dataset_path)
-        else:
-            domain_spm = spm.SentencePieceProcessor(model_file=domain_spm_path)
 
-        if not general_spm_path:
-            raise ValueError("general_spm_path is required for regex based generation")
-
-        general_spm = spm.SentencePieceProcessor(model_file=general_spm_path)
+        general_spm = spm.SentencePieceProcessor(model_file=synth_kwargs.general_spm_path)
 
     in_memory_dataset = []
 
@@ -95,28 +106,28 @@ def pipeline(
         # NOTE: this is a simple check to see if the dataset is already generated
         in_memory_dataset.extend([{"messages": rc_text} for _, _, rc_text in regex_rc_gen.dataset_generator(dataset_path)])
 
-    generation_state = None
-    if generation_state_file:
-        if os.path.exists(generation_state_file):
-            with open(generation_state_file, "rb") as f:
-                generation_state = pickle.load(f)
-        else:
-            generation_state = {"processed_files": [], "total_files": 0, "files_missed": 0}
-            pickle.dump(generation_state, open(generation_state_file, "wb"))
-
-    if not os.path.exists(llm_dataset_output_path):
-        os.makedirs(llm_dataset_output_path)
-
     # NOTE: this operation is time consuming and very expensive
     # Attention has been paid to try to save intermediate steps in case of failure
     # so that the generation can be resumed from the last checkpoint
-    if comprehension_type in [SynthMode.LLM, SynthMode.BOTH]:
+    if comprehension_type in [SynthMode.LLM, SynthMode.BOTH] and llm_kwargs:
+
+        if generation_state_file:
+            if os.path.exists(generation_state_file):
+                with open(generation_state_file, "rb") as f:
+                    generation_state = pickle.load(f)
+            else:
+                generation_state = {"processed_files": [], "total_files": 0, "files_missed": 0}
+                pickle.dump(generation_state, open(generation_state_file, "wb"))
+
+        if not os.path.exists(llm_kwargs.dataset_output_path):
+            os.makedirs(llm_kwargs.dataset_output_path)
+
         llm_rc_dataset_generator = generate_synthetic_dataset(
-            model_name=llm_synth_model_name,
+            model_name=llm_kwargs.model_name,
             input_directory=dataset_path,
             processed_files=generation_state["processed_files"],
-            chunk=chunk,
-            context_length=llm_synth_model_context_length,
+            chunk=llm_kwargs.chunk or False,
+            context_length=llm_kwargs.context_length or 0,
         )
 
         # generate llm based reading comprehension dataset
@@ -124,7 +135,7 @@ def pipeline(
             qanda = question_and_answer_extractor(gen_text, context)
             if qanda:
                 output_file = f"{filename}_{index}.json"
-                with open(os.path.join(llm_dataset_output_path, output_file), "w") as o:
+                with open(os.path.join(llm_kwargs.dataset_output_path, output_file), "w") as o:
                     json.dump(qanda, o)
             else:
                 logger.warning(f"No question and answer pairs found for {filename}")
@@ -140,8 +151,8 @@ def pipeline(
         logger.info(f"Total files missed: {generation_state['files_missed']} out of {generation_state['total_files']}")
         logger.info(f"Total files processed: {generation_state['total_files']}")
 
-        for file in os.listdir(llm_dataset_output_path):
-            with open(os.path.join(llm_dataset_output_path, file), "r") as f:
+        for file in os.listdir(llm_kwargs.dataset_output_path):
+            with open(os.path.join(llm_kwargs.dataset_output_path, file), "r") as f:
                 in_memory_dataset.append({"messages": json.load(f)})
 
     # shuffle in memory dataset
@@ -178,14 +189,15 @@ def pipeline(
         weight_decay=weight_decay,
         optimizer_type=optimizer_type,
         output_dir=model_output_dir,
-        log_freq=log_freq,
         neftune_noise_alpha=neftune_noise_alpha,
         log_with=log_with,
         local_dataset=True,
+        validation_split=validation_split,
+        run_name=run_name,
     )
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, required=True, help="name of the model to be trained")
     parser.add_argument(
@@ -232,6 +244,7 @@ def parse_args():
     parser.add_argument("--num_train_epochs", type=int, default=1, help="number of epochs to train the generator")
     parser.add_argument("--split", type=str, default="train", help="split to be used for training")
     parser.add_argument("--size_valid_set", type=int, default=1000, help="size of the validation set (STREAMING ONLY)")
+    parser.add_argument("--validation_split", type=float, default=0.05, help="validation split")
     parser.add_argument("--streaming", action="store_true", help="whether to use streaming or not")
     parser.add_argument("--shuffle_buffer", type=int, default=10000, help="shuffle buffer size (STREAMING ONLY)")
     parser.add_argument("--seq_length", type=int, default=2600, help="sequence length to be used for training")
@@ -270,22 +283,35 @@ def parse_args():
     parser.add_argument(
         "--generation_state_file", type=str, default="generation_state.pkl", help="file to save the generation state to"
     )
+    parser.add_argument("--run_name", type=str, default="run_name", help="name of the run")
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     args = parse_args()
+
+    llm_kwargs = None
+    synth_kwargs = None
+
+    if args.comprehension_type in [SynthMode.LLM, SynthMode.BOTH]:
+        llm_kwargs = LLMKwargs(
+            model_name=args.llm_synth_model_name,
+            context_length=args.llm_synth_model_context_length,
+            dataset_output_path=args.llm_dataset_output_path,
+            chunk=not args.no_chunk,
+        )
+    
+    if args.comprehension_type in [SynthMode.REGEX, SynthMode.BOTH]:
+        synth_kwargs = SynthKwargs(
+            general_spm_path=args.general_spm_path,
+            domain_spm_path=args.domain_spm_path,
+        )
+
     pipeline(
         model_name=args.model_name,
         output_dataset_name=args.output_dataset_name,
         comprehension_type=args.comprehension_type,
-        llm_synth_model_name=args.llm_synth_model_name,
-        llm_synth_model_context_length=args.llm_synth_model_context_length,
-        llm_dataset_output_path=args.llm_dataset_output_path,
-        general_spm_path=args.general_spm_path,
-        domain_spm_path=args.domain_spm_path,
         dataset_path=args.dataset_path,
-        chunk=not args.no_chunk,
         num_train_epochs=args.num_train_epochs,
         split=args.split,
         size_valid_set=args.size_valid_set,
@@ -310,10 +336,13 @@ def main():
         weight_decay=args.weight_decay,
         optimizer_type=args.optimizer_type,
         model_output_dir=args.model_output_dir,
-        log_freq=args.log_freq,
         neftune_noise_alpha=args.neftune_noise_alpha,
         log_with=args.log_with,
         generation_state_file=args.generation_state_file,
+        llm_kwargs=llm_kwargs,
+        synth_kwargs=synth_kwargs,
+        validation_split=args.validation_split,
+        run_name=args.run_name,
     )
 
 
