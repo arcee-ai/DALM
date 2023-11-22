@@ -20,9 +20,15 @@ def input_generator(directory_or_file: str, csv_column: Optional[str] = None) ->
         for file in os.listdir(directory_or_file):
             file_path = os.path.join(directory_or_file, file)
             if os.path.isfile(file_path):  # Ensures that we are reading files
-                with open(file_path, "r", encoding="utf-8") as file_contents:
-                    contents = file_contents.read()
-                    yield file, contents
+                try:
+                    with open(file_path, "r", encoding="utf-8") as file_contents:
+                        contents = file_contents.read()
+                except UnicodeDecodeError:
+                    with open(file_path, "r", encoding="utf-8") as file_contents:
+                        contents = file_contents.read()
+
+                yield file, contents
+
     elif os.path.isfile(directory_or_file) and directory_or_file.endswith(".csv") and csv_column:
         # If it's a CSV file, open it and yield the specified column
         with open(directory_or_file, newline="", encoding="utf-8") as csvfile:
@@ -69,7 +75,7 @@ def create_domain_tokenizer(text_file: str) -> spm.SentencePieceProcessor:
 
         # Train the SentencePiece model, the model is saved in the temporary directory
         spm.SentencePieceTrainer.train(
-            input=text_file, model_prefix=model_prefix, vocab_size=4000, character_coverage=1.0
+            input=text_file, model_prefix=model_prefix, vocab_size=32000, character_coverage=1.0
         )
 
         sp_model_file = f"{model_prefix}.model"
@@ -82,7 +88,6 @@ def split_to_sentences(text: str) -> List[str]:
     return sentences
 
 
-# TODO:  revisit the errors part
 def create_domain_tokenizer_from_files(directory_or_file: str, csv_column: Optional[str]) -> spm.SentencePieceProcessor:
     # open a tempfile and add sentences from files in directory_with_files to it
     with tempfile.TemporaryDirectory() as temp_dir:
