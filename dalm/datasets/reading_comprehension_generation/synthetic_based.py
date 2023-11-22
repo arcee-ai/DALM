@@ -192,7 +192,9 @@ def main() -> None:
             with open(os.path.join(args.output_directory, output_file), "w") as o:
                 json.dump(qanda, o)
         else:
-            logger.warning(f"No question and answer pairs found for {filename}")
+            logger.warning(
+                (f"No question and answer pairs found for {filename} " f"chunk: {index}" if not args.no_chunk else "")
+            )
             files_missed += 1
         total_files += 1
 

@@ -1209,13 +1209,11 @@ def parse_args() -> argparse.Namespace:
         type=str,
         help="directory of the output reading comprehension texts",
     )
-    parser.add_argument(
-        "--ori_spm_path", type=str, help="path of the original sentencepiece model", default="./tokenizers/general.spm"
-    )
+    parser.add_argument("--general_spm_path", type=str, help="path of the general sentencepiece model", required=True)
     parser.add_argument(
         "--domain_spm_path",
         type=str,
-        help="path of the domain sentencepiece model",  # default="./tokenizers/domain.spm"
+        help="path of the domain sentencepiece model",
     )
     parser.add_argument(
         "--domain_tokenizer_training_text",
