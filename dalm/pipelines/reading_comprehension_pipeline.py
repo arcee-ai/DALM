@@ -117,10 +117,9 @@ def pipeline(
         )
 
         # generate llm based reading comprehension dataset
-        for index, (filename, context, gen_text) in llm_rc_dataset_generator:
+        for index, filename, context, gen_text in llm_rc_dataset_generator:
             qanda = question_and_answer_extractor(gen_text, context)
             if qanda:
-                # save to file
                 output_file = f"{filename}_{index}.json"
                 with open(os.path.join(llm_dataset_output_path, output_file), "w") as o:
                     json.dump(qanda, o)

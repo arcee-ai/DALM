@@ -1,14 +1,15 @@
-import os
 import argparse
-from transformers import pipeline, Pipeline
-import torch
-import pickle
-from dalm.datasets.reading_comprehension_generation.utils import list_dir, text_chunker, question_and_answer_extractor
 import json
-from datasets import Dataset
 import logging
+import os
+import pickle
+from typing import Any, Dict, Iterator, Tuple
 
-from typing import Dict, Any, Iterator, Tuple
+import torch
+from datasets import Dataset
+from transformers import Pipeline, pipeline
+
+from dalm.datasets.reading_comprehension_generation.utils import list_dir, question_and_answer_extractor, text_chunker
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,7 @@ def generate_synthetic_dataset(
         "top_p": 0.95,
         "return_full_text": False,
     },
-) -> Iterator[Tuple[str, str, str]]:
+) -> Iterator[Tuple[int, str, str, str]]:
     model_pipeline = pipeline("text-generation", model=model_name, torch_dtype=torch.bfloat16, device_map="auto")
 
     input_files = list_dir(input_directory)
@@ -91,12 +92,13 @@ def generate_synthetic_dataset(
             continue
 
         if chunk:
-            for chunk_ in text_chunker(text, tokenizer, k):
+            for index, chunk_ in enumerate(text_chunker(text, tokenizer, k)):
                 gen_text = generate_synthetic_data(model_pipeline, chunk_, generation_params)
-                yield file, chunk_, gen_text
+                yield index, file, chunk_, gen_text
         else:
             gen_text = generate_synthetic_data(model_pipeline, text, generation_params)
-            yield file, text, gen_text
+            yield 0, file, text, gen_text
+
 
 def parse_args():
     parser = argparse.ArgumentParser("Generate synthetic dataset for reading comprehension")
@@ -115,13 +117,14 @@ def parse_args():
         default="rc_generation_state.pkl",
         help="File to save the state of the generation",
     )
-    parser.add_argument("--context_length", type=int, default=4192, help="context length to calulcate the chunk size")
+    parser.add_argument("--context_length", type=int, default=4192, help="context length to calculate the chunk size")
     parser.add_argument("--no_chunk", action="store_false")
     parser.add_argument(
         "--dataset_name", type=str, default="synthetic_rc_dataset", help="name of the dataset to be saved"
     )
 
     return parser.parse_args()
+
 
 def main():
     args = parse_args()
