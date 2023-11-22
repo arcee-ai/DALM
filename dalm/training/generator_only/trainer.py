@@ -1,23 +1,21 @@
+import argparse
 import logging
 import os
-from typing import Optional, Tuple, Dict, Any, Callable
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import torch
 from accelerate import Accelerator
-from datasets import load_dataset, load_from_disk, Dataset
+from datasets import Dataset, load_dataset, load_from_disk
 from peft import LoraConfig
 from tqdm import tqdm
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
-    TrainingArguments,
     PreTrainedTokenizerBase,
+    TrainingArguments,
 )
-
 from trl import SFTTrainer  # type: ignore[import]
-
-import argparse
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +69,7 @@ def chars_token_ratio(
     Estimate the average number of characters per token in the dataset.
     """
     total_characters, total_tokens = 0, 0
-    for _, example in tqdm(zip(range(sample_size), iter(dataset)), total=sample_size):
+    for _, example in tqdm(zip(range(sample_size), iter(dataset), strict=False), total=sample_size):
         text = formatting_func(example)
         total_characters += len(text)
         if tokenizer.is_fast:
@@ -90,7 +88,10 @@ def parse_args() -> argparse.Namespace:
         "--dataset_name",
         type=str,
         required=True,
-        help="The dataset name corresponding to one sitting on huggingface or a local one. If local, be sure to set the local_dataset flag",
+        help=(
+            "The dataset name corresponding to one sitting on huggingface or a local one"
+            "If local, be sure to set the local_dataset flag"
+        ),
     )
     parser.add_argument("--local_dataset", store_action="store_true", help="whether to use a local dataset")
     parser.add_argument("--split", type=str, default="train", help="the split to use")

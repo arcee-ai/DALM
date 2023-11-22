@@ -22,6 +22,8 @@
     SOFTWARE
 """
 
+# ruff: noqa: E501
+
 import argparse
 import copy
 import json

@@ -4,11 +4,12 @@ import logging
 import os
 import pickle
 import random
+from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
 import datasets
-import sentencepiece as spm # type: ignore[import-untyped]
+import sentencepiece as spm  # type: ignore[import-untyped]
 
 from dalm.datasets.reading_comprehension_generation.regex_based import RegexBasedReadingComprehension
 from dalm.datasets.reading_comprehension_generation.synthetic_based import generate_synthetic_dataset
@@ -16,15 +17,16 @@ from dalm.datasets.reading_comprehension_generation.utils import (
     create_domain_tokenizer_from_files,
     question_and_answer_extractor,
 )
-from dataclasses import dataclass
 from dalm.training.generator_only.trainer import train_generator
 
 logger = logging.getLogger(__name__)
+
 
 class SynthMode(Enum):
     REGEX = "regex"
     LLM = "llm"
     BOTH = "both"
+
 
 @dataclass
 class LLMKwargs:
@@ -41,7 +43,8 @@ class LLMKwargs:
 @dataclass
 class SynthKwargs:
     general_spm_path: str
-    domain_spm_path:  Optional[str]
+    domain_spm_path: Optional[str]
+
 
 def pipeline(
     model_name: str,
@@ -53,8 +56,8 @@ def pipeline(
     streaming: bool,
     shuffle_buffer: int,
     seq_length: int,
-    num_workers:int,
-    eval_steps:int,
+    num_workers: int,
+    eval_steps: int,
     logging_steps: int,
     per_device_train_batch_size: int,
     per_device_eval_batch_size: int,
@@ -89,7 +92,7 @@ def pipeline(
             raise ValueError("synth_kwargs is required for regex based generation")
 
         if synth_kwargs and synth_kwargs.domain_spm_path:
-             domain_spm = spm.SentencePieceProcessor(model_file=synth_kwargs.domain_spm_path)
+            domain_spm = spm.SentencePieceProcessor(model_file=synth_kwargs.domain_spm_path)
         else:
             logger.warning("No domain tokenizer provided. The domain tokenizer will be created from the input files")
             domain_spm = create_domain_tokenizer_from_files(dataset_path)
@@ -104,13 +107,14 @@ def pipeline(
         regex_rc_gen = RegexBasedReadingComprehension(general_spm, domain_spm)
 
         # NOTE: this is a simple check to see if the dataset is already generated
-        in_memory_dataset.extend([{"messages": rc_text} for _, _, rc_text in regex_rc_gen.dataset_generator(dataset_path)])
+        in_memory_dataset.extend(
+            [{"messages": rc_text} for _, _, rc_text in regex_rc_gen.dataset_generator(dataset_path)]
+        )
 
     # NOTE: this operation is time consuming and very expensive
     # Attention has been paid to try to save intermediate steps in case of failure
     # so that the generation can be resumed from the last checkpoint
     if comprehension_type in [SynthMode.LLM, SynthMode.BOTH] and llm_kwargs:
-
         if generation_state_file:
             if os.path.exists(generation_state_file):
                 with open(generation_state_file, "rb") as f:
@@ -145,9 +149,8 @@ def pipeline(
             pickle.dump(generation_state, open(generation_state_file, "wb"))
 
         logger.info(" Statistics ")
-        logger.info(
-            f"Total number of successfully extracted q&a: {generation_state['total_files'] - generation_state['files_missed']}"
-        )
+        success_files_count = generation_state["total_files"] - generation_state["files_missed"]
+        logger.info(f"Total number of successfully extracted q&a: {success_files_count}")
         logger.info(f"Total files missed: {generation_state['files_missed']} out of {generation_state['total_files']}")
         logger.info(f"Total files processed: {generation_state['total_files']}")
 
@@ -300,7 +303,7 @@ def main() -> None:
             dataset_output_path=args.llm_dataset_output_path,
             chunk=not args.no_chunk,
         )
-    
+
     if args.comprehension_type in [SynthMode.REGEX, SynthMode.BOTH]:
         synth_kwargs = SynthKwargs(
             general_spm_path=args.general_spm_path,

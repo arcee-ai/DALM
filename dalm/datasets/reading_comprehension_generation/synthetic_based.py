@@ -3,7 +3,7 @@ import json
 import logging
 import os
 import pickle
-from typing import Any, Dict, Iterator, Tuple, List
+from typing import Any, Dict, Iterator, List, Tuple
 
 import torch
 from datasets import Dataset
@@ -13,29 +13,47 @@ from dalm.datasets.reading_comprehension_generation.utils import list_dir, quest
 
 logger = logging.getLogger(__name__)
 
+# ruff: noqa: B006
+
 PROMPT = (
     "There are 4 types of reading comprehension tasks. "
-    "The point of reading comprehension tasks is to be assigned a text and questions to prompt answers so as to test conceptual and procedural knowledge "
-    "present in the text. The four types of reading comprehension tasks are : 1. complete-the-sentence Q&A TASK "
-    "2.true/false Q&A TASK (description: a sentence is posed and the user is asked to state the correctness of the statement) "
-    "3. frame a sentence with domain specific keywords(these keywords are required to be present in the text) Q&A TASK "
-    "4. Normal questions and answer Task (description: longform Q&A to test procedural and conceptual knowledge). "
-    "An example of all four tasks given an example text is as follows: "
-    "\n EXAMPLE TEXT: The insights into the mechanisms of memory consolidation during the sleep processes in human and animal brain led to other "
-    "biologically inspired approaches. While declarative memories are in the classical picture consolidated by hippocampo-neocortical dialog during NREM phase "
-    "of sleep, some types of procedural memories were suggested not to rely on the hippocampus and involve REM phase of the sleep. "
-    "This inspired models where internal representations (memories) created by previous learning are spontaneously replayed during sleep-like periods in the network "
-    "itself (i.e. without help of secondary network performed by generative replay approaches mentioned above).\n"
-    "Question: [type: true/false] Is the following sentence true?  all types of procedural memories rely on the hippocampus\n"
-    "Answer: False. The text clearly states there are some types of procedural memories not reliant on the hippocampus\n--------\n"
-    "Question [type: complete-the-sentence] Complete the following sentence:  The insights into ____ in human and animal brain led to other _____ approaches\n"
-    "Answer: The insights into the mechanisms of memory consolidation during the sleep processes in human and animal brain led to other biologically inspired approaches\n------\n"
-    "Question [type 3 domain-keywords] Make a sentence with the following keywords 'hippocampo-neocortical', 'declarative' and 'NREM'\n"
-    "Answer: declarative memories are in the classical picture consolidated by hippocampo-neocortical dialog during NREM phase of sleep\n-------\n"
-    "Question [type: normal q&a] Some types of procedural memories were suggested not to rely on the hippocampus and involve REM phase of the sleep. What did this go on to inspire?\n"
-    "Answer This inspired models where internal representations (memories) created by previous learning are spontaneously replayed during sleep-like periods in the network itself [END OF EXAMPLE]\n\n "
-    "Similar to the above, could you craft 4 different reading comprehension tasks (make sure your output is a list of question answer pairs and each question is labelled QUESTION and answer is labelled ANSWER "
-    "and there is one question and answer per task) based solely and completely focused on the following TEXT: "
+    "The point of reading comprehension tasks is to be assigned a text and questions to "
+    "prompt answers so as to test conceptual and procedural knowledge present in the text. "
+    "The four types of reading comprehension tasks are : 1. complete-the-sentence Q&A TASK "
+    "2.true/false Q&A TASK (description: a sentence is posed and the user is asked to state "
+    "the correctness of the statement) 3. frame a sentence with domain specific keywords"
+    "(these keywords are required to be present in the text) Q&A TASK "
+    "4. Normal questions and answer Task (description: longform Q&A to test procedural and "
+    "conceptual knowledge). An example of all four tasks given an example text is as follows: "
+    "\n EXAMPLE TEXT: The insights into the mechanisms of memory consolidation during the sleep "
+    "processes in human and animal brain led to other biologically inspired approaches. While "
+    "declarative memories are in the classical picture consolidated by hippocampo-neocortical "
+    "dialog during NREM phase of sleep, some types of procedural memories were suggested not "
+    "to rely on the hippocampus and involve REM phase of the sleep. This inspired models where "
+    "internal representations (memories) created by previous learning are spontaneously replayed "
+    "during sleep-like periods in the network itself (i.e. without help of secondary network "
+    "performed by generative replay approaches mentioned above).\n"
+    "Question: [type: true/false] Is the following sentence true?  all types of procedural "
+    "memories rely on the hippocampus\n"
+    "Answer: False. The text clearly states there are some types of procedural memories not "
+    "reliant on the hippocampus\n--------\n"
+    "Question [type: complete-the-sentence] Complete the following sentence:  The insights into "
+    "____ in human and animal brain led to other _____ approaches\n"
+    "Answer: The insights into the mechanisms of memory consolidation during the sleep processes "
+    "in human and animal brain led to other biologically inspired approaches\n------\n"
+    "Question [type 3 domain-keywords] Make a sentence with the following keywords "
+    "'hippocampo-neocortical', 'declarative' and 'NREM'\n"
+    "Answer: declarative memories are in the classical picture consolidated by "
+    "hippocampo-neocortical dialog during NREM phase of sleep\n-------\n"
+    "Question [type: normal q&a] Some types of procedural memories were suggested not to rely on "
+    "the hippocampus and involve REM phase of the sleep. What did this go on to inspire?\n"
+    "Answer This inspired models where internal representations (memories) created by previous "
+    "learning are spontaneously replayed during sleep-like periods in the network itself [END OF "
+    "EXAMPLE]\n\n "
+    "Similar to the above, could you craft 4 different reading comprehension tasks (make sure "
+    "your output is a list of question answer pairs and each question is labelled QUESTION and "
+    "answer is labelled ANSWER and there is one question and answer per task) based solely and "
+    "completely focused on the following TEXT: "
 )
 
 
