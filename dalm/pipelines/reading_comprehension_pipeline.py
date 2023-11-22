@@ -104,6 +104,9 @@ def pipeline(
             generation_state = {"processed_files": [], "total_files": 0, "files_missed": 0}
             pickle.dump(generation_state, open(generation_state_file, "wb"))
 
+    if not os.path.exists(llm_dataset_output_path):
+        os.makedirs(llm_dataset_output_path)
+
     # NOTE: this operation is time consuming and very expensive
     # Attention has been paid to try to save intermediate steps in case of failure
     # so that the generation can be resumed from the last checkpoint
@@ -178,6 +181,7 @@ def pipeline(
         log_freq=log_freq,
         neftune_noise_alpha=neftune_noise_alpha,
         log_with=log_with,
+        local_dataset=True,
     )
 
 
