@@ -3,13 +3,17 @@ import json
 import logging
 import os
 import pickle
-from typing import Any, Dict, Iterator, List, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 import torch
 from datasets import Dataset
 from transformers import Pipeline, pipeline
 
-from dalm.datasets.reading_comprehension_generation.utils import list_dir, question_and_answer_extractor, text_chunker
+from dalm.datasets.reading_comprehension_generation.utils import (
+    input_generator,
+    question_and_answer_extractor,
+    text_chunker,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +86,8 @@ def generate_synthetic_data(model_pipeline: Pipeline, text: str, generation_para
 
 def generate_synthetic_dataset(
     model_name: str,
-    input_directory: str,
+    input_directory_or_file: str,
+    csv_column: Optional[str],
     processed_files: List[str],
     chunk: bool,
     context_length: int,
@@ -97,7 +102,7 @@ def generate_synthetic_dataset(
 ) -> Iterator[Tuple[int, str, str, str]]:
     model_pipeline = pipeline("text-generation", model=model_name, torch_dtype=torch.bfloat16, device_map="auto")
 
-    input_files = list_dir(input_directory)
+    input_files = input_generator(input_directory_or_file, csv_column)
 
     if chunk:
         tokenizer = model_pipeline.tokenizer
@@ -121,7 +126,8 @@ def generate_synthetic_dataset(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser("Generate synthetic dataset for reading comprehension")
     parser.add_argument("--model_name", type=str, default="HuggingFaceH4/zephyr-7b-alpha")
-    parser.add_argument("--input_directory", type=str, required=True, help="Directory containing the input files")
+    parser.add_argument("--input", type=str, required=True, help="Directory containing the input files OR a CSV file")
+    parser.add_argument("--csv_column", type=str, help="Column to read from the CSV file")
     parser.add_argument(
         "--output_directory",
         type=str,
@@ -151,6 +157,9 @@ def main() -> None:
     that can be used directly for training
     """
 
+    if os.path.isfile(args.input) and not args.csv_column:
+        raise ValueError("a CSV column must be specified if the input is a file")
+
     if args.state_file:
         if os.path.exists(args.state_file):
             with open(args.state_file, "rb") as f:
@@ -167,10 +176,11 @@ def main() -> None:
 
     synth_dataset_generator = generate_synthetic_dataset(
         model_name=args.model_name,
-        input_directory=args.input_directory,
+        input_directory_or_file=args.input,
         processed_files=state["processed_files"] if args.state_file else [],
         chunk=args.no_chunk,
         context_length=args.context_length,
+        csv_column=args.csv_column,
     )
 
     for index, filename, context, gen_text in synth_dataset_generator:

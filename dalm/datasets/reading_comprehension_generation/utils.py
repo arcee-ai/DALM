@@ -1,18 +1,36 @@
+import csv
 import os
 import re
 import tempfile
-from typing import Dict, Iterator, List, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 import sentencepiece as spm  # type: ignore[import-untyped]
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 
 
-def list_dir(directory: str) -> Iterator[Tuple[str, str]]:
-    for file in os.listdir(directory):
-        file_path = os.path.join(directory, file)
-        with open(file_path, "r") as file_contents:
-            contents = file_contents.read()
-        yield file, contents
+def input_generator(directory_or_file: str, csv_column: Optional[str] = None) -> Iterator[Tuple[str, str]]:
+    """
+    Generator that yields the file name and its contents
+    """
+
+    if os.path.isfile(directory_or_file) and not csv_column:
+        raise ValueError("a CSV column must be specified if the input is a file")
+
+    if os.path.isdir(directory_or_file):
+        for file in os.listdir(directory_or_file):
+            file_path = os.path.join(directory_or_file, file)
+            if os.path.isfile(file_path):  # Ensures that we are reading files
+                with open(file_path, "r", encoding="utf-8") as file_contents:
+                    contents = file_contents.read()
+                    yield file, contents
+    elif os.path.isfile(directory_or_file) and directory_or_file.endswith(".csv") and csv_column:
+        # If it's a CSV file, open it and yield the specified column
+        with open(directory_or_file, newline="", encoding="utf-8") as csvfile:
+            reader = csv.DictReader(csvfile)
+            for index, row in enumerate(reader):
+                yield os.path.basename(directory_or_file) + str(index), row[csv_column]
+    else:
+        raise ValueError("The input should be a directory or a CSV file.")
 
 
 def text_chunker(text: str, tokenizer: PreTrainedTokenizerBase, chunk_size: int) -> Iterator[str]:
@@ -32,7 +50,7 @@ def files_chunker(input_directory: str, model: str, context_length: int, output_
 
     k = context_length - CONSTANT
 
-    for filename, text in list_dir(input_directory):
+    for filename, text in input_generator(input_directory):
         extension = filename.split(".")[-1]
         output_file_name = filename.split(".")[0]
         for index, chunk in enumerate(text_chunker(text, tokenizer, k)):
@@ -65,25 +83,18 @@ def split_to_sentences(text: str) -> List[str]:
 
 
 # TODO:  revisit the errors part
-def create_domain_tokenizer_from_files(directory_with_files: str) -> spm.SentencePieceProcessor:
+def create_domain_tokenizer_from_files(directory_or_file: str, csv_column: Optional[str]) -> spm.SentencePieceProcessor:
     # open a tempfile and add sentences from files in directory_with_files to it
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_file = open(os.path.join(temp_dir, "temp.txt"), "w", encoding="utf-8")
-        for filename in os.listdir(directory_with_files):
-            try:
-                with open(os.path.join(directory_with_files, filename), "r", encoding="utf-8") as infile:
-                    sentences = split_to_sentences(infile.read())
+        generator = input_generator(directory_or_file, csv_column)
+        for _, text in generator:
+            sentences = split_to_sentences(text)
 
-            except UnicodeDecodeError:
-                with open(
-                    os.path.join(directory_with_files, filename), "r", encoding="utf-8", errors="replace"
-                ) as infile:
-                    sentences = split_to_sentences(infile.read())
-
-            for sentence in sentences:
-                sentence = sentence.strip()
-                if sentence and sentence != "":
-                    temp_file.write(sentence + "\n")
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if sentence and sentence != "":
+                temp_file.write(sentence + "\n")
 
         return create_domain_tokenizer(os.path.join(temp_dir, "temp.txt"))
 

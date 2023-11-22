@@ -49,7 +49,8 @@ class SynthKwargs:
 def pipeline(
     model_name: str,
     output_dataset_name: str,
-    dataset_path: str,
+    input: str,
+    csv_column: Optional[str],
     comprehension_type: SynthMode,
     num_train_epochs: int,
     split: str,
@@ -95,7 +96,7 @@ def pipeline(
             domain_spm = spm.SentencePieceProcessor(model_file=synth_kwargs.domain_spm_path)
         else:
             logger.warning("No domain tokenizer provided. The domain tokenizer will be created from the input files")
-            domain_spm = create_domain_tokenizer_from_files(dataset_path)
+            domain_spm = create_domain_tokenizer_from_files(input, csv_column=csv_column)
 
         general_spm = spm.SentencePieceProcessor(model_file=synth_kwargs.general_spm_path)
 
@@ -108,7 +109,7 @@ def pipeline(
 
         # NOTE: this is a simple check to see if the dataset is already generated
         in_memory_dataset.extend(
-            [{"messages": rc_text} for _, _, rc_text in regex_rc_gen.dataset_generator(dataset_path)]
+            [{"messages": rc_text} for _, _, rc_text in regex_rc_gen.dataset_generator(input, csv_column)]
         )
 
     # NOTE: this operation is time consuming and very expensive
@@ -128,10 +129,11 @@ def pipeline(
 
         llm_rc_dataset_generator = generate_synthetic_dataset(
             model_name=llm_kwargs.model_name,
-            input_directory=dataset_path,
+            input_directory_or_file=input,
             processed_files=generation_state["processed_files"],
             chunk=llm_kwargs.chunk or False,
             context_length=llm_kwargs.context_length or 0,
+            csv_column=csv_column,
         )
 
         # generate llm based reading comprehension dataset
@@ -240,9 +242,8 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="path to the domain tokenizer (needed for regex based generation)",
     )
-    parser.add_argument(
-        "--dataset_path", type=str, required=True, help="path to the dataset to be used for generation input"
-    )
+    parser.add_argument("--input", type=str, required=True, help="A CSV file OR a directory containing the input files")
+    parser.add_argument("--csv_column", type=str, help="Column to read from the CSV file")
     parser.add_argument("--no_chunk", action="store_true", help="whether to NOT chunk the input files or not")
     parser.add_argument("--num_train_epochs", type=int, default=1, help="number of epochs to train the generator")
     parser.add_argument("--split", type=str, default="train", help="split to be used for training")
@@ -293,6 +294,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
+    if os.path.isfile(args.input) and not args.csv_column:
+        raise ValueError("a CSV column must be specified if the input is a file")
+
     llm_kwargs = None
     synth_kwargs = None
 
@@ -314,7 +318,7 @@ def main() -> None:
         model_name=args.model_name,
         output_dataset_name=args.output_dataset_name,
         comprehension_type=args.comprehension_type,
-        dataset_path=args.dataset_path,
+        input=args.input,
         num_train_epochs=args.num_train_epochs,
         split=args.split,
         size_valid_set=args.size_valid_set,
@@ -346,6 +350,7 @@ def main() -> None:
         synth_kwargs=synth_kwargs,
         validation_split=args.validation_split,
         run_name=args.run_name,
+        csv_column=args.csv_column,
     )
 
 

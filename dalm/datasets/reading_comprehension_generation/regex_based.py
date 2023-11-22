@@ -32,7 +32,7 @@ import os
 import random
 import re
 import typing
-from typing import Any, Dict, Iterator, List, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 import datasets
 import numpy as np
@@ -43,6 +43,7 @@ from tqdm.contrib.concurrent import process_map
 from dalm.datasets.reading_comprehension_generation.utils import (
     create_domain_tokenizer,
     create_domain_tokenizer_from_files,
+    input_generator,
 )
 
 logger = logging.getLogger(__name__)
@@ -1178,19 +1179,14 @@ class RegexBasedReadingComprehension:
 
         return {"read_compre": read_compre_list, "file_name": entry["file_name"]}
 
-    def dataset_generator(self, input_dir: str, workers: int = 1) -> Iterator[Tuple[int, str, str]]:
-        files = os.listdir(input_dir)
+    def dataset_generator(
+        self, input_dir_or_file: str, column: Optional[str], workers: int = 1
+    ) -> Iterator[Tuple[int, str, str]]:
+        generator = input_generator(input_dir_or_file, column)
 
         raw_texts = []
-        for text_id, filename in enumerate(files):
-            try:
-                with open(os.path.join(input_dir, filename), "r", encoding="utf8") as f:
-                    text = f.read().strip()
-
-            except UnicodeDecodeError:
-                with open(os.path.join(input_dir, filename), "r", encoding="utf8", errors="replace") as f:
-                    text = f.read().strip()
-
+        for text_id, (filename, content) in enumerate(generator):
+            text = content.strip()
             raw_texts.append({"text": text, "text_id": text_id, "file_name": filename})
 
         logger.info("transferring raw texts into reading comprehension...")
@@ -1206,11 +1202,12 @@ class RegexBasedReadingComprehension:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input_dir", type=str, help="directory of the input raw texts", required=True)
+    parser.add_argument("--input", type=str, required=True, help="Directory containing the input files OR a CSV file")
+    parser.add_argument("--csv_column", type=str, help="Column to read from the CSV file")
     parser.add_argument(
         "--debug_output_dir",
         type=str,
-        help="if directory of the output reading comprehension texts",
+        help="directory of the output reading comprehension texts",
     )
     parser.add_argument(
         "--ori_spm_path", type=str, help="path of the original sentencepiece model", default="./tokenizers/general.spm"
@@ -1237,6 +1234,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+
+    if os.path.isfile(args.input) and not args.csv_column:
+        raise ValueError("a CSV column must be specified if the input is a file")
+
     if not (args.domain_spm_path or args.domain_tokenizer_training_text):
         # warn user that the domain tokenizer will be created from the input files
         logger.warn(
@@ -1250,7 +1251,7 @@ def main() -> None:
     elif args.domain_spm_path:
         domain_spm = spm.SentencePieceProcessor(model_file=args.domain_spm_path)
     else:
-        domain_spm = create_domain_tokenizer_from_files(args.input_dir)
+        domain_spm = create_domain_tokenizer_from_files(args.input_dir, args.csv_column)
 
     general_spm = spm.SentencePieceProcessor(model_file=args.ori_spm_path)
 
@@ -1260,7 +1261,7 @@ def main() -> None:
     logger.info(f"max_workers for generation of regex data: {max_workers}")
 
     rc = RegexBasedReadingComprehension(general_spm, domain_spm)
-    dataset_generator = rc.dataset_generator(args.input_dir, workers=max_workers)
+    dataset_generator = rc.dataset_generator(args.input, column=args.csv_column, workers=max_workers)
 
     if args.debug_output_dir:
         in_memory_dataset = []
