@@ -24,7 +24,7 @@ def input_generator(directory_or_file: str, csv_column: Optional[str] = None) ->
                     with open(file_path, "r", encoding="utf-8") as file_contents:
                         contents = file_contents.read()
                 except UnicodeDecodeError:
-                    with open(file_path, "r", encoding="utf-8") as file_contents:
+                    with open(file_path, "r", encoding="utf-8", errors="replace") as file_contents:
                         contents = file_contents.read()
 
                 yield file, contents
