@@ -1,23 +1,22 @@
-from typing import Optional
-from enum import Enum
+import argparse
+import json
+import logging
 import os
+import pickle
 import random
+from enum import Enum
+from typing import Optional
+
 import datasets
 import sentencepiece as spm
-import pickle
-import logging
-import json
 
 from dalm.datasets.reading_comprehension_generation.regex_based import RegexBasedReadingComprehension
 from dalm.datasets.reading_comprehension_generation.synthetic_based import generate_synthetic_dataset
 from dalm.datasets.reading_comprehension_generation.utils import (
-    question_and_answer_extractor,
     create_domain_tokenizer_from_files,
+    question_and_answer_extractor,
 )
-
 from dalm.training.generator_only.trainer import train_generator
-
-import argparse
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +80,9 @@ def pipeline(
         else:
             domain_spm = spm.SentencePieceProcessor(model_file=domain_spm_path)
 
+        if not general_spm_path:
+            raise ValueError("general_spm_path is required for regex based generation")
+
         general_spm = spm.SentencePieceProcessor(model_file=general_spm_path)
 
     in_memory_dataset = []
@@ -91,7 +93,7 @@ def pipeline(
         regex_rc_gen = RegexBasedReadingComprehension(general_spm, domain_spm)
 
         # NOTE: this is a simple check to see if the dataset is already generated
-        in_memory_dataset.extend([{"messages": rc_text} for _, _, rc_text in regex_rc_gen])
+        in_memory_dataset.extend([{"messages": rc_text} for _, _, rc_text in regex_rc_gen.dataset_generator(dataset_path)])
 
     generation_state = None
     if generation_state_file:
@@ -221,7 +223,7 @@ def parse_args():
         help="path to the domain tokenizer (needed for regex based generation)",
     )
     parser.add_argument(
-        "--dataset_path", type=str, default=None, help="path to the dataset to be used for generation input"
+        "--dataset_path", type=str, required=True, help="path to the dataset to be used for generation input"
     )
     parser.add_argument("--no_chunk", action="store_true", help="whether to NOT chunk the input files or not")
     parser.add_argument("--num_train_epochs", type=int, default=1, help="number of epochs to train the generator")
