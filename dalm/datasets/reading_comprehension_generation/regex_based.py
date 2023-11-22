@@ -22,48 +22,43 @@
     SOFTWARE
 """
 
-
-from concurrent.futures import ProcessPoolExecutor
-import random
-import os
-import sentencepiece as spm
-import numpy as np
-import re
 import argparse
-from tqdm.contrib.concurrent import process_map
-from pysbd import Segmenter
 import copy
+import json
+import logging
+import os
+import random
+import re
+import typing
+from typing import Any, Dict, Iterator, List, Tuple
+
+import datasets
+import numpy as np
+import sentencepiece as spm  # type: ignore[import-untyped]
+from pysbd import Segmenter  # type: ignore[import-untyped]
+from tqdm.contrib.concurrent import process_map
+
 from dalm.datasets.reading_comprehension_generation.utils import (
     create_domain_tokenizer,
     create_domain_tokenizer_from_files,
 )
-import json
-from warnings import warn
-import datasets
-import logging
 
 logger = logging.getLogger(__name__)
 
 TYPES = ["nli", "common_reason", "paraphrase", "word2text", "summarize", "text_completion"]
 
 
-def remove_double_space(string):
+def remove_double_space(string: str) -> str:
     return re.sub("[ ]{2,}", " ", string)
 
 
-def get_max_workers():
-    # create a process pool with the default number of worker processes
-    pool = ProcessPoolExecutor()
-    # report the number of worker processes chosen by default
-    return pool._max_workers
-
-
 class App:
-    def __init__(self):
-        self.cls_dic = {}
+    def __init__(self) -> None:
+        self.cls_dic: Dict[str, Any] = {}
 
-    def add(self, key):
-        def adder(cls):
+    @typing.no_type_check
+    def add(self, key: str):
+        def adder(cls: Any):
             self.cls_dic[key] = cls
             return cls
 
@@ -73,7 +68,7 @@ class App:
 type_map = App()
 
 
-def chatml_format(question, answer=None):
+def chatml_format(question: str, answer: str | None = None) -> List[Dict[str, str]]:
     result = [{"role": "user", "content": question}]
     if answer is not None:
         result.append({"role": "assistant", "content": answer})
@@ -82,19 +77,19 @@ def chatml_format(question, answer=None):
 
 @type_map.add("basetype")
 class BaseType(object):
-    def __init__(self):
-        # NOTE: we use a simple blank space to connect input and output
-        # you may try other connectors like `<eot>` in LIMA or `## Response:` in Orca
+    def __init__(self) -> None:
         self.max_subcategory_num = 2  # limit the number of examples per subcategory
         self.max_seq_len = 2048
+        self.mine_regex: Dict[str, Any] = {}
 
-    def collect_mined(self, tup, class_name):
+    def collect_mined(self, tup: List[str], class_name: str) -> Dict[str, Any]:
         raise NotImplementedError
 
-    def get_all_templates(self, entry, random_seed):
+    def get_all_templates(self, entry: Dict[str, Any], random_seed: int) -> List[Tuple[str, str]] | List[Tuple[str]]:
         raise NotImplementedError
 
-    def get_template(self, entry, random_seed):
+    @typing.no_type_check
+    def get_template(self, entry: Dict[str, Any], random_seed: int) -> Tuple[str] | Tuple[str, str]:
         """
         random sample a template for each entry
         """
@@ -103,7 +98,9 @@ class BaseType(object):
         return template
 
     # TODO: refactor
-    def fill_in_the_template(self, template, kw_dic):
+    def fill_in_the_template(
+        self, template: Tuple[str] | Tuple[str, str], kw_dic: Dict[str, Any]
+    ) -> List[Dict[str, str]]:
         """
         Account for:
         1. length 1 template and no qa_demos
@@ -124,16 +121,18 @@ class BaseType(object):
             return qa_demos
         elif len(template) == 1 and len(qa_demos) == 0:
             return chatml_format(question)
+        elif len(template) == 2:
+            answer = template[1].format(**kw_dic)
 
-        answer = template[1].format(**kw_dic)
+            result = chatml_format(question, answer)
+            if qa_demos is not None:
+                result = qa_demos + result
 
-        result = chatml_format(question, answer)
-        if qa_demos is not None:
-            result = qa_demos + result
+            return result
+        else:
+            raise ValueError("template length must be 1 or 2")
 
-        return result
-
-    def truncate_sentence(self, text, max_len):
+    def truncate_sentence(self, text: str, max_len: int) -> List[str]:
         tokenized_example = self.ori_spm.encode(text)
         example_length = len(tokenized_example)
 
@@ -145,33 +144,29 @@ class BaseType(object):
             for truncated_tokens in chunked_list:
                 truncated_text_list.append(self.ori_spm.decode(truncated_tokens))
             return truncated_text_list
-            # return truncated_text
         else:
             return [text]
 
-    def init_spm(self, ori_spm, domain_spm):
-        # self.ori_spm = spm.SentencePieceProcessor(model_file=ori_spm_path)
-        # self.domain_spm = spm.SentencePieceProcessor(model_file=domain_spm_path)
+    def init_spm(self, ori_spm: spm.SentencePieceProcessor, domain_spm: spm.SentencePieceProcessor) -> None:
         self.ori_spm = ori_spm
         self.domain_spm = domain_spm
 
         ori_tokens = set([self.ori_spm.id_to_piece(i) for i in range(len(self.ori_spm))])
         domain_tokens = set([self.domain_spm.id_to_piece(i) for i in range(len(self.domain_spm))])
-        specific_tokens = domain_tokens - (ori_tokens & domain_tokens)
-        specific_tokens = [token for token in list(specific_tokens) if (token.startswith("▁") and len(token) > 10)]
+        specific_tokens_set = domain_tokens - (ori_tokens & domain_tokens)
+        specific_tokens = [token for token in list(specific_tokens_set) if (token.startswith("▁") and len(token) > 10)]
         self.specific_token_set = set(specific_tokens)
 
-    # TODO: perhaps place this in the init?
-    def compile_regex(self):
+    def compile_regex(self) -> None:
         """
-        nothing more than compiling regexes
+        Does nothing more than compile regexes
         """
         self.regex_dic = {}
         for class_name, pattern in self.mine_regex.items():
             self.regex_dic[class_name] = re.compile(pattern, re.IGNORECASE)
 
-    def mine(self, text, **kwargs):
-        mined_dic = {}
+    def mine(self, text: str, **kwargs: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
+        mined_dic: Dict[str, Any] = {}
         mined_num = 0
         for class_name, regex in self.regex_dic.items():
             mined_dic[class_name] = []
@@ -186,7 +181,7 @@ class BaseType(object):
 
 @type_map.add("nli")
 class nli(BaseType):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         # init regex
         self.mine_regex = {
@@ -196,7 +191,7 @@ class nli(BaseType):
         }
         self.compile_regex()
 
-    def collect_mined(self, tup, class_name):
+    def collect_mined(self, tup: List[str], class_name: str) -> Dict[str, Any]:
         dic = {
             "label": class_name,
             "verbalizer": tup[3],
@@ -205,7 +200,7 @@ class nli(BaseType):
         }
         return dic
 
-    def get_all_templates(self, entry, random_seed):
+    def get_all_templates(self, entry: Dict[str, Any], random_seed: int) -> List[Tuple[str, str]]:
         np.random.seed(random_seed)
         type = np.random.choice(["generate", "classify"], p=[0.2, 0.8])
         if type == "classify":
@@ -383,8 +378,12 @@ class nli(BaseType):
                         "{hypothesis}",
                     ),
                 ]
+            else:
+                raise ValueError("label must be Entail, Neutral or Contradict")
+        else:
+            raise ValueError("type must be generate or classify")
 
-    def format_single_demo(self, entry, random_seed):
+    def format_single_demo(self, entry: Dict[str, Any], random_seed: int) -> List[Dict[str, str]]:
         kw_dic = {}
         kw_dic["premise"] = entry["premise"]
         hypothesis = entry["hypothesis"]
@@ -411,7 +410,7 @@ class nli(BaseType):
 
 @type_map.add("common_reason")
 class common_reason(BaseType):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.mine_regex = {
             "Cause-effect": r"([.!?]+[\s]+)([^.!?\n,]{50,}[.!?]+)([\s]+)(Thus|Therefore|Accordingly|Hence|For this reason)([\s]*,[\s]+)([^.!?\n,]{50,}[.!?]+)([\s]+)",
@@ -419,7 +418,7 @@ class common_reason(BaseType):
         }
         self.compile_regex()
 
-    def collect_mined(self, tup, class_name):
+    def collect_mined(self, tup: List[str], class_name: str) -> Dict[str, Any]:
         dic = {
             "relation": class_name,
             "verbalizer": tup[3],
@@ -428,7 +427,7 @@ class common_reason(BaseType):
         }
         return dic
 
-    def get_all_templates(self, entry, random_seed):
+    def get_all_templates(self, entry: Dict[str, Any], random_seed: int) -> List[Tuple[str, str]]:
         if entry["relation"] == "Cause-effect":
             return [
                 # Basic templates
@@ -503,8 +502,10 @@ class common_reason(BaseType):
                 ("Answer the question...{effect} {verbalizer}?", "{cause}"),
                 ("{effect} {verbalizer}:", "{cause}"),
             ]
+        else:
+            raise ValueError("relation must be Cause-effect or Effect-cause")
 
-    def format_single_demo(self, entry, random_seed):
+    def format_single_demo(self, entry: Dict[str, Any], random_seed: int) -> List[Dict[str, str]]:
         kw_dic = {}
         kw_dic["verbalizer"] = entry["verbalizer"]
         if entry["relation"] == "Cause-effect":
@@ -523,7 +524,7 @@ class common_reason(BaseType):
 
 @type_map.add("paraphrase")
 class paraphrase(BaseType):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.mine_regex = {
             "Similar": r"([.!?]+[\s]+)([^.!?\n]{50,}[.!?]+)([\s]+)(In other words|In other word|Namely|That is to say|i.e.|Scilicet|Similarly|Equally)([\s]*,[\s]+)([^.!?\n]{50,}[.!?]+)([\s]+)",
@@ -532,7 +533,7 @@ class paraphrase(BaseType):
 
         self.compile_regex()
 
-    def collect_mined(self, tup, class_name):
+    def collect_mined(self, tup: List[str], class_name: str) -> Dict[str, Any]:
         dic = {
             "label": class_name,
             "verbalizer": tup[3],
@@ -541,7 +542,7 @@ class paraphrase(BaseType):
         }
         return dic
 
-    def get_all_templates(self, entry, random_seed):
+    def get_all_templates(self, entry: Dict[str, Any], random_seed: int) -> List[Tuple[str, str]]:
         if entry["label"] == "Different":
             return [
                 (
@@ -604,8 +605,10 @@ class paraphrase(BaseType):
                 ('"{sentence1}" Expand on the previous statement:', "{sentence2}"),
                 ("{sentence1}\nProvide an explanatory sentence:", "{sentence2}"),
             ]
+        else:
+            raise ValueError("label must be Similar or Different")
 
-    def format_single_demo(self, entry, random_seed):
+    def format_single_demo(self, entry: Dict[str, Any], random_seed: int) -> List[Dict[str, str]]:
         kw_dic = {}
         kw_dic["verbalizer"] = entry["verbalizer"]
         kw_dic["sentence1"] = entry["sentence1"]
@@ -617,7 +620,7 @@ class paraphrase(BaseType):
 
 @type_map.add("word2text")
 class word2text(BaseType):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.mine_regex = {
             "definition": r"([\s]+)([^.!?,;\s\"]{10,})([\s]+)(is defined as|\'s definition is)([\s]+)([^.!?\n]{20,}[.!?]+)([\s]+)",
@@ -632,7 +635,7 @@ class word2text(BaseType):
         self.max_sent_len = 100  # with fewer than 100 sent tokens.
         self.max_collect_sent = 2  # early break when find enough task examples.
 
-    def collect_mined(self, tup, class_name):
+    def collect_mined(self, tup: List[str], class_name: str) -> Dict[str, Any]:
         if class_name == "definition":
             dic = {
                 "relation": class_name,
@@ -649,7 +652,8 @@ class word2text(BaseType):
             }
         return dic
 
-    def mine(self, text, sents, **kwargs):
+    @typing.no_type_check
+    def mine(self, text: str, sents: List[str], **kwargs) -> Tuple[Dict[str, Any], int]:
         def mine_regex(text):
             mined_dic = {}
             mined_num = 0
@@ -687,7 +691,7 @@ class word2text(BaseType):
         mined_num += len(mined_dic["word2text"])
         return mined_dic, mined_num
 
-    def get_all_templates(self, entry, random_seed):
+    def get_all_templates(self, entry: Dict[str, Any], random_seed: int) -> List[Tuple[str, str]]:
         if entry["relation"] == "word2text":
             return [
                 ("Concepts: {tripleset}\nWrite a sentence that includes all these words.\nSentence:", "{target}"),
@@ -768,8 +772,10 @@ class word2text(BaseType):
                 ("Question: {sentence} {verbalizer}?", "{topic}"),
                 ("{sentence} {verbalizer}??", "{topic}"),
             ]
+        else:
+            raise ValueError("relation must be word2text, definition or topic")
 
-    def format_single_demo(self, entry, random_seed):
+    def format_single_demo(self, entry: Dict[str, Any], random_seed: int) -> List[Dict[str, str]]:
         kw_dic = {}
         if entry["relation"] == "word2text":
             kw_dic["tokens"] = entry["token_set"]
@@ -784,68 +790,70 @@ class word2text(BaseType):
 
 @type_map.add("summarize")
 class summarize(BaseType):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def mine(self, text, title, **kwargs):
+    @typing.no_type_check
+    def mine(self, text: str, title, **kwargs):
         # seems redundant but has to do so to align with other task types
         mined_dic = {"title": title}
         mined_num = 1 if title is not None else 0
         return mined_dic, mined_num
 
-    def get_all_templates(self, entry, random_seed):
+    def get_all_templates(self, entry: Dict[str, Any], random_seed: int) -> List[Tuple[str]]:
         # those are templates when summarization is conducted but text completion is NOT conducted
         return [
             # summary_templates
             (
-                "{context_wo_title}\n\nWhat is a potential title for this context in the {domain} domain?",
-                "\nTitle: {title}",
+                "{context_wo_title}\n\nWhat is a potential title for this context in the {domain} domain? \nTitle: {title}",
             ),
-            ("{domain} article: {context_wo_title}{qa_demos}\n\nWhat is the title of this article?", "{title}"),
+            ("{domain} article: {context_wo_title}{qa_demos}\n\nWhat is the title of this article? {title}",),
+            ("Article: {context_wo_title}{qa_demos}\n\nGenerate a title for this {domain} paragraph.\nTitle: {title}",),
+            ("{context_wo_title}\n\nWrite a title for the above {domain} article. {title}",),
+            ("{context_wo_title}\nBriefly summarize this {domain} text? {title}",),
             (
-                "Article: {context_wo_title}{qa_demos}\n\nGenerate a title for this {domain} paragraph.\n",
-                "Title: {title}",
-            ),
-            ("{context_wo_title}\n\nWrite a title for the above {domain} article.", "{title}"),
-            ("{context_wo_title}\nBriefly summarize this {domain} text?", "{title}"),
-            (
-                "Article in the {domain} domain: {context_wo_title}\n\nGenerate a short summary for this article.\n",
-                "Answer: {title}",
+                "Article in the {domain} domain: {context_wo_title}\n\nGenerate a short summary for this article.\nAnswer: {title}",
             ),
             (
-                "{context_wo_title}{qa_demos}\n\nSummarize the aforementioned {domain} text in a single sentence. {title}"
+                "{context_wo_title}{qa_demos}\n\nSummarize the aforementioned {domain} text in a single sentence. {title}",
             ),
-            ("{context_wo_title}\nCan you generate a short summary of the above {domain} paragraph? {title}{qa_demos}"),
             (
-                "{context_wo_title}\nPlease write a short summary for the above article in the {domain} domain. {title}{qa_demos}"
+                "{context_wo_title}\nCan you generate a short summary of the above {domain} paragraph? {title}{qa_demos}",
             ),
-            ("Context: {context_wo_title}{qa_demos}\n\nWhat was this {domain} article about? {title}"),
+            (
+                "{context_wo_title}\nPlease write a short summary for the above article in the {domain} domain. {title}{qa_demos}",
+            ),
+            ("Context: {context_wo_title}{qa_demos}\n\nWhat was this {domain} article about? {title}",),
             # write based on title
             (
-                "Write an article about {domain} domain, using the following title: {title}.\nArticle: {context_wo_title}{qa_demos}"
+                "Write an article about {domain} domain, using the following title: {title}.\nArticle: {context_wo_title}{qa_demos}",
             ),
             (
-                "Title: {title}\nWrite a an article about {domain} domain based on this title. {context_wo_title}{qa_demos}"
+                "Title: {title}\nWrite a an article about {domain} domain based on this title. {context_wo_title}{qa_demos}",
             ),
-            ('Use the title "{title}" to write a {domain} article.\nArticle: {context_wo_title}{qa_demos}'),
+            ('Use the title "{title}" to write a {domain} article.\nArticle: {context_wo_title}{qa_demos}',),
             (
-                "Craft an informative article about the {domain} domain, drawing from the following summary: {title}\nArticle: {context_wo_title}{qa_demos}"
-            ),
-            ("Create a {domain} article inspired by the provided title: {title}\nOutput: {context_wo_title}{qa_demos}"),
-            ('Can you develop an engaging {domain} article using the title "{title}"? {context_wo_title}{qa_demos}'),
-            (
-                "Write an informative piece on the {domain} domain, using the provided title: {title}. {context_wo_title}{qa_demos}"
+                "Craft an informative article about the {domain} domain, drawing from the following summary: {title}\nArticle: {context_wo_title}{qa_demos}",
             ),
             (
-                "Craft an article focused on {domain}, utilizing the provided title: {title}.\nArticle: {context_wo_title}{qa_demos}"
+                "Create a {domain} article inspired by the provided title: {title}\nOutput: {context_wo_title}{qa_demos}",
             ),
-            ("Compose an in-depth {domain} article based on the title: {title}\nArticle: {context_wo_title}{qa_demos}"),
+            ('Can you develop an engaging {domain} article using the title "{title}"? {context_wo_title}{qa_demos}',),
             (
-                'Can you create an article delving into the {domain} domain, incorporating the given title "{title}"? {context_wo_title}{qa_demos}'
+                "Write an informative piece on the {domain} domain, using the provided title: {title}. {context_wo_title}{qa_demos}",
+            ),
+            (
+                "Craft an article focused on {domain}, utilizing the provided title: {title}.\nArticle: {context_wo_title}{qa_demos}",
+            ),
+            (
+                "Compose an in-depth {domain} article based on the title: {title}\nArticle: {context_wo_title}{qa_demos}",
+            ),
+            (
+                'Can you create an article delving into the {domain} domain, incorporating the given title "{title}"? {context_wo_title}{qa_demos}',
             ),
         ]
 
-    def format_single_demo(self, entry, random_seed):
+    def format_single_demo(self, entry: Dict[str, Any], random_seed: int) -> List[Dict[str, str]]:
         sents = entry.pop("sents")
         template = self.get_template(entry, random_seed)
 
@@ -856,16 +864,17 @@ class summarize(BaseType):
 
 @type_map.add("text_completion")
 class text_completion(BaseType):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def mine(self, sents, **kwargs):
+    @typing.no_type_check
+    def mine(self, sents: Any, **kwargs) -> Tuple[Dict[str, Any], int]:
         # seems redundant but has to do so to align with other task types
         mined_dic = {"sents": sents}
         mined_num = 1 if len(sents) >= 4 else 0
         return mined_dic, mined_num
 
-    def get_all_templates(self, entry, random_seed):
+    def get_all_templates(self, entry: Dict[str, Any], random_seed: int) -> List[Tuple[str, str]]:
         # those are templates when text completion is conducted but summarization is NOT conducted
         return [
             ("Please complete an article: {context_1st_half}", "{context_2nd_half}"),
@@ -904,7 +913,7 @@ class text_completion(BaseType):
             ),
         ]
 
-    def format_single_demo(self, entry, random_seed):
+    def format_single_demo(self, entry: Dict[str, Any], random_seed: int) -> List[Dict[str, str]]:
         sents = entry.pop("sents")
         entry["context_1st_half"] = entry["title"] + "\n" if entry["title"] is not None else ""
 
@@ -920,45 +929,45 @@ class text_completion(BaseType):
 # NOTE: useless if we don't have the title
 @type_map.add("summarize_completion")
 class summarize_completion(BaseType):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def get_all_templates(self, entry, random_seed):
+    def get_all_templates(self, entry: Dict[str, Any], random_seed: int) -> List[Tuple[str]]:
         # applicable to both text completion and summarization:
         return [
             (
-                "Please complete an article about {domain}: {context_1st_half} {context_2nd_half}{qa_demos}\n\nWhat was this article about?\nAnswer: {title}"
+                "Please complete an article about {domain}: {context_1st_half} {context_2nd_half}{qa_demos}\n\nWhat was this article about?\nAnswer: {title}",
             ),
             (
-                "Here is the first part of an article about {domain}: {context_1st_half}\n\nPlease complete it.\nCompletion: {context_2nd_half}{qa_demos}\n\nWhat was this article about? {title}"
+                "Here is the first part of an article about {domain}: {context_1st_half}\n\nPlease complete it.\nCompletion: {context_2nd_half}{qa_demos}\n\nWhat was this article about? {title}",
             ),
             (
-                "Explore the initial section of an article on {domain}: {context_1st_half}\n\nProvide the text ending? {context_2nd_half}\n\nPropose a title for this context? {title}{qa_demos}"
+                "Explore the initial section of an article on {domain}: {context_1st_half}\n\nProvide the text ending? {context_2nd_half}\n\nPropose a title for this context? {title}{qa_demos}",
             ),
             (
-                "Read the beginning of an article about {domain}: {context_1st_half}\n\nYour task is to add the subsequent part. {context_2nd_half}\n\nBriefly summarize this text. Summary: {title}{qa_demos}"
+                "Read the beginning of an article about {domain}: {context_1st_half}\n\nYour task is to add the subsequent part. {context_2nd_half}\n\nBriefly summarize this text. Summary: {title}{qa_demos}",
             ),
             (
-                "In this article snippet about {domain}, you will find the first half: {context_1st_half}\n\nCompose the remaining section: {context_2nd_half}\n\nWrite a title for it.\nTitle: {title}{qa_demos}"
+                "In this article snippet about {domain}, you will find the first half: {context_1st_half}\n\nCompose the remaining section: {context_2nd_half}\n\nWrite a title for it.\nTitle: {title}{qa_demos}",
             ),
             (
-                "Take a look at the first part of an article on {domain}: {context_1st_half}\n\nYour challenge is to write the following segment. {context_2nd_half}\n\nWhat is a very short summary of the above text? {title}{qa_demos}"
+                "Take a look at the first part of an article on {domain}: {context_1st_half}\n\nYour challenge is to write the following segment. {context_2nd_half}\n\nWhat is a very short summary of the above text? {title}{qa_demos}",
             ),
             (
-                "Review the initial portion of an article discussing {domain}: {context_1st_half}\n\nWhat would you include in the rest of the article? {context_2nd_half}\n\nWhat is a shorter version of this article?\nShort version: {title}{qa_demos}"
+                "Review the initial portion of an article discussing {domain}: {context_1st_half}\n\nWhat would you include in the rest of the article? {context_2nd_half}\n\nWhat is a shorter version of this article?\nShort version: {title}{qa_demos}",
             ),
             (
-                "Consider the opening of an article centered around {domain}: {context_1st_half}\n\nNow, provide the continuation of the article.\nContinuation: {context_2nd_half}\n\nWhat was this article about? {title}{qa_demos}"
+                "Consider the opening of an article centered around {domain}: {context_1st_half}\n\nNow, provide the continuation of the article.\nContinuation: {context_2nd_half}\n\nWhat was this article about? {title}{qa_demos}",
             ),
             (
-                "Examine the first segment of an article exploring {domain}: {context_1st_half}\n\nComplete the article? {context_2nd_half}\nCan you generate a short summary of the above paragraph?\nAnswer: {title}{qa_demos}"
+                "Examine the first segment of an article exploring {domain}: {context_1st_half}\n\nComplete the article? {context_2nd_half}\nCan you generate a short summary of the above paragraph?\nAnswer: {title}{qa_demos}",
             ),
             (
-                "Read the beginning of an article on {domain}: {context_1st_half}\n\nHow would you extend the article? {context_2nd_half}\n\nPlease write a short summary for the above article. {title}{qa_demos}"
+                "Read the beginning of an article on {domain}: {context_1st_half}\n\nHow would you extend the article? {context_2nd_half}\n\nPlease write a short summary for the above article. {title}{qa_demos}",
             ),
         ]
 
-    def format_single_demo(self, entry, random_seed):
+    def format_single_demo(self, entry: Dict[str, Any], random_seed: int) -> List[Dict[str, str]]:
         sents = entry.pop("sents")
         template = self.get_template(entry, random_seed)
         cut_index = random.Random(random_seed).randint(1, len(sents) - 1)
@@ -971,10 +980,10 @@ class summarize_completion(BaseType):
 
 @type_map.add("no_summarize_completion")
 class no_summarize_completion(BaseType):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def get_all_templates(self, entry, random_seed):
+    def get_all_templates(self, entry: Dict[str, Any], random_seed: int) -> List[Tuple[str]]:
         # applicable to having no summarization and no completion
         return [
             ("Please answer some questions about the following article:\n{context}\n",),
@@ -991,7 +1000,7 @@ class no_summarize_completion(BaseType):
             ("Answer based on context :\n{context}\n",),
         ]
 
-    def format_single_demo(self, entry, random_seed):
+    def format_single_demo(self, entry: Dict[str, Any], random_seed: int) -> List[Dict[str, str]]:
         sents = entry.pop("sents")
         entry["context"] = entry["title"] + "\n" if entry["title"] is not None else ""
 
@@ -1004,7 +1013,7 @@ class no_summarize_completion(BaseType):
 
 @type_map.add("overall")
 class overall(BaseType):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.demo_deliminator = "\n\n"
         self.intro_deliminators = [  # connect raw text with the followed QAs
@@ -1026,10 +1035,12 @@ class overall(BaseType):
             ("\nEvaluate your understanding of the article by answering the following questions:\n\n",),
         ]
 
-    def format_recomprehension(self, overall_entry, insert_types=TYPES):
+    def format_recomprehension(
+        self, overall_entry: Dict[str, Any], insert_types: List[str] = TYPES
+    ) -> Tuple[str, Dict[str, Any]]:
         qa_demo_list = []
         seed = overall_entry["text_id"]
-        count_dict = {}
+        count_dict: Dict[str, Any] = {}
         for type in list(set(insert_types) & set(["nli", "common_reason", "paraphrase", "word2text"])):
             type_cls = type_map.cls_dic[type]()
             type_examples = []
@@ -1049,12 +1060,12 @@ class overall(BaseType):
         if len(qa_demo_list) > 0:
             random.Random(seed).shuffle(qa_demo_list)
             intro = random.Random(seed).choice(self.intro_deliminators)[0]
-            qa_demos = sum(qa_demo_list, [])
+            qa_demos: List[Dict[str, str]] = sum(qa_demo_list, [])
             qa_demos[0]["content"] = intro + qa_demos[0]["content"]
         else:
             qa_demos = []
 
-        def summaize_only(count_dict):
+        def summaize_only(count_dict: Dict[str, int]) -> Tuple[List[Dict[str, str]], Dict[str, int]]:
             count_dict["summarize"] = 1
             count_dict["text_completion"] = 0
             overall_cls = summarize()
@@ -1063,9 +1074,9 @@ class overall(BaseType):
             entry["qa_demos"] = qa_demos
             entry["spm"] = self.ori_spm
             read_compre_demo = overall_cls.format_single_demo(entry, seed)
-            return remove_double_space(read_compre_demo), count_dict
+            return read_compre_demo, count_dict
 
-        def completion_only(count_dict):
+        def completion_only(count_dict: Dict[str, int]) -> Tuple[List[Dict[str, str]], Dict[str, int]]:
             count_dict["summarize"] = 0
             count_dict["text_completion"] = 1
             overall_cls = text_completion()
@@ -1075,9 +1086,8 @@ class overall(BaseType):
             entry["spm"] = self.ori_spm
             read_compre_demo = overall_cls.format_single_demo(entry, seed)
             return read_compre_demo, count_dict
-            # return remove_double_space(read_compre_demo), count_dict
 
-        def summarize_and_completion(count_dict):
+        def summarize_and_completion(count_dict: Dict[str, int]) -> Tuple[List[Dict[str, str]], Dict[str, int]]:
             count_dict["summarize"] = 1
             count_dict["text_completion"] = 1
             overall_cls = summarize_completion()
@@ -1087,9 +1097,8 @@ class overall(BaseType):
             entry["spm"] = self.ori_spm
             read_compre_demo = overall_cls.format_single_demo(entry, seed)
             return read_compre_demo, count_dict
-            # return remove_double_space(read_compre_demo), count_dict
 
-        def no_summarize_or_completion(count_dict):
+        def no_summarize_or_completion(count_dict: Dict[str, int]) -> Tuple[List[Dict[str, str]], Dict[str, int]]:
             count_dict["summarize"] = 0
             count_dict["text_completion"] = 0
             overall_cls = no_summarize_completion()
@@ -1100,55 +1109,31 @@ class overall(BaseType):
             read_compre_demo = overall_cls.format_single_demo(entry, seed)
             return read_compre_demo, count_dict
 
-        if ('summarize' in insert_types and overall_entry['summarize']['title'] is not None) and ('text_completion' in insert_types and len(overall_entry['text_completion']['sents']) >=2):
-           np.random.seed(seed)
-           read_func = np.random.choice([summaize_only, completion_only, summarize_and_completion, no_summarize_or_completion], p=[0.4, 0.1, 0.4, 0.1])
-        elif ('summarize' in insert_types and overall_entry['summarize']['title'] is not None):
-           np.random.seed(seed)
-           read_func = np.random.choice([summaize_only, no_summarize_or_completion], p=[0.5, 0.5])
+        if ("summarize" in insert_types and overall_entry["summarize"]["title"] is not None) and (
+            "text_completion" in insert_types and len(overall_entry["text_completion"]["sents"]) >= 2
+        ):
+            np.random.seed(seed)
+            read_func = np.random.choice(  # type: ignore
+                [summaize_only, completion_only, summarize_and_completion, no_summarize_or_completion],  # type: ignore
+                p=[0.4, 0.1, 0.4, 0.1],  # type: ignore
+            )  # type: ignore
+        elif "summarize" in insert_types and overall_entry["summarize"]["title"] is not None:
+            np.random.seed(seed)
+            read_func = np.random.choice([summaize_only, no_summarize_or_completion], p=[0.5, 0.5])  # type: ignore
         if "text_completion" in insert_types and len(overall_entry["text_completion"]["sents"]) >= 2:
             np.random.seed(seed)
             if len(qa_demos) == 0:
                 read_func = completion_only
             else:
-                read_func = np.random.choice([completion_only, no_summarize_or_completion], p=[0.5, 0.5])
+                read_func = np.random.choice([completion_only, no_summarize_or_completion], p=[0.5, 0.5])  # type: ignore
         else:
             read_func = no_summarize_or_completion
 
         return read_func(count_dict)
 
 
-def search(entry, overall_cls, segmenter, inited_type_map, domain_name, TYPES):
-    # NOTE: if the context has no title, use the following code:
-    title = None
-    context_wo_title = entry["text"]
-
-    # truncate the context to meet the max_seq_len
-    context_wo_title_list = overall_cls.truncate_sentence(context_wo_title, max_len=overall_cls.max_seq_len - 200)
-
-    read_compre_list = []
-    for context_wo_title in context_wo_title_list:
-        # mine task examples from the raw text
-        sents = segmenter.segment(context_wo_title)
-        overall_entry = {"text_id": entry["text_id"]}
-        for type in TYPES:
-            type_cls = inited_type_map[type]
-            overall_entry[type], mined_num = type_cls.mine(
-                text=context_wo_title, domain=domain_name, title=title, sents=copy.deepcopy(sents)
-            )
-            # mined_num is the number of mined examples per task type
-
-        # create the reading comprehension text
-        read_compre, count_dict = overall_cls.format_recomprehension(copy.deepcopy(overall_entry))
-        # count_dict includes the number of comprehension tasks per task type
-        # you may use `mined_num` and `count_dict` for data analysis
-        read_compre_list.append(read_compre)
-
-    return {"read_compre": read_compre_list, "file_name": entry["file_name"]}
-
-
 class RegexBasedReadingComprehension:
-    def __init__(self, general_spm, domain_spm):
+    def __init__(self, general_spm: spm.SentencePieceProcessor, domain_spm: spm.SentencePieceProcessor) -> None:
         self.inited_type_map = {}
 
         for type in TYPES:
@@ -1162,7 +1147,7 @@ class RegexBasedReadingComprehension:
         # to chunk text to sentences
         self.segmenter = Segmenter(language="en", clean=False)
 
-    def generate(self, entry):
+    def generate(self, entry: Dict[str, Any]) -> Dict[str, Any]:
         # NOTE: if the context has no title, use the following code:
         title = None
         context_wo_title = entry["text"]
@@ -1191,7 +1176,7 @@ class RegexBasedReadingComprehension:
 
         return {"read_compre": read_compre_list, "file_name": entry["file_name"]}
 
-    def dataset_generator(self, input_dir, workers=1):
+    def dataset_generator(self, input_dir: str, workers: int = 1) -> Iterator[Tuple[int, str, str]]:
         files = os.listdir(input_dir)
 
         raw_texts = []
@@ -1204,7 +1189,7 @@ class RegexBasedReadingComprehension:
                 with open(os.path.join(input_dir, filename), "r", encoding="utf8", errors="replace") as f:
                     text = f.read().strip()
 
-            raw_texts.append({"text": text, "text_id": text_id, "file_name": file_name})
+            raw_texts.append({"text": text, "text_id": text_id, "file_name": filename})
 
         logger.info("transferring raw texts into reading comprehension...")
         read_compre = list(process_map(self.generate, raw_texts, max_workers=workers, chunksize=8192))
@@ -1214,16 +1199,16 @@ class RegexBasedReadingComprehension:
         for entry in read_compre:
             for index, read_compre_example in enumerate(entry["read_compre"]):
                 file_name = entry["file_name"]
-                yield index, filename, read_compre_example
+                yield index, file_name, read_compre_example
 
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_dir", type=str, help="directory of the input raw texts", required=True)
     parser.add_argument(
-        "--debug_output_dir", type=str, help="if directory of the output reading comprehension texts",
+        "--debug_output_dir",
+        type=str,
+        help="if directory of the output reading comprehension texts",
     )
     parser.add_argument(
         "--ori_spm_path", type=str, help="path of the original sentencepiece model", default="./tokenizers/general.spm"
@@ -1245,8 +1230,11 @@ if __name__ == "__main__":
         help="name of the output dataset",
     )
 
-    args = parser.parse_args()
+    return parser.parse_args()
 
+
+def main() -> None:
+    args = parse_args()
     if not (args.domain_spm_path or args.domain_tokenizer_training_text):
         # warn user that the domain tokenizer will be created from the input files
         logger.warn(
@@ -1265,7 +1253,8 @@ if __name__ == "__main__":
     general_spm = spm.SentencePieceProcessor(model_file=args.ori_spm_path)
 
     # get max worker for multi-process
-    max_workers = get_max_workers()
+    max_workers = min((os.cpu_count() or 1) // 2, 1)
+
     logger.info(f"max_workers for generation of regex data: {max_workers}")
 
     rc = RegexBasedReadingComprehension(general_spm, domain_spm)
@@ -1279,16 +1268,20 @@ if __name__ == "__main__":
 
         for index, filename, read_compre_example in dataset_generator:
             with open(os.path.join(args.debug_output_dir, f"{filename}_{index}.json"), "w", encoding="utf8") as f:
-                json.dump({"messages":read_compre_example}, f)
-            in_memory_dataset.append({"messages":read_compre_example})
+                json.dump({"messages": read_compre_example}, f)
+            in_memory_dataset.append({"messages": read_compre_example})
     else:
-        in_memory_dataset = [{"messages":rc_text} for _,_,rc_text in  dataset_generator]
-
+        in_memory_dataset = [{"messages": rc_text} for _, _, rc_text in dataset_generator]
 
     # make dataset from reading comprehension texts
     logger.info("making dataset...")
 
-    regex_dataset=datasets.Dataset.from_list(in_memory_dataset)
+    regex_dataset = datasets.Dataset.from_list(in_memory_dataset)
     regex_dataset.save_to_disk(args.output_dataset_name)
 
     logger.info("done")
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    main()
