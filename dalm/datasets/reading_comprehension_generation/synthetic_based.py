@@ -3,7 +3,7 @@ import json
 import logging
 import os
 import pickle
-from typing import Any, Dict, Iterator, Tuple
+from typing import Any, Dict, Iterator, Tuple, List
 
 import torch
 from datasets import Dataset
@@ -39,7 +39,7 @@ PROMPT = (
 )
 
 
-def gen_prompt(text: str) -> Dict[str, Any]:
+def gen_prompt(text: str) -> List[Dict[str, str]]:
     prompt = PROMPT + text
 
     return [
@@ -65,7 +65,7 @@ def generate_synthetic_data(model_pipeline: Pipeline, text: str, generation_para
 def generate_synthetic_dataset(
     model_name: str,
     input_directory: str,
-    processed_files: [str],
+    processed_files: List[str],
     chunk: bool,
     context_length: int,
     generation_params: Dict[str, Any] = {
@@ -100,7 +100,7 @@ def generate_synthetic_dataset(
             yield 0, file, text, gen_text
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser("Generate synthetic dataset for reading comprehension")
     parser.add_argument("--model_name", type=str, default="HuggingFaceH4/zephyr-7b-alpha")
     parser.add_argument("--input_directory", type=str, required=True, help="Directory containing the input files")
@@ -126,7 +126,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     args = parse_args()
     """
     Pipeline here includes chunking, generation and parsing of question and answer into a list of exchanges
@@ -155,12 +155,12 @@ def main():
         context_length=args.context_length,
     )
 
-    for index, (filename, context, gen_text) in enumerate(synth_dataset_generator):
+    for index, filename, context, gen_text in synth_dataset_generator:
         state["processed_files"].append(filename)
         pickle.dump(state, open(args.state_file, "wb"))
         qanda = question_and_answer_extractor(gen_text, context)
         if qanda:
-            output_file = f"gen_{index}.json"
+            output_file = f"{filename}_{index}.json"
             with open(os.path.join(args.output_directory, output_file), "w") as o:
                 json.dump(qanda, o)
         else:
