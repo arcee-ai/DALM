@@ -1,15 +1,21 @@
 import logging
 import os
-from typing import Optional
+from typing import Optional, Tuple, Dict, Any, Callable
 
 import torch
 from accelerate import Accelerator
-from datasets import load_dataset, load_from_disk
+from datasets import load_dataset, load_from_disk, Dataset
 from peft import LoraConfig
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+    TrainingArguments,
+    PreTrainedTokenizerBase,
+)
 
-from trl import SFTTrainer
+from trl import SFTTrainer  # type: ignore[import]
 
 import argparse
 
@@ -22,10 +28,10 @@ def create_datasets(
     validation_split: Optional[float],
     size_valid_set: Optional[int],
     streaming: bool,
-    shuffle_buffer: int,
+    shuffle_buffer: Optional[int],
     num_workers: int,
     local_dataset: bool = False,
-):
+) -> Tuple[Dataset, Dataset]:
     if local_dataset:
         dataset = load_from_disk(
             dataset_name,
@@ -39,10 +45,14 @@ def create_datasets(
         )
     if streaming:
         logging.info("Loading the dataset in streaming mode")
+        if not (shuffle_buffer and size_valid_set):
+            raise ValueError("size_valid_set must be set when streaming is enabled")
         valid_data = dataset.take(size_valid_set)
         train_data = dataset.skip(size_valid_set)
         train_data = train_data.shuffle(buffer_size=shuffle_buffer, seed=None)
     else:
+        if not validation_split:
+            raise ValueError("validation_split must be set when streaming is disabled")
         dataset = dataset.train_test_split(test_size=validation_split, seed=None)
         train_data = dataset["train"]
         valid_data = dataset["test"]
@@ -51,7 +61,12 @@ def create_datasets(
     return train_data, valid_data
 
 
-def chars_token_ratio(dataset, tokenizer, formatting_func, sample_size=400):
+def chars_token_ratio(
+    dataset: Dataset,
+    tokenizer: PreTrainedTokenizerBase,
+    formatting_func: Callable[[Dict[str, Any]], str],
+    sample_size: int = 400,
+) -> float:
     """
     Estimate the average number of characters per token in the dataset.
     """
@@ -67,23 +82,23 @@ def chars_token_ratio(dataset, tokenizer, formatting_func, sample_size=400):
     return total_characters / total_tokens
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="HuggingFaceH4/zephyr-7b-alpha", help="the model name")
-    parser.add_argument("--log_with", type=str, default="wandb", help="use 'wandb' to log with wandb")
+    parser.add_argument("--log_with", type=str, default="wandb", help="tracker name (wandb, mlflow, ..etc)")
     parser.add_argument(
         "--dataset_name",
         type=str,
         required=True,
         help="The dataset name corresponding to one sitting on huggingface or a local one. If local, be sure to set the local_dataset flag",
     )
-    parser.add_argument("--local_dataset", type=bool, default=False, help="whether to load the dataset from disk")
+    parser.add_argument("--local_dataset", store_action="store_true", help="whether to use a local dataset")
     parser.add_argument("--split", type=str, default="train", help="the split to use")
     parser.add_argument(
         "--size_valid_set", type=int, default=4000, help="the size of the validation set (when streaming is enabled)"
     )
     parser.add_argument("--validation_split", type=float, default=0.05, help="the validation split percentage")
-    parser.add_argument("--streaming", type=bool, default=False, help="whether to stream the dataset")
+    parser.add_argument("--no_streaming", action="store_true", help="whether to not stream the dataset")
     parser.add_argument("--shuffle_buffer", type=int, default=5000, help="the shuffle buffer size")
     parser.add_argument("--seq_length", type=int, default=2600, help="the sequence length")
     parser.add_argument("--num_workers", type=int, default=4, help="the number of workers")
@@ -98,7 +113,7 @@ def parse_args():
         "--gradient_checkpointing", type=bool, default=True, help="whether to use gradient checkpointing"
     )
     parser.add_argument("--group_by_length", type=bool, default=False, help="whether to group by length")
-    parser.add_argument("--packing", type=bool, default=True, help="whether to use packing for SFTTrainer")
+    parser.add_argument("--no-packing", action="store_true", help="whether to not pack the sequences")
 
     parser.add_argument("--lora_alpha", type=float, default=512, help="the lora alpha parameter")
     parser.add_argument("--lora_dropout", type=float, default=0.05, help="the lora dropout parameter")
@@ -107,10 +122,15 @@ def parse_args():
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="the learning rate")
     parser.add_argument("--lr_scheduler_type", type=str, default="cosine", help="the lr scheduler type")
     parser.add_argument("--num_warmup_steps", type=int, default=100, help="the number of warmup steps")
-    parser.add_argument("--weight_decay", type=float, default=0.05, help="the weight decay")
+    parser.add_argument("--weight_decay", type=float, default=0.05, help="weight decay")
     parser.add_argument("--optimizer_type", type=str, default="paged_adamw_32bit", help="the optimizer type")
 
-    parser.add_argument("--output_dir", type=str, default="./generator_finetuned_model", help="the output directory")
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="./generator_finetuned_model",
+        help="the output directory where the model will be saved",
+    )
     parser.add_argument("--neftune_noise_alpha", type=int, default=5, help="the noise alpha for neftune")
     parser.add_argument("--run_name", type=str, default="generator_finetuning", help="the tracker run name")
     return parser.parse_args()
@@ -140,7 +160,7 @@ def train_generator(
     lora_dropout: float,
     lora_r: int,
     learning_rate: float,
-    lr_scheduler_type: float,
+    lr_scheduler_type: str,
     num_warmup_steps: int,
     weight_decay: float,
     optimizer_type: str,
@@ -148,7 +168,7 @@ def train_generator(
     neftune_noise_alpha: int,
     log_with: str,
     run_name: str,
-):
+) -> None:
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"  # Fix weird overflow issue with fp16 training
@@ -198,13 +218,20 @@ def train_generator(
         neftune_noise_alpha=neftune_noise_alpha,
     )
 
-    def prepare_sample_text(example):
+    def prepare_sample_text(example: Dict[str, Any]) -> str:
         """Prepare the text from a sample of the dataset."""
         text = tokenizer.apply_chat_template(example["messages"], tokenize=False)
         return text
 
     train_dataset, eval_dataset = create_datasets(
-        dataset_name, split, validation_split, size_valid_set, streaming, shuffle_buffer, num_workers, local_dataset
+        dataset_name=dataset_name,
+        split=split,
+        validation_split=validation_split,
+        size_valid_set=size_valid_set,
+        streaming=streaming,
+        shuffle_buffer=shuffle_buffer,
+        num_workers=num_workers,
+        local_dataset=local_dataset,
     )
 
     chars_per_token = chars_token_ratio(train_dataset, tokenizer, prepare_sample_text)
@@ -230,7 +257,7 @@ def train_generator(
     trainer.model.save_pretrained(output_dir)
 
 
-def main():
+def main() -> None:
     args = parse_args()
     train_generator(
         model_name=args.model_name,
@@ -251,7 +278,7 @@ def main():
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         gradient_checkpointing=args.gradient_checkpointing,
         group_by_length=args.group_by_length,
-        packing=args.packing,
+        packing=not args.no_packing,
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
         lora_r=args.lora_r,
@@ -268,4 +295,5 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()
