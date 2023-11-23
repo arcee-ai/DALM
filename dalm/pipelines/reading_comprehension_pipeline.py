@@ -304,6 +304,12 @@ def main() -> None:
     synth_kwargs = None
 
     if args.comprehension_type in [SynthMode.LLM, SynthMode.BOTH]:
+        if not args.llm_synth_model_name:
+            raise ValueError("llm_synth_model_name is required for LLM based generation")
+
+        if not args.llm_dataset_output_path:
+            raise ValueError("llm_dataset_output_path is required for LLM based generation")
+
         llm_kwargs = LLMKwargs(
             model_name=args.llm_synth_model_name,
             context_length=args.llm_synth_model_context_length,
