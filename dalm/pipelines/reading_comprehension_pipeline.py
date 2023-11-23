@@ -312,6 +312,9 @@ def main() -> None:
         )
 
     if args.comprehension_type in [SynthMode.REGEX, SynthMode.BOTH]:
+        if not args.general_spm_path:
+            raise ValueError("general_spm_path is required for regex based generation")
+
         synth_kwargs = SynthKwargs(
             general_spm_path=args.general_spm_path,
             domain_spm_path=args.domain_spm_path,
