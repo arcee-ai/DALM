@@ -50,39 +50,39 @@ def pipeline(
     model_name: str,
     output_dataset_name: str,
     input: str,
-    csv_column: Optional[str],
-    comprehension_type: SynthMode,
-    num_train_epochs: int,
-    split: str,
-    streaming: bool,
-    shuffle_buffer: int,
-    seq_length: int,
-    num_workers: int,
-    eval_steps: int,
-    logging_steps: int,
-    per_device_train_batch_size: int,
-    per_device_eval_batch_size: int,
-    gradient_accumulation_steps: int,
-    gradient_checkpointing: bool,
-    group_by_length: bool,
-    packing: bool,
-    lora_alpha: int,
-    lora_dropout: float,
-    lora_r: int,
-    learning_rate: float,
-    lr_scheduler_type: str,
-    num_warmup_steps: int,
-    weight_decay: float,
-    optimizer_type: str,
     model_output_dir: str,
-    neftune_noise_alpha: int,
-    log_with: str,
-    run_name: str,
     generation_state_file: str,
-    size_valid_set: Optional[int],
-    validation_split: Optional[float],
     llm_kwargs: Optional[LLMKwargs],
     synth_kwargs: Optional[SynthKwargs],
+    csv_column: Optional[str],
+    size_valid_set: Optional[int],
+    comprehension_type: SynthMode,
+    shuffle_buffer: Optional[int],
+    num_train_epochs: int = 1,
+    split: str = "train",
+    streaming: bool = False,
+    seq_length: int = 2600,
+    num_workers: int = 4,
+    eval_steps: int = 200,
+    logging_steps: int = 1000,
+    per_device_train_batch_size: int = 1,
+    per_device_eval_batch_size: int = 1,
+    gradient_accumulation_steps: int = 1,
+    gradient_checkpointing: bool = True,
+    group_by_length: bool = False,
+    packing: bool = True,
+    lora_alpha: int = 512,
+    lora_dropout: float = 0.05,
+    lora_r: int = 256,
+    learning_rate: float = 5e-5,
+    lr_scheduler_type: str = "cosine",
+    num_warmup_steps: int = 0,
+    weight_decay: float = 0.0,
+    optimizer_type: str = "paged_adamw_32bit",
+    neftune_noise_alpha: int = 5,
+    log_with: str = "wandb",
+    run_name: str = "rc_pipeline",
+    validation_split: Optional[float] = 0.05,
 ) -> None:
     if comprehension_type in [SynthMode.LLM, SynthMode.BOTH]:
         if not llm_kwargs:
@@ -231,7 +231,7 @@ def parse_args() -> argparse.Namespace:
         help="name of the model to be used for LLM based generation",
     )
     parser.add_argument(
-        "--llm_synth_model_context_length", type=int, default=4192, help="context length to calulcate the chunk size"
+        "--llm_synth_model_context_length", type=int, default=4096, help="context length to calulcate the chunk size"
     )
     parser.add_argument(
         "--llm_dataset_output_path",
@@ -276,16 +276,15 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--group_by_length", action="store_true", help="whether to group the dataset by length or not")
     parser.add_argument("--no_packing", action="store_true", help="whether to disable packing or not")
-    parser.add_argument("--lora_alpha", type=int, default=16, help="lora alpha")
+    parser.add_argument("--lora_alpha", type=int, default=512, help="lora alpha")
     parser.add_argument("--lora_dropout", type=float, default=0.05, help="lora dropout")
-    parser.add_argument("--lora_r", type=int, default=8, help="lora r")
-    parser.add_argument("--learning_rate", type=float, default=5e-5)
-    parser.add_argument("--lr_scheduler_type", type=str, default="linear")
-    parser.add_argument("--num_warmup_steps", type=int, default=0)
-    parser.add_argument("--weight_decay", type=float, default=0.0)
+    parser.add_argument("--lora_r", type=int, default=256, help="lora r")
+    parser.add_argument("--learning_rate", type=float, default=1e-4)
+    parser.add_argument("--lr_scheduler_type", type=str, default="cosine")
+    parser.add_argument("--num_warmup_steps", type=int, default=100)
+    parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--optimizer_type", type=str, default="paged_adamw_32bit")
     parser.add_argument("--model_output_dir", type=str, default="model_output_dir")
-    parser.add_argument("--log_freq", type=int, default=100)
     parser.add_argument("--neftune_noise_alpha", type=int, default=5)
     parser.add_argument(
         "--log_with",

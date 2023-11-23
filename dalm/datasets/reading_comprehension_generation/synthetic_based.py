@@ -141,7 +141,7 @@ def parse_args() -> argparse.Namespace:
         default="rc_generation_state.pkl",
         help="File to save the state of the generation",
     )
-    parser.add_argument("--context_length", type=int, default=4192, help="context length to calculate the chunk size")
+    parser.add_argument("--context_length", type=int, default=4096, help="context length to calculate the chunk size")
     parser.add_argument("--no_chunk", action="store_false")
     parser.add_argument(
         "--dataset_name", type=str, default="synthetic_rc_dataset", help="name of the dataset to be saved"
