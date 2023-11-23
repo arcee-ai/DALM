@@ -99,7 +99,7 @@ def parse_args() -> argparse.Namespace:
         "--size_valid_set", type=int, default=4000, help="the size of the validation set (when streaming is enabled)"
     )
     parser.add_argument("--validation_split", type=float, default=0.05, help="the validation split percentage")
-    parser.add_argument("--no_streaming", action="store_true", help="whether to not stream the dataset")
+    parser.add_argument("--stream", action="store_true", help="whether to stream the dataset")
     parser.add_argument("--shuffle_buffer", type=int, default=5000, help="the shuffle buffer size")
     parser.add_argument("--seq_length", type=int, default=2600, help="the sequence length")
     parser.add_argument("--num_workers", type=int, default=4, help="the number of workers")
@@ -266,7 +266,7 @@ def main() -> None:
         split=args.split,
         size_valid_set=args.size_valid_set,
         validation_split=args.validation_split,
-        streaming=args.streaming,
+        streaming=args.stream,
         shuffle_buffer=args.shuffle_buffer,
         seq_length=args.seq_length,
         num_workers=args.num_workers,
