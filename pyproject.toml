@@ -15,7 +15,7 @@ packages = [
  ]
 dependencies = [
     "scikit-learn",
-    "transformers",
+    "transformers>4.35",
     "peft",
     "accelerate",
     "datasets",
