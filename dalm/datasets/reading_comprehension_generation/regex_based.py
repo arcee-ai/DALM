@@ -1,26 +1,4 @@
-"""
-    MIT License
-
-    Copyright (c) Microsoft Corporation, Arcee.ai
-
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
-
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE
-"""
+# Modified version of code from https://github.com/microsoft/LMOps/blob/main/adaptllm/utils/read.py
 
 # ruff: noqa: E501
 
@@ -1238,7 +1216,7 @@ def main() -> None:
 
     if not (args.domain_spm_path or args.domain_tokenizer_training_text):
         # warn user that the domain tokenizer will be created from the input files
-        logger.warn(
+        logger.warning(
             "No domain tokenizer is provided nor explicit file for training domain tokenizer is provided, "
             "the domain tokenizer will be created from the input files, "
         )
@@ -1249,9 +1227,9 @@ def main() -> None:
     elif args.domain_spm_path:
         domain_spm = spm.SentencePieceProcessor(model_file=args.domain_spm_path)
     else:
-        domain_spm = create_domain_tokenizer_from_files(args.input_dir, args.csv_column)
+        domain_spm = create_domain_tokenizer_from_files(args.input, args.csv_column)
 
-    general_spm = spm.SentencePieceProcessor(model_file=args.ori_spm_path)
+    general_spm = spm.SentencePieceProcessor(model_file=args.general_spm_path)
 
     # get max worker for multi-process
     max_workers = min((os.cpu_count() or 1) // 2, 1)
