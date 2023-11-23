@@ -10,7 +10,7 @@ from transformers import AutoTokenizer, PreTrainedTokenizerBase
 
 def input_generator(directory_or_file: str, csv_column: Optional[str] = None) -> Iterator[Tuple[str, str]]:
     """
-    Generator that yields the file name and its contents
+    Generator that yields the contents of the files in the directory or the CSV column
     """
 
     if os.path.isfile(directory_or_file) and not csv_column:

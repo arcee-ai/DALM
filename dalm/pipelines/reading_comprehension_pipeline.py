@@ -208,7 +208,9 @@ def pipeline(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, required=True, help="name of the model to be trained")
+    parser.add_argument(
+        "--model_name", type=str, default="HuggingFaceH4/zephyr-7b-alpha", help="name of the model to be trained"
+    )
     parser.add_argument(
         "--output_dataset_name",
         type=str,
@@ -223,7 +225,10 @@ def parse_args() -> argparse.Namespace:
         help="type of comprehension to be generated",
     )
     parser.add_argument(
-        "--llm_synth_model_name", type=str, default=None, help="name of the model to be used for LLM based generation"
+        "--llm_synth_model_name",
+        type=str,
+        default="HuggingFaceH4/zephyr-7b-alpha",
+        help="name of the model to be used for LLM based generation",
     )
     parser.add_argument(
         "--llm_synth_model_context_length", type=int, default=4192, help="context length to calulcate the chunk size"
@@ -237,7 +242,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--general_spm_path",
         type=str,
-        default=None,
+        default="./resources/general.spm",
         help="path to the general tokenizer (needed for regex based generation)",
     )
     parser.add_argument(
@@ -291,7 +296,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--generation_state_file", type=str, default="generation_state.pkl", help="file to save the generation state to"
     )
-    parser.add_argument("--run_name", type=str, default="run_name", help="name of the run")
+    parser.add_argument("--run_name", type=str, default="rc_pipeline", help="name of the run")
     return parser.parse_args()
 
 
