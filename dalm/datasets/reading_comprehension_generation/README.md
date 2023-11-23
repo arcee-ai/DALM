@@ -9,6 +9,8 @@ We have two ways of generating  reading comprehension data
 1. Via regex based methods that combs the input data for match and aligns them into questions and answers
 2. Via prompting a large language model to come up with questions and answers 
 
+To see the prompt behind LLM based reading-comprehension dataset generation please go [here](https://github.com/arcee-ai/DALM/blob/4d93d4a198cc64ce5d19ee98786b70f579dbef0c/dalm/datasets/reading_comprehension_generation/synthetic_based.py#L22)
+
 ## How to get started
 
 For the input, either a single csv file or a directory of individual files each containing raw text will do.
@@ -35,7 +37,7 @@ Chunking of data is enabled by default and requires the context length to be pas
 
 ### Regex based
 
-For this please ensure you have a general sentencepiece model.
+(Same, as above i.e assuming you have your dataset as a csv file with the column `text` containing the raw texts)
 
 Please note there is the choice of passing in a domain sentence model in addition, but this is not required as
 the script will train a domain speicifc sentencepiece model on the input corpus
