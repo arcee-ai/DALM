@@ -144,7 +144,13 @@ def pipeline(
                 with open(os.path.join(llm_kwargs.dataset_output_path, output_file), "w") as o:
                     json.dump(qanda, o)
             else:
-                logger.warning(f"No question and answer pairs found for {filename}")
+                logger.warning(
+                    (
+                        f"No question and answer pairs found for {filename} " f"chunk: {index}"
+                        if llm_kwargs.chunk
+                        else ""
+                    )
+                )
                 generation_state["files_missed"] += 1
             generation_state["processed_files"].append(filename)
             generation_state["total_files"] += 1
