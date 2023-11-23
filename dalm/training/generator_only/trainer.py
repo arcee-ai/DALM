@@ -82,7 +82,7 @@ def chars_token_ratio(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="HuggingFaceH4/zephyr-7b-alpha", help="the model name")
+    parser.add_argument("--model_name", type=str, default="HuggingFaceH4/zephyr-7b-beta", help="the model name")
     parser.add_argument("--log_with", type=str, default="wandb", help="tracker name (wandb, mlflow, ..etc)")
     parser.add_argument(
         "--dataset_name",

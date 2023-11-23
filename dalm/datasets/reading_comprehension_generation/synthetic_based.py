@@ -125,7 +125,7 @@ def generate_synthetic_dataset(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser("Generate synthetic dataset for reading comprehension")
-    parser.add_argument("--model_name", type=str, default="HuggingFaceH4/zephyr-7b-alpha")
+    parser.add_argument("--model_name", type=str, default="HuggingFaceH4/zephyr-7b-beta")
     parser.add_argument("--input", type=str, required=True, help="Directory containing the input files OR a CSV file")
     parser.add_argument("--csv_column", type=str, help="Column to read from the CSV file")
     parser.add_argument(

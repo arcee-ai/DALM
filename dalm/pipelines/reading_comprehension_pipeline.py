@@ -227,7 +227,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--llm_synth_model_name",
         type=str,
-        default="HuggingFaceH4/zephyr-7b-alpha",
+        default="HuggingFaceH4/zephyr-7b-beta",
         help="name of the model to be used for LLM based generation",
     )
     parser.add_argument(
