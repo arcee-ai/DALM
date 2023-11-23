@@ -1,8 +1,8 @@
 ## A note about reading comprehension
 
 This aproach of adapting LLMs is based on this [paper](https://arxiv.org/abs/2309.09530) by Microsoft 
-The way espoused by the paper is generating read comprehension questions and answers based on the raw corpora
-and training a llm based on said generated dataset can enhance it domain adaptiveness
+The way espoused by the paper is generating reading comprehension questions and answers based on the raw corpora
+and training a llm on said generated dataset can enhance its domain adaptiveness
 
 We have two ways of generating  reading comprehension data
 
