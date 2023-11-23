@@ -91,15 +91,15 @@ def split_to_sentences(text: str) -> List[str]:
 def create_domain_tokenizer_from_files(directory_or_file: str, csv_column: Optional[str]) -> spm.SentencePieceProcessor:
     # open a tempfile and add sentences from files in directory_with_files to it
     with tempfile.TemporaryDirectory() as temp_dir:
-        temp_file = open(os.path.join(temp_dir, "temp.txt"), "w", encoding="utf-8")
-        generator = input_generator(directory_or_file, csv_column)
-        for _, text in generator:
-            sentences = split_to_sentences(text)
+        with open(os.path.join(temp_dir, "temp.txt"), "w", encoding="utf-8") as tfile:
+            generator = input_generator(directory_or_file, csv_column)
+            for _, text in generator:
+                sentences = split_to_sentences(text)
 
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if sentence and sentence != "":
-                temp_file.write(sentence + "\n")
+            for sentence in sentences:
+                sentence = sentence.strip()
+                if sentence and sentence != "":
+                    tfile.write(sentence + "\n")
 
         return create_domain_tokenizer(os.path.join(temp_dir, "temp.txt"))
 

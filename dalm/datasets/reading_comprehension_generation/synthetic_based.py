@@ -213,6 +213,10 @@ def main() -> None:
     dataset.save_to_disk(args.dataset_name)
 
     logger.info("Done generating synthetic dataset")
+    logger.info(f"Dataset saved to {args.dataset_name}")
+
+    if args.state_file:
+        os.remove(args.state_file)
 
 
 if __name__ == "__main__":

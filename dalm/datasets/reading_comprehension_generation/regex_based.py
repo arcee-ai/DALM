@@ -1280,7 +1280,7 @@ def main() -> None:
     regex_dataset = datasets.Dataset.from_list(in_memory_dataset)
     regex_dataset.save_to_disk(args.output_dataset_name)
 
-    logger.info("done")
+    logger.info(f"Done. Dataset saved to disk at {args.output_dataset_name}")
 
 
 if __name__ == "__main__":

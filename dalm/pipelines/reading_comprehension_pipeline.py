@@ -201,6 +201,9 @@ def pipeline(
         run_name=run_name,
     )
 
+    if generation_state_file:
+        os.remove(generation_state_file)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
