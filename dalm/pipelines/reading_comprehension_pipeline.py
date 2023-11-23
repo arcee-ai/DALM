@@ -165,7 +165,8 @@ def pipeline(
 
     dataset = datasets.Dataset.from_list(in_memory_dataset)
 
-    dataset.save_to_disk(output_dataset_name)
+    if not os.path.exists(output_dataset_name):
+        dataset.save_to_disk(output_dataset_name)
 
     train_generator(
         model_name=model_name,

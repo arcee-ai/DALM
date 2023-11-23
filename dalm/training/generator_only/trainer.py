@@ -181,7 +181,6 @@ def train_generator(
         quantization_config=bnb_config,
         device_map={"": Accelerator().local_process_index},
         trust_remote_code=True,
-        use_auth_token=True,
     )
 
     base_model.config.use_cache = False
