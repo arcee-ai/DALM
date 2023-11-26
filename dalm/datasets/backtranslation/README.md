@@ -10,9 +10,15 @@ The proposed Humback is a novel framework that can augment the instruction data 
 
 ## 🌴 Dependencies
 
-- Python==3.11.4
-- PyTorch==2.0.1
-- Others: [requirements.txt](./requirements.txt)
+- Dependencies required for training are included in requirements_train.txt
+    - These dependencies are needed when running:
+        - `train_backward_Myx.sh`
+        - `train_seed.sh`
+- Dependencies required for prediction are included in requirements_predict.txt
+    - These dependencies are needed when running:
+        - `self_aug.sh`
+        - `self_curation.sh`
+- Create two separate conda environments for training and predicting. This is because vllm downgrades some of the libraries needed for training (e.g. torch).
 
 ## 🚀 QuickStart
 
