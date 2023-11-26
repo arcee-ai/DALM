@@ -1,0 +1,633 @@
+(/home/ubuntu/sachira/Humback/.env) ubuntu@ip-172-31-46-114:~/sachira/Humback$ scripts/train_backward_Myx.sh
+WARNING:__main__:
+*****************************************
+Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+*****************************************
+[2023-11-10 21:31:40,744] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2023-11-10 21:31:40,749] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2023-11-10 21:31:40,751] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2023-11-10 21:31:40,763] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2023-11-10 21:31:40,810] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2023-11-10 21:31:40,838] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2023-11-10 21:31:40,842] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2023-11-10 21:31:40,868] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2023-11-10 21:31:40,918] [INFO] [comm.py:637:init_distributed] cdb=None
+[2023-11-10 21:31:40,926] [INFO] [comm.py:637:init_distributed] cdb=None
+[2023-11-10 21:31:40,929] [INFO] [comm.py:637:init_distributed] cdb=None
+[2023-11-10 21:31:40,938] [INFO] [comm.py:637:init_distributed] cdb=None
+[2023-11-10 21:31:41,000] [INFO] [comm.py:637:init_distributed] cdb=None
+[2023-11-10 21:31:41,015] [INFO] [comm.py:637:init_distributed] cdb=None
+[2023-11-10 21:31:41,039] [INFO] [comm.py:637:init_distributed] cdb=None
+[2023-11-10 21:31:41,040] [INFO] [comm.py:668:init_distributed] Initializing TorchBackend in DeepSpeed with backend nccl
+[2023-11-10 21:31:41,047] [INFO] [comm.py:637:init_distributed] cdb=None
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:06<00:00,  3.18s/it]
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:08<00:00,  4.09s/it]
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:08<00:00,  4.40s/it]
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:08<00:00,  4.11s/it]
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:08<00:00,  4.31s/it]
+max_steps is given, it will override any value given in num_train_epochs
+Using auto half precision backend
+[2023-11-10 21:32:35,817] [INFO] [logging.py:96:log_dist] [Rank 0] DeepSpeed info: version=0.12.2, git-hash=unknown, git-branch=unknown
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:08<00:00,  4.41s/it]
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:08<00:00,  4.15s/it]
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:09<00:00,  4.54s/it]
+[2023-11-10 21:33:05,414] [INFO] [logging.py:96:log_dist] [Rank 0] DeepSpeed Flops Profiler Enabled: False
+[2023-11-10 21:33:05,415] [INFO] [logging.py:96:log_dist] [Rank 0] Using client Optimizer as basic optimizer
+[2023-11-10 21:33:05,415] [INFO] [logging.py:96:log_dist] [Rank 0] Removing param_group that has no 'params' in the basic Optimizer
+[2023-11-10 21:33:05,423] [INFO] [logging.py:96:log_dist] [Rank 0] DeepSpeed Basic Optimizer = AdamW
+[2023-11-10 21:33:05,423] [INFO] [utils.py:56:is_zero_supported_optimizer] Checking ZeRO support for optimizer=AdamW type=<class 'torch.optim.adamw.AdamW'>
+[2023-11-10 21:33:05,424] [INFO] [logging.py:96:log_dist] [Rank 0] Creating torch.bfloat16 ZeRO stage 2 optimizer
+[2023-11-10 21:33:05,424] [INFO] [stage_1_and_2.py:147:__init__] Reduce bucket size 500,000,000
+[2023-11-10 21:33:05,424] [INFO] [stage_1_and_2.py:148:__init__] Allgather bucket size 500,000,000
+[2023-11-10 21:33:05,424] [INFO] [stage_1_and_2.py:149:__init__] CPU Offload: False
+[2023-11-10 21:33:05,424] [INFO] [stage_1_and_2.py:150:__init__] Round robin gradient partitioning: False
+/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/utils/checkpoint.py:429: UserWarning: torch.utils.checkpoint: please pass in use_reentrant=True or use_reentrant=False explicitly. The default value of use_reentrant will be updated to be False in the future. To maintain current behavior, pass use_reentrant=True. It is recommended that you use use_reentrant=False. Refer to docs for more details on the differences between the two variants.
+  warnings.warn(
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/ubuntu/sachira/Humback/src/core/train_flash_attn.py", line 10, in <module>
+    train()
+  File "/home/ubuntu/sachira/Humback/src/core/train.py", line 61, in train
+    trainer.train()
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 1555, in train
+    return inner_training_loop(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 1860, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 2725, in training_step
+    loss = self.compute_loss(model, inputs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 2748, in compute_loss
+    outputs = model(**inputs)
+              ^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/deepspeed/utils/nvtx.py", line 15, in wrapped_fn
+    ret_val = func(*args, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/deepspeed/runtime/engine.py", line 1814, in forward
+    loss = self.module(*inputs, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 1034, in forward
+    outputs = self.model(
+              ^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 912, in forward
+    layer_outputs = self._gradient_checkpointing_func(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/_compile.py", line 24, in inner
+    return torch._dynamo.disable(fn, recursive)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py", line 328, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/_dynamo/external_utils.py", line 17, in inner
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 451, in checkpoint
+    return CheckpointFunction.apply(function, preserve, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/autograd/function.py", line 539, in apply
+    return super().apply(*args, **kwargs)  # type: ignore[misc]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 230, in forward
+    outputs = run_function(*args)
+              ^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 672, in forward
+    hidden_states, self_attn_weights, present_key_value = self.self_attn(
+                                                          ^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/fastchat/train/llama_flash_attn_monkey_patch.py", line 77, in forward
+    qkv, indices, cu_q_lens, max_s = unpad_input(qkv, key_padding_mask)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/flash_attn/bert_padding.py", line 118, in unpad_input
+    index_first_axis(rearrange(hidden_states, "b s ... -> (b s) ..."), indices),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/autograd/function.py", line 539, in apply
+    return super().apply(*args, **kwargs)  # type: ignore[misc]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/flash_attn/bert_padding.py", line 17, in forward
+    return torch.gather(
+           ^^^^^^^^^^^^^
+torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 85.24 GiB. GPU 1 has a total capacty of 39.39 GiB of which 12.82 GiB is free. Including non-PyTorch memory, this process has 26.56 GiB memory in use. Of the allocated memory 22.20 GiB is allocated by PyTorch, and 2.97 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+[2023-11-10 21:33:28,702] [INFO] [utils.py:802:see_memory_usage] Before initializing optimizer states
+[2023-11-10 21:33:28,703] [INFO] [utils.py:803:see_memory_usage] MA 15.75 GB         Max_MA 15.75 GB         CA 15.75 GB         Max_CA 16 GB 
+[2023-11-10 21:33:28,703] [INFO] [utils.py:810:see_memory_usage] CPU Virtual Memory:  used = 66.02 GB, percent = 5.9%
+[2023-11-10 21:33:28,897] [INFO] [utils.py:802:see_memory_usage] After initializing optimizer states
+[2023-11-10 21:33:28,897] [INFO] [utils.py:803:see_memory_usage] MA 22.03 GB         Max_MA 28.31 GB         CA 28.31 GB         Max_CA 28 GB 
+[2023-11-10 21:33:28,898] [INFO] [utils.py:810:see_memory_usage] CPU Virtual Memory:  used = 53.14 GB, percent = 4.7%
+[2023-11-10 21:33:28,898] [INFO] [stage_1_and_2.py:514:__init__] optimizer state initialized
+/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/utils/checkpoint.py:429: UserWarning: torch.utils.checkpoint: please pass in use_reentrant=True or use_reentrant=False explicitly. The default value of use_reentrant will be updated to be False in the future. To maintain current behavior, pass use_reentrant=True. It is recommended that you use use_reentrant=False. Refer to docs for more details on the differences between the two variants.
+  warnings.warn(
+[2023-11-10 21:33:29,003] [INFO] [utils.py:802:see_memory_usage] After initializing ZeRO optimizer
+[2023-11-10 21:33:29,004] [INFO] [utils.py:803:see_memory_usage] MA 22.03 GB         Max_MA 22.03 GB         CA 28.31 GB         Max_CA 28 GB 
+[2023-11-10 21:33:29,004] [INFO] [utils.py:810:see_memory_usage] CPU Virtual Memory:  used = 46.17 GB, percent = 4.1%
+[2023-11-10 21:33:29,006] [INFO] [logging.py:96:log_dist] [Rank 0] DeepSpeed Final Optimizer = AdamW
+[2023-11-10 21:33:29,006] [INFO] [logging.py:96:log_dist] [Rank 0] DeepSpeed using client LR scheduler
+[2023-11-10 21:33:29,006] [INFO] [logging.py:96:log_dist] [Rank 0] DeepSpeed LR Scheduler = None
+[2023-11-10 21:33:29,006] [INFO] [logging.py:96:log_dist] [Rank 0] step=0, skipped=0, lr=[1e-05, 1e-05], mom=[(0.9, 0.95), (0.9, 0.95)]
+[2023-11-10 21:33:29,006] [INFO] [config.py:972:print] DeepSpeedEngine configuration:
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   activation_checkpointing_config  {
+    "partition_activations": false, 
+    "contiguous_memory_optimization": false, 
+    "cpu_checkpointing": false, 
+    "number_checkpoints": null, 
+    "synchronize_checkpoint_boundary": false, 
+    "profile": false
+}
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   aio_config ................... {'block_size': 1048576, 'queue_depth': 8, 'thread_count': 1, 'single_submit': False, 'overlap_events': True}
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   amp_enabled .................. False
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   amp_params ................... False
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   autotuning_config ............ {
+    "enabled": false, 
+    "start_step": null, 
+    "end_step": null, 
+    "metric_path": null, 
+    "arg_mappings": null, 
+    "metric": "throughput", 
+    "model_info": null, 
+    "results_dir": "autotuning_results", 
+    "exps_dir": "autotuning_exps", 
+    "overwrite": true, 
+    "fast": true, 
+    "start_profile_step": 3, 
+    "end_profile_step": 5, 
+    "tuner_type": "gridsearch", 
+    "tuner_early_stopping": 5, 
+    "tuner_num_trials": 50, 
+    "model_info_path": null, 
+    "mp_size": 1, 
+    "max_train_batch_size": null, 
+    "min_train_batch_size": 1, 
+    "max_train_micro_batch_size_per_gpu": 1.024000e+03, 
+    "min_train_micro_batch_size_per_gpu": 1, 
+    "num_tuning_micro_batch_sizes": 3
+}
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   bfloat16_enabled ............. True
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   checkpoint_parallel_write_pipeline  False
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   checkpoint_tag_validation_enabled  True
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   checkpoint_tag_validation_fail  False
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   comms_config ................. <deepspeed.comm.config.DeepSpeedCommsConfig object at 0x7f3e26b7dd50>
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   communication_data_type ...... None
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   compression_config ........... {'weight_quantization': {'shared_parameters': {'enabled': False, 'quantizer_kernel': False, 'schedule_offset': 0, 'quantize_groups': 1, 'quantize_verbose': False, 'quantization_type': 'symmetric', 'quantize_weight_in_forward': False, 'rounding': 'nearest', 'fp16_mixed_quantize': False, 'quantize_change_ratio': 0.001}, 'different_groups': {}}, 'activation_quantization': {'shared_parameters': {'enabled': False, 'quantization_type': 'symmetric', 'range_calibration': 'dynamic', 'schedule_offset': 1000}, 'different_groups': {}}, 'sparse_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'row_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'head_pruning': {'shared_parameters': {'enabled': False, 'method': 'topk', 'schedule_offset': 1000}, 'different_groups': {}}, 'channel_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'layer_reduction': {'enabled': False}}
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   curriculum_enabled_legacy .... False
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   curriculum_params_legacy ..... False
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   data_efficiency_config ....... {'enabled': False, 'seed': 1234, 'data_sampling': {'enabled': False, 'num_epochs': 1000, 'num_workers': 0, 'curriculum_learning': {'enabled': False}}, 'data_routing': {'enabled': False, 'random_ltd': {'enabled': False, 'layer_token_lr_schedule': {'enabled': False}}}}
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   data_efficiency_enabled ...... False
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   dataloader_drop_last ......... False
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   disable_allgather ............ False
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   dump_state ................... False
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   dynamic_loss_scale_args ...... None
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   eigenvalue_enabled ........... False
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   eigenvalue_gas_boundary_resolution  1
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   eigenvalue_layer_name ........ bert.encoder.layer
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   eigenvalue_layer_num ......... 0
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   eigenvalue_max_iter .......... 100
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   eigenvalue_stability ......... 1e-06
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   eigenvalue_tol ............... 0.01
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   eigenvalue_verbose ........... False
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   elasticity_enabled ........... False
+[2023-11-10 21:33:29,007] [INFO] [config.py:976:print]   flops_profiler_config ........ {
+    "enabled": false, 
+    "recompute_fwd_factor": 0.0, 
+    "profile_step": 1, 
+    "module_depth": -1, 
+    "top_modules": 1, 
+    "detailed": true, 
+    "output_file": null
+}
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   fp16_auto_cast ............... None
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   fp16_enabled ................. False
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   fp16_master_weights_and_gradients  False
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   global_rank .................. 0
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   grad_accum_dtype ............. None
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   gradient_accumulation_steps .. 1
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   gradient_clipping ............ 1.0
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   gradient_predivide_factor .... 1.0
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   hybrid_engine ................ enabled=False max_out_tokens=512 inference_tp_size=1 release_inference_cache=False pin_parameters=True tp_gather_partition_size=8
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   initial_dynamic_scale ........ 1
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   load_universal_checkpoint .... False
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   loss_scale ................... 1.0
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   memory_breakdown ............. False
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   mics_hierarchial_params_gather  False
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   mics_shard_size .............. -1
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   monitor_config ............... tensorboard=TensorBoardConfig(enabled=False, output_path='', job_name='DeepSpeedJobName') wandb=WandbConfig(enabled=False, group=None, team=None, project='deepspeed') csv_monitor=CSVConfig(enabled=False, output_path='', job_name='DeepSpeedJobName') enabled=False
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   nebula_config ................ {
+    "enabled": false, 
+    "persistent_storage_path": null, 
+    "persistent_time_interval": 100, 
+    "num_of_version_in_retention": 2, 
+    "enable_nebula_load": true, 
+    "load_path": null
+}
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   optimizer_legacy_fusion ...... False
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   optimizer_name ............... None
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   optimizer_params ............. None
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   pipeline ..................... {'stages': 'auto', 'partition': 'best', 'seed_layers': False, 'activation_checkpoint_interval': 0}
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   pld_enabled .................. False
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   pld_params ................... False
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   prescale_gradients ........... False
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   scheduler_name ............... None
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   scheduler_params ............. None
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   seq_parallel_communication_data_type  torch.float32
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   sparse_attention ............. None
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   sparse_gradients_enabled ..... False
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   steps_per_print .............. inf
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   train_batch_size ............. 8
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   train_micro_batch_size_per_gpu  1
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   use_node_local_storage ....... False
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   wall_clock_breakdown ......... False
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   weight_quantization_config ... None
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   world_size ................... 8
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   zero_allow_untested_optimizer  True
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   zero_config .................. stage=2 contiguous_gradients=True reduce_scatter=True reduce_bucket_size=500,000,000 allgather_partitions=True allgather_bucket_size=500,000,000 overlap_comm=False load_from_fp32_weights=True elastic_checkpoint=False offload_param=None offload_optimizer=None sub_group_size=1,000,000,000 cpu_offload_param=None cpu_offload_use_pin_memory=None cpu_offload=None prefetch_bucket_size=50,000,000 param_persistence_threshold=100,000 model_persistence_threshold=sys.maxsize max_live_parameters=1,000,000,000 max_reuse_distance=1,000,000,000 gather_16bit_weights_on_model_save=False stage3_gather_fp16_weights_on_model_save=False ignore_unused_parameters=True legacy_stage1=False round_robin_gradients=False zero_hpz_partition_size=1 zero_quantized_weights=False zero_quantized_nontrainable_weights=False zero_quantized_gradients=False mics_shard_size=-1 mics_hierarchical_params_gather=False memory_efficient_linear=True pipeline_loading_checkpoint=False override_module_apply=True
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   zero_enabled ................. True
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   zero_force_ds_cpu_optimizer .. True
+[2023-11-10 21:33:29,008] [INFO] [config.py:976:print]   zero_optimization_stage ...... 2
+[2023-11-10 21:33:29,008] [INFO] [config.py:962:print_user_config]   json = {
+    "bf16": {
+        "enabled": true
+    }, 
+    "zero_optimization": {
+        "stage": 2
+    }, 
+    "gradient_accumulation_steps": 1, 
+    "gradient_clipping": 1.0, 
+    "steps_per_print": inf, 
+    "train_batch_size": 8, 
+    "train_micro_batch_size_per_gpu": 1, 
+    "wall_clock_breakdown": false, 
+    "fp16": {
+        "enabled": false
+    }, 
+    "zero_allow_untested_optimizer": true
+}
+***** Running training *****
+  Num examples = 3,200
+  Num Epochs = 2
+  Instantaneous batch size per device = 1
+  Total train batch size (w. parallel, distributed & accumulation) = 8
+  Gradient Accumulation steps = 1
+  Total optimization steps = 500
+  Number of trainable parameters = 6,738,415,616
+  0%|                                                                                                                                                                                                                                        | 0/500 [00:00<?, ?it/s]/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/utils/checkpoint.py:429: UserWarning: torch.utils.checkpoint: please pass in use_reentrant=True or use_reentrant=False explicitly. The default value of use_reentrant will be updated to be False in the future. To maintain current behavior, pass use_reentrant=True. It is recommended that you use use_reentrant=False. Refer to docs for more details on the differences between the two variants.
+  warnings.warn(
+/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/utils/checkpoint.py:429: UserWarning: torch.utils.checkpoint: please pass in use_reentrant=True or use_reentrant=False explicitly. The default value of use_reentrant will be updated to be False in the future. To maintain current behavior, pass use_reentrant=True. It is recommended that you use use_reentrant=False. Refer to docs for more details on the differences between the two variants.
+  warnings.warn(
+/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/utils/checkpoint.py:429: UserWarning: torch.utils.checkpoint: please pass in use_reentrant=True or use_reentrant=False explicitly. The default value of use_reentrant will be updated to be False in the future. To maintain current behavior, pass use_reentrant=True. It is recommended that you use use_reentrant=False. Refer to docs for more details on the differences between the two variants.
+  warnings.warn(
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/ubuntu/sachira/Humback/src/core/train_flash_attn.py", line 10, in <module>
+    train()
+  File "/home/ubuntu/sachira/Humback/src/core/train.py", line 61, in train
+    trainer.train()
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 1555, in train
+    return inner_training_loop(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 1860, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 2725, in training_step
+    loss = self.compute_loss(model, inputs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 2748, in compute_loss
+    outputs = model(**inputs)
+              ^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/deepspeed/utils/nvtx.py", line 15, in wrapped_fn
+    ret_val = func(*args, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/deepspeed/runtime/engine.py", line 1814, in forward
+    loss = self.module(*inputs, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 1034, in forward
+    outputs = self.model(
+              ^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 912, in forward
+    layer_outputs = self._gradient_checkpointing_func(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/_compile.py", line 24, in inner
+    return torch._dynamo.disable(fn, recursive)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py", line 328, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/_dynamo/external_utils.py", line 17, in inner
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 451, in checkpoint
+    return CheckpointFunction.apply(function, preserve, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/autograd/function.py", line 539, in apply
+    return super().apply(*args, **kwargs)  # type: ignore[misc]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 230, in forward
+    outputs = run_function(*args)
+              ^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 672, in forward
+    hidden_states, self_attn_weights, present_key_value = self.self_attn(
+                                                          ^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/fastchat/train/llama_flash_attn_monkey_patch.py", line 77, in forward
+    qkv, indices, cu_q_lens, max_s = unpad_input(qkv, key_padding_mask)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/flash_attn/bert_padding.py", line 118, in unpad_input
+    index_first_axis(rearrange(hidden_states, "b s ... -> (b s) ..."), indices),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/autograd/function.py", line 539, in apply
+    return super().apply(*args, **kwargs)  # type: ignore[misc]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/flash_attn/bert_padding.py", line 17, in forward
+    return torch.gather(
+           ^^^^^^^^^^^^^
+torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 89.10 GiB. GPU 7 has a total capacty of 39.39 GiB of which 12.96 GiB is free. Including non-PyTorch memory, this process has 26.42 GiB memory in use. Of the allocated memory 22.20 GiB is allocated by PyTorch, and 2.97 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/ubuntu/sachira/Humback/src/core/train_flash_attn.py", line 10, in <module>
+    train()
+  File "/home/ubuntu/sachira/Humback/src/core/train.py", line 61, in train
+    trainer.train()
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 1555, in train
+    return inner_training_loop(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 1860, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 2725, in training_step
+    loss = self.compute_loss(model, inputs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 2748, in compute_loss
+    outputs = model(**inputs)
+              ^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/deepspeed/utils/nvtx.py", line 15, in wrapped_fn
+    ret_val = func(*args, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/deepspeed/runtime/engine.py", line 1814, in forward
+    loss = self.module(*inputs, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 1034, in forward
+    outputs = self.model(
+              ^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 912, in forward
+    layer_outputs = self._gradient_checkpointing_func(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/_compile.py", line 24, in inner
+    return torch._dynamo.disable(fn, recursive)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py", line 328, in _fn
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/ubuntu/sachira/Humback/src/core/train_flash_attn.py", line 10, in <module>
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/_dynamo/external_utils.py", line 17, in inner
+    train()    
+return fn(*args, **kwargs)
+        File "/home/ubuntu/sachira/Humback/src/core/train.py", line 61, in train
+     ^^^^^^^^^^^^^^^^^^^
+    trainer.train()
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 451, in checkpoint
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 1555, in train
+    return CheckpointFunction.apply(function, preserve, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/autograd/function.py", line 539, in apply
+    return inner_training_loop(
+           ^^    ^return super().apply(*args, **kwargs)  # type: ignore[misc]^
+^^^^^^^^ ^ ^ ^ ^ ^ ^ ^ ^ 
+  ^  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 1860, in _inner_training_loop
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 230, in forward
+    outputs = run_function(*args)
+              ^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    tr_loss_step = self.training_step(model, inputs)
+                   ^^^^^^^    ^return self._call_impl(*args, **kwargs)^
+^^^^^^^^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^^^^^^^^^^^^
+^^  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 2725, in training_step
+^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 672, in forward
+    loss = self.compute_loss(model, inputs)
+           ^    ^hidden_states, self_attn_weights, present_key_value = self.self_attn(^
+^^^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ 
+    File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/trainer.py", line 2748, in compute_loss
+                             ^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^    ^outputs = model(**inputs)^
+^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+              ^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^    ^return self._call_impl(*args, **kwargs)^
+^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/fastchat/train/llama_flash_attn_monkey_patch.py", line 77, in forward
+           ^    ^qkv, indices, cu_q_lens, max_s = unpad_input(qkv, key_padding_mask)^
+^^^^^^^^^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ 
+    File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/flash_attn/bert_padding.py", line 118, in unpad_input
+    index_first_axis(rearrange(hidden_states, "b s ... -> (b s) ..."), indices),
+       return forward_call(*args, **kwargs) 
+^^^^^^^^^^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/deepspeed/utils/nvtx.py", line 15, in wrapped_fn
+^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/autograd/function.py", line 539, in apply
+    ret_val = func(*args, **kwargs)
+              ^^^^^^^^^^    ^return super().apply(*args, **kwargs)  # type: ignore[misc]^
+^^^^^^^^^ 
+    File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/deepspeed/runtime/engine.py", line 1814, in forward
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/flash_attn/bert_padding.py", line 17, in forward
+    return torch.gather(
+           ^^^^^^^^^^^^^
+torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 78.63 GiB. GPU 3 has a total capacty of 39.39 GiB of which 12.82 GiB is free. Including non-PyTorch memory, this process has 26.56 GiB memory in use. Of the allocated memory 22.20 GiB is allocated by PyTorch, and 2.97 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+    loss = self.module(*inputs, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 1034, in forward
+    outputs = self.model(
+              ^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 912, in forward
+    layer_outputs = self._gradient_checkpointing_func(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/_compile.py", line 24, in inner
+    return torch._dynamo.disable(fn, recursive)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py", line 328, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/_dynamo/external_utils.py", line 17, in inner
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 451, in checkpoint
+    return CheckpointFunction.apply(function, preserve, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/autograd/function.py", line 539, in apply
+    return super().apply(*args, **kwargs)  # type: ignore[misc]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 230, in forward
+    outputs = run_function(*args)
+              ^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 672, in forward
+    hidden_states, self_attn_weights, present_key_value = self.self_attn(
+                                                          ^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/fastchat/train/llama_flash_attn_monkey_patch.py", line 77, in forward
+    qkv, indices, cu_q_lens, max_s = unpad_input(qkv, key_padding_mask)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/flash_attn/bert_padding.py", line 118, in unpad_input
+    index_first_axis(rearrange(hidden_states, "b s ... -> (b s) ..."), indices),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/autograd/function.py", line 539, in apply
+    return super().apply(*args, **kwargs)  # type: ignore[misc]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/flash_attn/bert_padding.py", line 17, in forward
+    return torch.gather(
+           ^^^^^^^^^^^^^
+torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 67.81 GiB. GPU 2 has a total capacty of 39.39 GiB of which 12.82 GiB is free. Including non-PyTorch memory, this process has 26.56 GiB memory in use. Of the allocated memory 22.19 GiB is allocated by PyTorch, and 2.98 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+[2023-11-10 21:33:29,813] torch.distributed.elastic.multiprocessing.api: [WARNING] Sending process 215718 closing signal SIGTERM
+[2023-11-10 21:33:29,813] torch.distributed.elastic.multiprocessing.api: [WARNING] Sending process 215720 closing signal SIGTERM
+[2023-11-10 21:33:29,813] torch.distributed.elastic.multiprocessing.api: [WARNING] Sending process 215721 closing signal SIGTERM
+[2023-11-10 21:33:29,814] torch.distributed.elastic.multiprocessing.api: [WARNING] Sending process 215722 closing signal SIGTERM
+[2023-11-10 21:33:29,814] torch.distributed.elastic.multiprocessing.api: [WARNING] Sending process 215723 closing signal SIGTERM
+[2023-11-10 21:33:29,814] torch.distributed.elastic.multiprocessing.api: [WARNING] Sending process 215724 closing signal SIGTERM
+[2023-11-10 21:33:29,814] torch.distributed.elastic.multiprocessing.api: [WARNING] Sending process 215725 closing signal SIGTERM
+[2023-11-10 21:33:31,158] torch.distributed.elastic.multiprocessing.api: [ERROR] failed (exitcode: 1) local_rank: 1 (pid: 215719) of binary: /home/ubuntu/sachira/Humback/.env/bin/python
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/distributed/run.py", line 810, in <module>
+    main()
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 346, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/distributed/run.py", line 806, in main
+    run(args)
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/distributed/run.py", line 797, in run
+    elastic_launch(
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 134, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/sachira/Humback/.env/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 264, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+src.core.train_flash_attn FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2023-11-10_21:33:29
+  host      : ip-172-31-46-114.ec2.internal
+  rank      : 1 (local_rank: 1)
+  exitcode  : 1 (pid: 215719)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+(/home/ubuntu/sachira/Humback/.env) ubuntu@ip-172-31-46-114:~/sachira/Humback$ 
