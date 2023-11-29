@@ -157,7 +157,7 @@ def pipeline(
             pickle.dump(generation_state, open(generation_state_file, "wb"))
 
         logger.info(" Statistics ")
-        success_files_count = generation_state["total_texts"] - generation_state["files_texts"]
+        success_files_count = generation_state["total_texts"] - generation_state["texts_missed"]
         logger.info(f"Total number of successfully extracted q&a: {success_files_count}")
         logger.info(f"Total texts missed: {generation_state['texts_missed']} out of {generation_state['total_texts']}")
         logger.info(f"Total texts processed: {generation_state['total_texts']}")

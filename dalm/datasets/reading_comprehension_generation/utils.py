@@ -90,9 +90,26 @@ def create_domain_tokenizer(text_file: str) -> spm.SentencePieceProcessor:
         model_prefix = f"{temp_dir}/domain"
 
         # Train the SentencePiece model, the model is saved in the temporary directory
-        spm.SentencePieceTrainer.train(
-            input=text_file, model_prefix=model_prefix, vocab_size=32000, character_coverage=1.0
-        )
+        exit_tries = False
+        vocab_size = 32000
+        # hack to get around that the vocab size is too large and has to be set manually
+        # TODO: please figure out if mathematically a lower number of vocab is suitable for our case
+        while not exit_tries:
+            try:
+                spm.SentencePieceTrainer.train(
+                    input=text_file, model_prefix=model_prefix, vocab_size=vocab_size, character_coverage=1.0
+                )
+                exit_tries = True
+            except RuntimeError as e:
+                error_message = str(e)
+                if error_message.startswith("Internal: src/trainer_interface.cc(661)"):
+                    print(f"Vocab size of {vocab_size} is too large, decreasing it ...")
+                    vocab_size = int(
+                        error_message.split()[-1][:-1]
+                    )  # error message ends with the recommended vocab and a period
+                    print(f"Attempting with vocab size of {vocab_size}")
+                else:
+                    raise e
 
         sp_model_file = f"{model_prefix}.model"
         return spm.SentencePieceProcessor(model_file=sp_model_file)
