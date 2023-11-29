@@ -10,33 +10,49 @@ from transformers import AutoTokenizer, PreTrainedTokenizerBase
 
 def input_generator(directory_or_file: str, csv_column: Optional[str] = None) -> Iterator[Tuple[str, str]]:
     """
-    Generator that yields the contents of the files in the directory or the CSV column
+    Generator that yields the contents of the files in the directory or the CSV column.
     """
 
-    if os.path.isfile(directory_or_file) and not csv_column:
-        raise ValueError("a CSV column must be specified if the input is a file")
+    if os.path.isfile(directory_or_file):
+        if directory_or_file.endswith(".csv") and csv_column:
+            # Process a single CSV file
+            yield from process_csv_file(directory_or_file, csv_column)
+        elif not csv_column:
+            # Process a single non-CSV file
+            yield from process_plain_file(directory_or_file)
+        else:
+            raise ValueError("CSV column specified for non-CSV file")
 
-    if os.path.isdir(directory_or_file):
+    elif os.path.isdir(directory_or_file):
+        # Process each file in the directory
         for file in os.listdir(directory_or_file):
             file_path = os.path.join(directory_or_file, file)
-            if os.path.isfile(file_path):  # Ensures that we are reading files
-                try:
-                    with open(file_path, "r", encoding="utf-8") as file_contents:
-                        contents = file_contents.read()
-                except UnicodeDecodeError:
-                    with open(file_path, "r", encoding="utf-8", errors="replace") as file_contents:
-                        contents = file_contents.read()
+            if file_path.endswith(".csv") and csv_column:
+                yield from process_csv_file(file_path, csv_column)
+            elif not file_path.endswith(".csv"):
+                yield from process_plain_file(file_path)
 
-                yield file, contents
-
-    elif os.path.isfile(directory_or_file) and directory_or_file.endswith(".csv") and csv_column:
-        # If it's a CSV file, open it and yield the specified column
-        with open(directory_or_file, newline="", encoding="utf-8") as csvfile:
-            reader = csv.DictReader(csvfile)
-            for index, row in enumerate(reader):
-                yield os.path.basename(directory_or_file) + str(index), row[csv_column]
     else:
-        raise ValueError("The input should be a directory or a CSV file.")
+        raise ValueError("The input should be a directory or a file.")
+
+
+def process_csv_file(file_path: str, csv_column: str) -> Iterator[Tuple[str, str]]:
+    """Process a single CSV file."""
+    with open(file_path, newline="", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for index, row in enumerate(reader):
+            yield os.path.basename(file_path) + str(index), row[csv_column]
+
+
+def process_plain_file(file_path: str) -> Iterator[Tuple[str, str]]:
+    """Process a single plain text file."""
+    try:
+        with open(file_path, "r", encoding="utf-8") as file_contents:
+            contents = file_contents.read()
+    except UnicodeDecodeError:
+        with open(file_path, "r", encoding="utf-8", errors="replace") as file_contents:
+            contents = file_contents.read()
+    yield os.path.basename(file_path), contents
 
 
 def text_chunker(text: str, tokenizer: PreTrainedTokenizerBase, chunk_size: int) -> Iterator[str]:

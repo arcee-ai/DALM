@@ -51,13 +51,14 @@ def pipeline(
     output_dataset_name: str,
     input: str,
     model_output_dir: str,
-    generation_state_file: str,
+    log_with: Optional[str],
     llm_kwargs: Optional[LLMKwargs],
     synth_kwargs: Optional[SynthKwargs],
     csv_column: Optional[str],
     size_valid_set: Optional[int],
     comprehension_type: SynthMode,
     shuffle_buffer: Optional[int],
+    generation_state_file: str = "generation_state.pkl",
     num_train_epochs: int = 1,
     split: str = "train",
     streaming: bool = False,
@@ -80,7 +81,6 @@ def pipeline(
     weight_decay: float = 0.0,
     optimizer_type: str = "paged_adamw_32bit",
     neftune_noise_alpha: int = 5,
-    log_with: str = "wandb",
     run_name: str = "rc_pipeline",
     validation_split: Optional[float] = 0.05,
 ) -> None:
@@ -121,7 +121,7 @@ def pipeline(
                 with open(generation_state_file, "rb") as f:
                     generation_state = pickle.load(f)
             else:
-                generation_state = {"processed_files": [], "total_files": 0, "files_missed": 0}
+                generation_state = {"processed_texts": [], "total_texts": 0, "texts_missed": 0}
                 pickle.dump(generation_state, open(generation_state_file, "wb"))
 
         if not os.path.exists(llm_kwargs.dataset_output_path):
@@ -130,49 +130,51 @@ def pipeline(
         llm_rc_dataset_generator = generate_synthetic_dataset(
             model_name=llm_kwargs.model_name,
             input_directory_or_file=input,
-            processed_files=generation_state["processed_files"],
+            processed_files=generation_state["processed_texts"],
             chunk=llm_kwargs.chunk or False,
             context_length=llm_kwargs.context_length or 0,
             csv_column=csv_column,
         )
 
         # generate llm based reading comprehension dataset
-        for index, filename, context, gen_text in llm_rc_dataset_generator:
+        for index, text_identifier, context, gen_text in llm_rc_dataset_generator:
             qanda = question_and_answer_extractor(gen_text, context)
             if qanda:
-                output_file = f"{filename}_{index}.json"
+                output_file = f"{text_identifier}_{index}.json"
                 with open(os.path.join(llm_kwargs.dataset_output_path, output_file), "w") as o:
                     json.dump(qanda, o)
             else:
                 logger.warning(
                     (
-                        f"No question and answer pairs found for {filename} " f"chunk: {index}"
+                        f"No question and answer pairs found for {text_identifier} " f"chunk: {index}"
                         if llm_kwargs.chunk
                         else ""
                     )
                 )
-                generation_state["files_missed"] += 1
-            generation_state["processed_files"].append(filename)
-            generation_state["total_files"] += 1
+                generation_state["texts_missed"] += 1
+            generation_state["processed_texts"].append(text_identifier)
+            generation_state["total_texts"] += 1
             pickle.dump(generation_state, open(generation_state_file, "wb"))
 
         logger.info(" Statistics ")
-        success_files_count = generation_state["total_files"] - generation_state["files_missed"]
+        success_files_count = generation_state["total_texts"] - generation_state["files_texts"]
         logger.info(f"Total number of successfully extracted q&a: {success_files_count}")
-        logger.info(f"Total files missed: {generation_state['files_missed']} out of {generation_state['total_files']}")
-        logger.info(f"Total files processed: {generation_state['total_files']}")
+        logger.info(f"Total texts missed: {generation_state['texts_missed']} out of {generation_state['total_texts']}")
+        logger.info(f"Total texts processed: {generation_state['total_texts']}")
 
         for file in os.listdir(llm_kwargs.dataset_output_path):
             with open(os.path.join(llm_kwargs.dataset_output_path, file), "r") as f:
                 in_memory_dataset.append({"messages": json.load(f)})
+
+    if in_memory_dataset == []:
+        raise ValueError("No dataset generated")
 
     # shuffle in memory dataset
     random.shuffle(in_memory_dataset)
 
     dataset = datasets.Dataset.from_list(in_memory_dataset)
 
-    if not os.path.exists(output_dataset_name):
-        dataset.save_to_disk(output_dataset_name)
+    dataset.save_to_disk(output_dataset_name)
 
     train_generator(
         model_name=model_name,
@@ -295,7 +297,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--log_with",
         type=str,
-        default="wandb",
         help="tracker backend to be used",
     )
     parser.add_argument(

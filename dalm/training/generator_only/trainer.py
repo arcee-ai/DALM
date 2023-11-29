@@ -83,7 +83,7 @@ def chars_token_ratio(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="HuggingFaceH4/zephyr-7b-beta", help="the model name")
-    parser.add_argument("--log_with", type=str, default="wandb", help="tracker name (wandb, mlflow, ..etc)")
+    parser.add_argument("--log_with", type=str, help="tracker name (wandb, mlflow, ..etc)")
     parser.add_argument(
         "--dataset_name",
         type=str,
@@ -141,9 +141,9 @@ def train_generator(
     model_name: str,
     dataset_name: str,
     local_dataset: bool,
-    log_with: str,
     run_name: str,
     output_dir: str,
+    log_with: Optional[str],
     size_valid_set: Optional[int],
     validation_split: Optional[float],
     shuffle_buffer: Optional[int],
@@ -236,6 +236,8 @@ def train_generator(
 
     chars_per_token = chars_token_ratio(train_dataset, tokenizer, prepare_sample_text)
     logging.info(f"The character to token ratio of the dataset is: {chars_per_token:.2f}")
+
+    logging.info("Starting the model training")
 
     trainer = SFTTrainer(
         model=base_model,
