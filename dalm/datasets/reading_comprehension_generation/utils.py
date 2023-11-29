@@ -1,4 +1,5 @@
 import csv
+import logging
 import os
 import re
 import tempfile
@@ -6,6 +7,8 @@ from typing import Dict, Iterator, List, Optional, Tuple
 
 import sentencepiece as spm  # type: ignore[import-untyped]
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
+
+logger = logging.getLogger(__name__)
 
 
 def input_generator(directory_or_file: str, csv_column: Optional[str] = None) -> Iterator[Tuple[str, str]]:
@@ -103,11 +106,11 @@ def create_domain_tokenizer(text_file: str) -> spm.SentencePieceProcessor:
             except RuntimeError as e:
                 error_message = str(e)
                 if error_message.startswith("Internal: src/trainer_interface.cc(661)"):
-                    print(f"Vocab size of {vocab_size} is too large, decreasing it ...")
+                    logger.warning(f"Vocab size of {vocab_size} is too large, decreasing it ...")
                     vocab_size = int(
                         error_message.split()[-1][:-1]
                     )  # error message ends with the recommended vocab and a period
-                    print(f"Attempting with vocab size of {vocab_size}")
+                    logger.warning(f"Attempting with vocab size of {vocab_size}")
                 else:
                     raise e
 
