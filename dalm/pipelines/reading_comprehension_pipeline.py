@@ -257,9 +257,14 @@ def parse_args() -> argparse.Namespace:
         "--domain_spm_path",
         type=str,
         default=None,
-        help="path to the domain tokenizer used for regex based generation.  If None is provided (default), it will be automatically generated.",
+        help=(
+            "path to the domain tokenizer used for regex based generation."
+            "If None is provided (default), it will be automatically generated."
+        ),
     )
-    parser.add_argument("--input", type=str, required=True, help="A CSV file OR a directory containing the CSV input files")
+    parser.add_argument(
+        "--input", type=str, required=True, help="A CSV file OR a directory containing the CSV input files"
+    )
     parser.add_argument("--csv_column", type=str, help="Column to read from the CSV file")
     parser.add_argument("--no_chunk", action="store_true", help="whether to NOT chunk the input files or not")
     parser.add_argument("--num_train_epochs", type=int, default=1, help="number of epochs to train the generator")

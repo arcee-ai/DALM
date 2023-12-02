@@ -154,7 +154,7 @@ def fix_first_prompt(text: str, chat_chain: List[Dict[str, str]]) -> List[Dict[s
 
 
 # TODO: add test
-# TODO: Address known issues described in #78 
+# TODO: Address known issues described in #78
 def question_and_answer_extractor(whole_text: str, context: str) -> List[Dict[str, str]] | None:
     text_lines = whole_text.split("\n")
     question: List[str] = []
