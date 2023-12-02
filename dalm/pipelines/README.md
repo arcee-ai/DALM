@@ -10,7 +10,7 @@ python dalm/pipelines/reading_comprehension_pipeline.py --model_name HuggingFace
     --input input.csv --csv_column text \
 	--output_dataset_name combined \
     --general_spm_path tokenizers/general.spm \
-	--llm_synth_model_name meta-llama/Llama-2-13b \
+	--llm_synth_model_name meta-llama/Llama-2-13b-chat-hf \
     --llm_synth_model_context_length 4096
 
 ```

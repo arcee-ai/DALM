@@ -30,8 +30,8 @@ python dalm/datasets/reading_comprehension_generation/synthetic_based.py \
 ```
 
 the output directory serves as a temporary holding place of all generated data before it can be made a dataset.
-The generation process usually takes time. SO every step is taken to ensure if the process is interrupted, once back running
-will pick up where it left off
+The generation process is time consuming. So every step is taken to ensure that if the process is interrupted, once back running
+will pick up where it left off. 
 
 Chunking of data is enabled by default and requires the context length to be passed  which is why it passed in in the example
 
@@ -40,7 +40,7 @@ Chunking of data is enabled by default and requires the context length to be pas
 (Same, as above i.e assuming you have your dataset as a csv file with the column `text` containing the raw texts)
 
 Please note there is the choice of passing in a domain sentence model in addition, but this is not required as
-the script will train a domain speicifc sentencepiece model on the input corpus
+the script will train a domain specific sentencepiece model on the input corpus
 
 ```bash
 
