@@ -4,7 +4,7 @@ This aproach of adapting LLMs is based on this [paper](https://arxiv.org/abs/230
 The way espoused by the paper is generating reading comprehension questions and answers based on the raw corpora
 and training a llm on said generated dataset can enhance its domain adaptiveness
 
-We have two ways of generating  reading comprehension data
+We have two ways of generating reading comprehension data
 
 1. Via regex based methods that combs the input data for match and aligns them into questions and answers
 2. Via prompting a large language model to come up with questions and answers 
@@ -30,8 +30,7 @@ python dalm/datasets/reading_comprehension_generation/synthetic_based.py \
 ```
 
 the output directory serves as a temporary holding place of all generated data before it can be made a dataset.
-The generation process is time consuming. So every step is taken to ensure that if the process is interrupted, once back running
-will pick up where it left off. 
+The generation process is time consuming and expensive. On average, because the process uses an LLM (if using the recommended 13b llama2 model), it take about 20-30 minutes to produce 10 questions (numbers may vary depending on the content of your dataset and the unpredictability of the model). So every step is taken to ensure that if the process is interrupted, once back running will pick up where it left off. 
 
 Chunking of data is enabled by default and requires the context length to be passed  which is why it passed in in the example
 
