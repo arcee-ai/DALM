@@ -228,7 +228,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--comprehension_type",
         type=SynthMode,
-        default=SynthMode.BOTH,
+        default=SynthMode.LLM,
         choices=list(SynthMode),
         help="type of comprehension to be generated",
     )
