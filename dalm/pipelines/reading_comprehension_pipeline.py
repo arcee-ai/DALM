@@ -297,6 +297,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--log_with",
         type=str,
+        default="none",
         help="tracker backend to be used",
     )
     parser.add_argument(
