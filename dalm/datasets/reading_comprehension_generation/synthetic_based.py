@@ -139,7 +139,7 @@ def parse_args() -> argparse.Namespace:
         type=str,
         required=False,
         default="rc_generation_state.pkl",
-        help="File to save the state of the generation",
+        help="File to save the state of the generation in order to support resume functionality",
     )
     parser.add_argument("--context_length", type=int, default=4096, help="context length to calculate the chunk size")
     parser.add_argument("--no_chunk", action="store_false")
