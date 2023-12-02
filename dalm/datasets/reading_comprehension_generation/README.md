@@ -30,7 +30,7 @@ python dalm/datasets/reading_comprehension_generation/synthetic_based.py \
 ```
 
 the output directory serves as a temporary holding place of all generated data before it can be made a dataset.
-The generation process is time consuming and expensive. On average, because the process uses an LLM (if using the recommended 13b llama2 model), it take about 20-30 minutes to produce 10 questions (numbers may vary depending on the content of your dataset and the unpredictability of the model). So every step is taken to ensure that if the process is interrupted, once back running will pick up where it left off. 
+The generation process is time consuming and expensive. On average, because the process uses a LLM (if using the recommended 13b llama2 model), it takes about 20-30 minutes to produce 10 questions (numbers may vary depending on the content of your dataset and the unpredictability of the model). So every step is taken to ensure that if the process is interrupted, once back running will pick up where it left off. 
 
 Chunking of data is enabled by default and requires the context length to be passed  which is why it passed in in the example
 
