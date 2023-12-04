@@ -172,7 +172,7 @@ def extract_question_or_answer(text: str, extract_type: str = "question") -> Tup
     extraction_regex = rf".*\[?{extract_type}[:\]]*(?:.*?\])?\s*(.*)"
 
     match = re.match(extraction_regex, text, re.IGNORECASE)
-    extracted_text = match.group(1) if match else None
+    extracted_text = match.group(1) if match else ""
     found_extracted = True if extracted_text else False
     return found_extracted, extracted_text
     
