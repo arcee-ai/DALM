@@ -1,3 +1,5 @@
+# ruff: noqa: E501
+
 from typing import Dict, List, cast
 
 from dalm.datasets.reading_comprehension_generation.utils import (
