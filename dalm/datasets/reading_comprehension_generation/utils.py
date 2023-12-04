@@ -277,6 +277,11 @@ def question_and_answer_extractor(whole_text: str, context: str) -> List[Dict[st
     # Extract the qa pairs from whole_text
     qa_pairs = _raw_question_and_answer_extractor(whole_text)
 
+    # If there are no qa pairs, return None
+    if not qa_pairs:
+        logger.warning(f"No QA pairs could be generated from whole_text: {whole_text} \n\n and context: {context}")
+        return None
+
     # Convert the qa pairs to chat completion inputs
     qa_pairs_chat_completions = convert_qa_pairs_to_chat_completions(qa_pairs)
 

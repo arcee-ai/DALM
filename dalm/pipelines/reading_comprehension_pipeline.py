@@ -138,9 +138,11 @@ def pipeline(
 
         # generate llm based reading comprehension dataset
         for index, text_identifier, context, gen_text in llm_rc_dataset_generator:
+            logger.info(f"LLM RC dataset generator #{index} generated text of length {len(gen_text)} from context of length {len(context)}")
             qanda = question_and_answer_extractor(gen_text, context)
             if qanda:
                 output_file = f"{text_identifier}_{index}.json"
+                logger.info(f"Writing Q & A chat completions of length {len(qanda)} to {output_file}")
                 with open(os.path.join(llm_kwargs.dataset_output_path, output_file), "w") as o:
                     json.dump(qanda, o)
             else:
