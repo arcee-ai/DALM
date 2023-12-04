@@ -33,8 +33,8 @@ class LLMKwargs:
     model_name: str
     context_length: Optional[int]
     dataset_output_path: str
-    unprocessed_dataset_output_path: Optional[str] = None
     chunk: bool
+    unprocessed_dataset_output_path: Optional[str] = None
 
     def __post_init__(self) -> None:
         if self.chunk and not self.context_length:
