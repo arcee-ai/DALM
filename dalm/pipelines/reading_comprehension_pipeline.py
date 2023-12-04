@@ -33,6 +33,7 @@ class LLMKwargs:
     model_name: str
     context_length: Optional[int]
     dataset_output_path: str
+    unprocessed_dataset_output_path: Optional[str] = None
     chunk: bool
 
     def __post_init__(self) -> None:
@@ -140,6 +141,19 @@ def pipeline(
         for index, text_identifier, context, gen_text in llm_rc_dataset_generator:
             logger.info(f"LLM RC dataset generator #{index} generated text of length {len(gen_text)} from context of length {len(context)}")
             qanda = question_and_answer_extractor(gen_text, context)
+            if llm_kwargs.unprocessed_dataset_output_path:
+                output_file = f"{text_identifier}_{index}.json"
+                logger.info(f"Writing unprocessed LLM output to {output_file}")
+                unprocessed = {
+                    "context": context, 
+                    "gen_text": gen_text, 
+                    "qanda": qanda, 
+                    "index": index, 
+                    "text_identifier": text_identifier
+                }
+                with open(os.path.join(llm_kwargs.unprocessed_dataset_output_path, output_file), "w") as o:
+                    json.dump(unprocessed, o)
+
             if qanda:
                 output_file = f"{text_identifier}_{index}.json"
                 logger.info(f"Writing Q & A chat completions of length {len(qanda)} to {output_file}")
@@ -250,6 +264,12 @@ def parse_args() -> argparse.Namespace:
         help="path to save the generated LLM based dataset",
     )
     parser.add_argument(
+        "--llm_unprocessed_dataset_output_path",
+        type=str,
+        default=None,
+        help="path to save the raw unprocessed LLM based dataset for debugging purposes",
+    )
+    parser.add_argument(
         "--general_spm_path",
         type=str,
         default="./resources/general.spm",
@@ -334,6 +354,7 @@ def main() -> None:
             model_name=args.llm_synth_model_name,
             context_length=args.llm_synth_model_context_length,
             dataset_output_path=args.llm_dataset_output_path,
+            unprocessed_dataset_output_path=args.llm_unprocessed_dataset_output_path,
             chunk=not args.no_chunk,
         )
 
