@@ -128,6 +128,10 @@ def pipeline(
         if not os.path.exists(llm_kwargs.dataset_output_path):
             os.makedirs(llm_kwargs.dataset_output_path)
 
+        if llm_kwargs.unprocessed_dataset_output_path and \
+            not os.path.exists(llm_kwargs.unprocessed_dataset_output_path):
+            os.makedirs(llm_kwargs.unprocessed_dataset_output_path)
+
         llm_rc_dataset_generator = generate_synthetic_dataset(
             model_name=llm_kwargs.model_name,
             input_directory_or_file=input,
