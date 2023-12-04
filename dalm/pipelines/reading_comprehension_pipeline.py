@@ -128,8 +128,9 @@ def pipeline(
         if not os.path.exists(llm_kwargs.dataset_output_path):
             os.makedirs(llm_kwargs.dataset_output_path)
 
-        if llm_kwargs.unprocessed_dataset_output_path and \
-            not os.path.exists(llm_kwargs.unprocessed_dataset_output_path):
+        if llm_kwargs.unprocessed_dataset_output_path and not os.path.exists(
+            llm_kwargs.unprocessed_dataset_output_path
+        ):
             os.makedirs(llm_kwargs.unprocessed_dataset_output_path)
 
         llm_rc_dataset_generator = generate_synthetic_dataset(
@@ -143,17 +144,19 @@ def pipeline(
 
         # generate llm based reading comprehension dataset
         for index, text_identifier, context, gen_text in llm_rc_dataset_generator:
-            logger.info(f"LLM RC dataset generator #{index} generated text of length {len(gen_text)} from context of length {len(context)}")
+            logger.info(
+                f"LLM RC dataset generated text of length {len(gen_text)} from context of length {len(context)}"
+            )
             qanda = question_and_answer_extractor(gen_text, context)
             if llm_kwargs.unprocessed_dataset_output_path:
                 output_file = f"{text_identifier}_{index}.json"
                 logger.info(f"Writing unprocessed LLM output to {output_file}")
                 unprocessed = {
-                    "context": context, 
-                    "gen_text": gen_text, 
-                    "qanda": qanda, 
-                    "index": index, 
-                    "text_identifier": text_identifier
+                    "context": context,
+                    "gen_text": gen_text,
+                    "qanda": qanda,
+                    "index": index,
+                    "text_identifier": text_identifier,
                 }
                 with open(os.path.join(llm_kwargs.unprocessed_dataset_output_path, output_file), "w") as o:
                     json.dump(unprocessed, o)
