@@ -204,6 +204,10 @@ def _raw_question_and_answer_extractor(whole_text: str) -> List[Dict[str, str]] 
         Format 2: A question which does not contain the keyword "Question":
 
         2. [type: true/false] Is the following sentence true? ... clinical trials.    
+
+        Format 3: A question and answer on the same line:
+
+        2. [QUESTION: What benefits of physical activity? ANSWER: Reductions in risk factors.]
     """
 
     task_regex = r"^\*?\*?task\s*\d*"
