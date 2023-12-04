@@ -237,13 +237,22 @@ def _raw_question_and_answer_extractor(whole_text: str) -> List[Dict[str, str]] 
                 continue
         elif state == state_waiting_for_answer:
             is_answer, answer_text = extract_answer(text)
-            state = state_waiting_for_question
-            cur_qa_pair["answer"] = answer_text
-            qa_pairs.append(cur_qa_pair)
+            if is_answer:
+                state = state_waiting_for_question
+                cur_qa_pair["answer"] = answer_text
+                if not cur_qa_pair["question"] or not cur_qa_pair["answer"]:
+                    logger.warning(f"Found a QA pair with an empty question or answer: {cur_qa_pair}.  Skipping.")
+                else:
+                    qa_pairs.append(cur_qa_pair)
+            else:
+                # If we're expecting an answer, but the next non-empty line is not an answer,
+                # something probably went wrong.  Print a warning and skip this QA pair.
+                logger.warning(f"Found a question with no answer: {cur_qa_pair}.  Skipping.")
+                state = state_waiting_for_question
+            
             continue
-
         else:
-            raise ValueError("Unknown state")   
+            raise ValueError(f"Unknown state while extracting Q&A pairs: {state}")   
 
     return qa_pairs 
 
