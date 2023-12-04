@@ -1,6 +1,5 @@
 from dalm.datasets.reading_comprehension_generation.utils import _raw_question_and_answer_extractor, question_and_answer_extractor
-from typing import Dict, Iterator, List, Optional, Tuple
-
+from typing import Dict, List, cast
 
 def test_question_and_answer_extractor() -> None:
     chat_completions = question_and_answer_extractor(
@@ -191,7 +190,8 @@ def test_raw_question_and_answer_extractor() -> None:
             whole_text=str(test_case["whole_text"])
         )
         
-        expected_qa_pairs = test_case["expected_output"]
+        # The cast is necessary because linter doesn't know that the test case is a dict.
+        expected_qa_pairs = cast(List[Dict[str, str]], test_case["expected_output"])
 
         assert result_qa_pairs is not None
         assert expected_qa_pairs is not None
@@ -199,7 +199,8 @@ def test_raw_question_and_answer_extractor() -> None:
         assert len(result_qa_pairs) == len(expected_qa_pairs)
         
         for i, result_qa_pair in enumerate(result_qa_pairs):
-            expected_qa_pair = expected_qa_pairs[i]
+            expected_qa_pair= expected_qa_pairs[i]
+
             assert result_qa_pair is not None
             assert expected_qa_pair is not None
 
