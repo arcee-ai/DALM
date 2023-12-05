@@ -220,8 +220,12 @@ def train_generator(
 
     def prepare_sample_text(example: Dict[str, Any]) -> str:
         """Prepare the text from a sample of the dataset."""
-        text = tokenizer.apply_chat_template(example["messages"], tokenize=False)
-        return text
+        try:
+            text = tokenizer.apply_chat_template(example["messages"], tokenize=False)
+            return text
+        except Exception as e:
+            logger.exception(f"Error while preparing the text: {e}.  Skipping this example: {example}")
+            return ""
 
     train_dataset, eval_dataset = create_datasets(
         dataset_name=dataset_name,
