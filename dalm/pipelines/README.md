@@ -14,3 +14,23 @@ python dalm/pipelines/reading_comprehension_pipeline.py --model_name HuggingFace
     --llm_synth_model_context_length 4096
 
 ```
+
+### Data format
+
+```
+{"messages":[
+    [{"role":"...", "content": "..."}, {"role":"...", "content": "..."}, ...],
+    [{"role":"...", "content": "..."}, {"role":"...", "content": "..."}, ...],
+    [{"role":"...", "content": "..."}, {"role":"...", "content": "..."}, ...],
+    ....
+    ]
+}
+```
+
+take from this snippet:
+
+```
+import datasets
+a = datasets.load_dataset("arcee-ai/azure-reading-comprehension-dataset")
+print(a["train"]["messages"][0])
+```
