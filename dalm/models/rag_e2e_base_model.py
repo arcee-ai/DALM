@@ -31,7 +31,7 @@ class AutoModelForRagE2E(torch.nn.Module):
     ) -> None:
         super(AutoModelForRagE2E, self).__init__()
 
-        # Retriver initialization
+        # Retriever initialization
         self.retriever_model = AutoModel.from_pretrained(
             retriever_name,
             quantization_config=AutoModelForRagE2E.__get_bnb_config()
