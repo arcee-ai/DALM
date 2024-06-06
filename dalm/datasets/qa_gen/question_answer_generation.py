@@ -114,11 +114,11 @@ def split_dataset(
 
 
 def generate_qa_from_dataset(
-    dataset: Dataset, passage_column_name: str, title_column_name: str, sample_size: int, batch_size: int
+    dataset: Dataset, passage_column_name: str, title_column_name: str, sample_size: int, batch_size: int, load_in_8bit: bool = True
 ) -> DatasetDict:
     logger.info(f"Generating question answer pairs with batch size: {batch_size}")
     tokenizer = AutoTokenizer.from_pretrained(QA_MODEL)
-    model = AutoModelForSeq2SeqLM.from_pretrained(QA_MODEL, device_map="auto", load_in_8bit=True)
+    model = AutoModelForSeq2SeqLM.from_pretrained(QA_MODEL, device_map="auto", load_in_8bit=load_in_8bit)
     # shuffle data
     dataset.shuffle(seed=42)
     # select a subset
