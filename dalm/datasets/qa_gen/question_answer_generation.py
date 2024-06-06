@@ -19,7 +19,7 @@ QA_MODEL = "potsawee/t5-large-generation-squad-QuestionAnswer"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate question answer pairs from the dataset of passages")
+    parser = argparse.ArgumentParser(description="Generate question answer pairs from the dataset of passages ")
     parser.add_argument(
         "--dataset_path",
         type=str,
