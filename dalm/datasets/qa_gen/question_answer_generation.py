@@ -9,13 +9,13 @@ import datasets
 import torch
 from datasets import Dataset, DatasetDict
 from sklearn.model_selection import train_test_split
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
 
 logger = logging.getLogger(__name__)
 
 DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 TEST_SIZE = 0.2
-QA_MODEL = "potsawee/t5-large-generation-squad-QuestionAnswer"
+QA_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
 
 def parse_args() -> argparse.Namespace:
@@ -69,30 +69,80 @@ def parse_args() -> argparse.Namespace:
 def generate_question_answer_pairs(
     documents: dict, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, passage_column_name: str
 ) -> dict:
+
     """Generate question answer pairs"""
     texts = documents[passage_column_name]
+        
+    # Sample passage and question for the example (approx. 50 words)
+    example_passage = (
+        "The hummingbird is one of the smallest birds, known for its ability to hover "
+        "and fly backwards. Its wings beat incredibly fast, allowing it to remain "
+        "stationary in the air while feeding on nectar."
+    )
+    example_question = "What unique flying abilities does the hummingbird possess?"
 
-    inputs = tokenizer(texts, return_tensors="pt", padding=True, max_length=150, truncation=True).to(DEVICE)
-    outputs = model.generate(**inputs, max_new_tokens=50)
-    question_answers = tokenizer.batch_decode(outputs, skip_special_tokens=False)
-    question_answers = [
-        question_answer.replace(tokenizer.pad_token, "").replace(tokenizer.eos_token, "")
-        for question_answer in question_answers
+    # Construct the prompt with the CoT example
+    prompt_template = (
+        "Read the following passage and generate a single, relevant question based on its content.\n\n"
+        "Example:\n"
+        "Passage:\n"
+        "{example_passage}\n"
+        "Question:\n"
+        "{example_question}\n\n"
+        "Now, do the same for the next passage.\n"
+        "Passage:\n"
+        "{passage}\n"
+        "Question:"
+    )
+
+    system_message = {
+        "role": "system",
+        "content": "You are Qwen, created by Alibaba Cloud. You are a helpful assistant."
+    }
+
+    batch_messages = [
+        [system_message, {"role": "user", "content": prompt_template.format(
+            example_passage=example_passage,
+            example_question=example_question,
+            passage=passage)}]
+        for passage in texts
     ]
+    
+    batch_texts = tokenizer.apply_chat_template(
+        batch_messages,
+        tokenize=False,
+        add_generation_prompt=True
+    )
 
-    question_answer_pairs = [
-        question_answer.split(tokenizer.sep_token) if question_answer.count(tokenizer.sep_token) == 1 else ["-", "-"]
-        for question_answer in question_answers
+    model_inputs = tokenizer(batch_texts, return_tensors="pt", padding=True, truncation=True).to(model.device)
+    
+    generated_ids = model.generate(
+        **model_inputs,
+        max_new_tokens=512
+    )
+    
+    generated_ids = [
+        output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
     ]
-
-    questions = [question_answer_pair[0].strip() for question_answer_pair in question_answer_pairs]
-    answers = [question_answer_pair[1].strip() for question_answer_pair in question_answer_pairs]
-
-    return {"Question": questions, "Answer": answers}
+    
+    responses = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
+    
+    results = []
+    for response in responses:
+        question = response.strip()
+        # Check if the question ends with a question mark, otherwise replace with "-"
+        if not question.endswith('?'):
+            question = "-"
+        results.append({"Question": question, "Answer": ""})
+    
+    return {
+        "Question": [r["Question"] for r in results],
+        "Answer": [r["Answer"] for r in results]
+    }
 
 
 def filter_malformed_questions(record: dict) -> bool:
-    return record["Question"] != "-" and record["Answer"] != "-"
+    return record["Question"] != "-" and record["Question"] != "" and record["Question"] is not None
 
 
 def split_dataset(
@@ -102,8 +152,8 @@ def split_dataset(
 
     train_titles, test_titles = train_test_split(list(unique_titles), test_size=test_size, random_state=42)
 
-    train_dataset = shuffled_dataset.filter(lambda example: example[title_column_name] in train_titles, num_proc=128)
-    test_dataset = shuffled_dataset.filter(lambda example: example[title_column_name] in test_titles, num_proc=128)
+    train_dataset = shuffled_dataset.filter(lambda example: example[title_column_name] in train_titles)
+    test_dataset = shuffled_dataset.filter(lambda example: example[title_column_name] in test_titles)
 
     return datasets.DatasetDict(
         {
@@ -118,7 +168,8 @@ def generate_qa_from_dataset(
 ) -> DatasetDict:
     logger.info(f"Generating question answer pairs with batch size: {batch_size}")
     tokenizer = AutoTokenizer.from_pretrained(QA_MODEL)
-    model = AutoModelForSeq2SeqLM.from_pretrained(QA_MODEL, device_map="auto", load_in_8bit=load_in_8bit)
+    model = AutoModelForCausalLM.from_pretrained(QA_MODEL, torch_dtype="auto", device_map="auto")
+    
     # shuffle data
     dataset.shuffle(seed=42)
     # select a subset
@@ -134,13 +185,14 @@ def generate_qa_from_dataset(
         generate_question_answer_pairs, model=model, tokenizer=tokenizer, passage_column_name=passage_column_name
     )
     processed_data = small_dataset_splits.map(qa_gen_map, batched=True, batch_size=batch_size)
+
     filtered_data = processed_data.filter(filter_malformed_questions)
     logger.info(
         f"Malformed question answer pairs: "
         f"(train: {len(processed_data['train']) - len(filtered_data['train'])} "
         f"test: {len(processed_data['test']) - len(filtered_data['test'])})"
     )
-    return processed_data
+    return filtered_data
 
 
 def _load_dataset_from_path(dataset_path: str) -> Dataset:
@@ -210,7 +262,7 @@ if __name__ == "__main__":
 """
 python question_answer_generation.py \
     --dataset_path=knowledge_dataset.csv \
-    --batch_size=1000 \
-    --sample_size=1000000 \
+    --batch_size=8 \
+    --sample_size=50 \
     --output_dir=out
 """
