@@ -11,6 +11,8 @@ from datasets import Dataset, DatasetDict
 from sklearn.model_selection import train_test_split
 from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -72,27 +74,31 @@ def generate_question_answer_pairs(
 
     """Generate question answer pairs"""
     texts = documents[passage_column_name]
-        
-    # Sample passage and question for the example (approx. 50 words)
     example_passage = (
-        "The hummingbird is one of the smallest birds, known for its ability to hover "
-        "and fly backwards. Its wings beat incredibly fast, allowing it to remain "
-        "stationary in the air while feeding on nectar."
+        "Dense retrieval models are essential for embedding-based information "
+        "retrieval systems, as they map queries and documents into a shared "
+        "embedding space where their relevance can be computed. By using in-batch "
+        "negative contrastive learning, these models can be trained more efficiently, "
+        "as each batch contains not only positive examples but also negative samples "
+        "from unrelated queries or documents. This approach helps optimize the model's "
+        "ability to retrieve the most relevant information in real-world applications, "
+        "such as question-answering systems, where precision is critical."
     )
-    example_question = "What unique flying abilities does the hummingbird possess?"
 
-    # Construct the prompt with the CoT example
+    example_question = (
+        "What role does in-batch negative contrastive learning play in training dense "
+        "retrieval models, particularly in optimizing the retrieval of relevant information "
+        "across different applications?"
+   )
+
     prompt_template = (
-        "Read the following passage and generate a single, relevant question based on its content.\n\n"
-        "Example:\n"
-        "Passage:\n"
-        "{example_passage}\n"
-        "Question:\n"
-        "{example_question}\n\n"
-        "Now, do the same for the next passage.\n"
-        "Passage:\n"
-        "{passage}\n"
-        "Question:"
+        "Read the following passage and generate a single, relevant question based "
+        "on its content. The question should be less than 100 words and more than 10 "
+        "words. Do not generate anything other than the question itself. Avoid any tokens, "
+        "explanations, or formatting. Do not use words like 'Question:', 'Answer:', 'Example:', or 'Passage:'. "
+        "Ensure there are no line breaks in the output. The output should be the question only, nothing more.\n\n"
+        "Example:\nPassage: {example_passage}\n{example_question}\n\nNow, do the same for the next "
+        "passage:\n{passage}\n"
     )
 
     system_message = {
@@ -130,9 +136,6 @@ def generate_question_answer_pairs(
     results = []
     for response in responses:
         question = response.strip()
-        # Check if the question ends with a question mark, otherwise replace with "-"
-        if not question.endswith('?'):
-            question = "-"
         results.append({"Question": question, "Answer": ""})
     
     return {
@@ -142,7 +145,19 @@ def generate_question_answer_pairs(
 
 
 def filter_malformed_questions(record: dict) -> bool:
-    return record["Question"] != "-" and record["Question"] != "" and record["Question"] is not None
+    question = record["Question"]
+    return (
+        question is not None and
+        question != "" and
+        question != "-" and
+        len(question.split()) >= 5 and
+        not question.startswith("<") and
+        "instruction" not in question.lower() and
+        "question" not in question.lower() and
+        "answer" not in question.lower() and
+        "Answer:" not in question and
+        "Question:" not in question
+    )
 
 
 def split_dataset(
@@ -185,13 +200,24 @@ def generate_qa_from_dataset(
         generate_question_answer_pairs, model=model, tokenizer=tokenizer, passage_column_name=passage_column_name
     )
     processed_data = small_dataset_splits.map(qa_gen_map, batched=True, batch_size=batch_size)
+    # Print all questions from the test split before filtering
+    print("All questions from test split before filtering:")
+    for i, example in enumerate(processed_data['test']):
+        print(f"{i + 1}: {example['Question']}")
 
     filtered_data = processed_data.filter(filter_malformed_questions)
+
+    # Print all questions from the test split after filtering
+    # print("All questions from test split after filtering:")
+    # for i, example in enumerate(filtered_data['test']):
+    #     print(f"{i + 1}: {example['Question']}")
+
     logger.info(
         f"Malformed question answer pairs: "
         f"(train: {len(processed_data['train']) - len(filtered_data['train'])} "
         f"test: {len(processed_data['test']) - len(filtered_data['test'])})"
     )
+    
     return filtered_data
 
 
