@@ -5,21 +5,18 @@ import warnings
 from functools import partial
 from pathlib import Path
 
-import multiprocessing
-import math
 import datasets
 import torch
 from datasets import Dataset, DatasetDict
 from sklearn.model_selection import train_test_split
 from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
-from langchain_core.prompts.chat import SystemMessagePromptTemplate, HumanMessagePromptTemplate, ChatPromptTemplate
-from langchain_openai import ChatOpenAI
+from accelerate import Accelerator  # Import the Accelerator
+from accelerate.utils import gather_object
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 TEST_SIZE = 0.2
 QA_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
@@ -77,92 +74,9 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     return args
 
-def generate_question_answer_pairs_langchain_parallel(
-    documents: dict, passage_column_name: str, max_input_tokens: int
-) -> dict:
-    texts = documents[passage_column_name]
-    num_processors = min(multiprocessing.cpu_count(), len(texts))
-    chunk_size = math.ceil(len(texts) / num_processors)
-    
-    with multiprocessing.Pool(num_processors) as pool:
-        results = pool.map(
-            partial(generate_qa_chunk, passage_column_name=passage_column_name, max_input_tokens=max_input_tokens),
-            [texts[i:i + chunk_size] for i in range(0, len(texts), chunk_size)]
-        )
-    
-    # Flatten the results
-    flattened_results = [item for sublist in results for item in sublist]
-    
-    return {
-        "Question": [r["Question"] for r in flattened_results],
-        "Answer": [r["Answer"] for r in flattened_results]
-    }
-
-def generate_qa_chunk(texts, passage_column_name, max_input_tokens):
-    example_passage = (
-        "Dense retrieval models are essential for embedding-based information "
-        "retrieval systems, as they map queries and documents into a shared "
-        "embedding space where their relevance can be computed. By using in-batch "
-        "negative contrastive learning, these models can be trained more efficiently, "
-        "as each batch contains not only positive examples but also negative samples "
-        "from unrelated queries or documents. This approach helps optimize the model's "
-        "ability to retrieve the most relevant information in real-world applications, "
-        "such as question-answering systems, where precision is critical."
-    )
-    example_question = (
-        "What role does in-batch negative contrastive learning play in training dense "
-        "retrieval models, particularly in optimizing the retrieval of relevant information "
-        "across different applications?"
-    )
-    prompt_template = (
-        "Read the following passage and generate a single, relevant question based "
-        "on its content. The question should be less than 100 words and more than 10 "
-        "words. Do not generate anything other than the question itself. Avoid any tokens, "
-        "explanations, or formatting. Do not use words like 'Question:', 'Answer:', 'Example:', or 'Passage:'. "
-        "Ensure there are no line breaks in the output. The output should be the question only, nothing more.\n\n"
-        "Example:\nPassage: {example_passage}\n{example_question}\n\nNow, do the same for the next "
-        "passage:\n{passage}\n"
-    )
-
-    arcee_llm = ChatOpenAI(
-        model_name="arcee-spark",
-        temperature=0,
-        max_tokens=1024,
-        openai_api_base=os.getenv("ARCEE_END_POINT"),
-        timeout=None,
-        max_retries=2,
-        top_p=0.75
-    )
-    system_template = "You are Arcee spark, created by Arcee.Inc. You are a helpful assistant whose task is to generate Questions given a piece of text and not the answer. You are a question generator."
-
-    system_message_prompt = SystemMessagePromptTemplate.from_template(system_template)
-    human_message_prompt = HumanMessagePromptTemplate.from_template(prompt_template)
-
-    chat_prompt = ChatPromptTemplate.from_messages([system_message_prompt, human_message_prompt])
-
-    input_chain = chat_prompt | arcee_llm 
-
-    results = []
-
-    for text in texts:
-        result = input_chain.invoke({
-            "example_passage" : example_passage,
-            "example_question" : example_question,
-            "passage" : text
-        })
-
-        if isinstance(result, dict) and "output" in result:
-            output = result["output"]
-        else:
-            output = str(result.content)
-        print("The output is : ", output)
-        print("The passage is : ", text)
-        results.append({"Question": output, "Answer": ""})
-    
-    return results
 
 def generate_question_answer_pairs(
-    documents: dict, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, passage_column_name: str, max_input_tokens: int
+    documents: dict, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, passage_column_name: str, max_input_tokens: int, accelerator : Accelerator
 ) -> dict:
 
     """Generate question answer pairs"""
@@ -182,7 +96,7 @@ def generate_question_answer_pairs(
         "What role does in-batch negative contrastive learning play in training dense "
         "retrieval models, particularly in optimizing the retrieval of relevant information "
         "across different applications?"
-    )
+   )
 
     prompt_template = (
         "Read the following passage and generate a single, relevant question based "
@@ -213,9 +127,15 @@ def generate_question_answer_pairs(
         add_generation_prompt=True
     )
 
+    print("accelerator.device : ", accelerator.device)
     model_inputs = tokenizer(batch_texts, return_tensors="pt", padding=True, truncation=True, max_length=max_input_tokens).to(model.device)
     
-    generated_ids = model.generate(
+    # Move model inputs to the correct device
+    # Use accelerator.unwrap_model to get the original model
+    unwrapped_model = accelerator.unwrap_model(model)
+
+    # Generate outputs
+    generated_ids = unwrapped_model.generate(
         **model_inputs,
         max_new_tokens=512
     )
@@ -253,7 +173,7 @@ def filter_malformed_questions(record: dict) -> bool:
     )
 
 
-def split_dataset(
+def splitting_dataset(
     shuffled_dataset: datasets.Dataset, title_column_name: str, test_size: float = TEST_SIZE
 ) -> datasets.DatasetDict:
     unique_titles = set(shuffled_dataset[title_column_name])
@@ -274,44 +194,96 @@ def split_dataset(
 def generate_qa_from_dataset(
     dataset: Dataset, passage_column_name: str, title_column_name: str, sample_size: int, batch_size: int, max_input_tokens: int, load_in_8bit: bool = True
 ) -> DatasetDict:
-    logger.info(f"Generating question answer pairs with batch size: {batch_size}")
-    #tokenizer = AutoTokenizer.from_pretrained(QA_MODEL)
-    #model = AutoModelForCausalLM.from_pretrained(QA_MODEL, torch_dtype="auto", device_map="auto")
     
-    # shuffle data
-    dataset.shuffle(seed=42)
-    # select a subset
+    accelerator = Accelerator()  # Initialize the Accelerator
+
+    if accelerator.is_main_process:
+        logger.info(f"Generating question answer pairs with batch size: {batch_size}")
+    
+    # Load model and tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(QA_MODEL)
+    model = AutoModelForCausalLM.from_pretrained(QA_MODEL, torch_dtype="auto")
+    model = accelerator.prepare(model)  # Prepare the model with accelerator
+    
+    # Shuffle data
+    dataset = dataset.shuffle(seed=42)
+    
+    # Sample dataset
     num_samples = min(sample_size, len(dataset))
     small_dataset = dataset.select(range(num_samples))
-    # train-test split
-    small_dataset_splits = split_dataset(small_dataset, title_column_name)
+    
+    # Train-test split
+    small_dataset_splits = splitting_dataset(small_dataset, title_column_name)
     logger.info(
         f"Train dataset size: {len(small_dataset_splits['train'])}, "
         f"Test dataset size: {len(small_dataset_splits['test'])}"
     )
-    qa_gen_map = partial(
-        generate_question_answer_pairs_langchain_parallel, passage_column_name=passage_column_name, max_input_tokens=max_input_tokens
-    )
-    processed_data = small_dataset_splits.map(qa_gen_map, batched=True, batch_size=batch_size)
-    # Print all questions from the test split before filtering
-    print("All questions from test split before filtering:")
-    for i, example in enumerate(processed_data['test']):
-        print(f"{i + 1}: {example['Question']}")
-
-    filtered_data = processed_data.filter(filter_malformed_questions)
-
-    # Print all questions from the test split after filtering
-    # print("All questions from test split after filtering:")
-    # for i, example in enumerate(filtered_data['test']):
-    #     print(f"{i + 1}: {example['Question']}")
-
-    logger.info(
-        f"Malformed question answer pairs: "
-        f"(train: {len(processed_data['train']) - len(filtered_data['train'])} "
-        f"test: {len(processed_data['test']) - len(filtered_data['test'])})"
-    )
     
-    return filtered_data
+    processed_data_splits = {}
+    for split in ["train", "test"]:
+        split_dataset = small_dataset_splits[split]
+        
+        # Shard the dataset among processes
+        split_dataset = split_dataset.shard(num_shards=accelerator.num_processes, index=accelerator.process_index)
+        
+        # Process data in batches
+        results = {
+            "Question": [],
+            "Answer": []
+        }
+        print("The length of split_dataset : ", len(split_dataset))
+        for i in range(0, len(split_dataset), batch_size):
+            batch = split_dataset[i:i+batch_size]
+            print("Split dataset : ", split_dataset)
+            batch_results = generate_question_answer_pairs(
+                batch, model, tokenizer, passage_column_name, max_input_tokens, accelerator
+            )
+            results["Question"].extend(batch_results["Question"])
+            results["Answer"].extend(batch_results["Answer"])
+
+            #print("Results : ", batch_results["Question"])
+        
+        # Prepare results for gathering
+        results_list = [results]
+        gathered_results = gather_object(results_list)
+        
+        if accelerator.is_main_process:
+            all_questions = []
+            all_answers = []
+            for res in gathered_results:
+                all_questions.extend(res["Question"])
+                all_answers.extend(res["Answer"])
+            
+            # Reconstruct the dataset
+            processed_dataset = Dataset.from_dict({
+                "Question": all_questions,
+                "Answer": all_answers
+            })
+            
+            processed_data_splits[split] = processed_dataset
+
+    # Only the main process proceeds to filter and return data
+    if accelerator.is_main_process:
+        # Filter malformed questions
+        filtered_data = DatasetDict()
+        for split in ["train", "test"]:
+            split_dataset = processed_data_splits[split]
+            split_dataset = split_dataset.filter(filter_malformed_questions)
+            filtered_data[split] = split_dataset
+        
+        logger.info(
+            f"Malformed question answer pairs: "
+            f"(train: {len(processed_data_splits['train']) - len(filtered_data['train'])} "
+            f"test: {len(processed_data_splits['test']) - len(filtered_data['test'])})"
+        )
+
+        print("All questions from test split after filtering:")
+        for i, example in enumerate(filtered_data['test']):
+            print(f"{i + 1}: {example['Question']}")
+        
+        return filtered_data
+    else:
+        return None
 
 
 def _load_dataset_from_path(dataset_path: str) -> Dataset:
@@ -351,16 +323,19 @@ def generate_qa_from_disk(
 ) -> None:
     dataset = _load_dataset_from_path(dataset_path)
     qa_gen_data = generate_qa_from_dataset(dataset, passage_column_name, title_column_name, sample_size, batch_size, max_input_tokens)
-    output_path = Path(output_dir)
-    output_path.mkdir(exist_ok=True)
-    for split_name, split_ds in qa_gen_data.items():
-        full_path = f"{output_path}/question_answer_pairs_{split_name}"
-        if as_csv:
-            full_path = f"{full_path}.csv"
-            split_ds.to_csv(full_path)
-        else:
-            split_ds.save_to_disk(full_path)
-        logger.info(f"Saving split {split_name} to {full_path}")
+    
+    # Only the main process proceeds to save the data
+    if qa_gen_data is not None:
+        output_path = Path(output_dir)
+        output_path.mkdir(exist_ok=True)
+        for split_name, split_ds in qa_gen_data.items():
+            full_path = f"{output_path}/question_answer_pairs_{split_name}"
+            if as_csv:
+                full_path = f"{full_path}.csv"
+                split_ds.to_csv(full_path)
+            else:
+                split_ds.save_to_disk(full_path)
+            logger.info(f"Saving split {split_name} to {full_path}")
 
 
 def main() -> None:
@@ -381,7 +356,7 @@ if __name__ == "__main__":
     main()
 
 """
-python question_answer_generation.py \
+accelerate launch question_answer_generation_final.py \
     --dataset_path=knowledge_dataset.csv \
     --batch_size=8 \
     --sample_size=50 \
