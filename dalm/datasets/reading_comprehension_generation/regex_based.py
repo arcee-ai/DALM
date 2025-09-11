@@ -421,7 +421,7 @@ class common_reason(BaseType):
                 ("What is the result of the following sentence?\n{cause}\nResult:", "{effect}"),
                 ('Q: What happens after "{cause}"? A:', "{effect}"),
                 ("{cause}\nWhat happens next?", "{effect}"),
-                # More varaiations
+                # More variations
                 ("Considering the cause: {cause}\nWhat could be the resulting effect?", "{effect}"),
                 ("Given that: {cause}\nWhat do you anticipate as the outcome?", "{effect}"),
                 ('What could stem from "{cause}"?', "{effect}"),
@@ -495,7 +495,7 @@ class common_reason(BaseType):
         elif entry["relation"] == "Effect-cause":
             kw_dic["cause"] = entry["sentence2"][0].upper() + entry["sentence2"][1:]
             kw_dic["effect"] = entry["sentence1"]
-        elif entry["relation"] == "Explanantion":
+        elif entry["relation"] == "Explanation":
             kw_dic["sentence1"] = entry["sentence1"]
             kw_dic["sentence2"] = entry["sentence2"][0].upper() + entry["sentence2"][1:]
 
